@@ -1,0 +1,97 @@
+/* src/components/SummariesPage.css */
+
+/* Outer container: full‐height light gray background */
+.summaries-page {
+  padding: 2rem;
+  font-family: sans-serif;
+  background-color: #f3f4f6;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Page title, centered */
+.summaries-title {
+  text-align: center;
+  font-size: 3rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 2.5rem;
+}
+
+/* The 3×2 grid container: exactly 3 columns per row */
+.summaries-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Each summary card */
+.summary-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 2.5rem 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;      /* increased font size */
+  font-weight: 600;
+  color: #ffffff;         /* white text */
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  min-height: 150px;
+}
+
+/* Hover effect for all cards */
+.summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Give each card its own pastel‐tone background */
+.summary-card:nth-child(1) {
+  background-color: #60a5fa; /* blue‐400 */
+}
+.summary-card:nth-child(2) {
+  background-color: #34d399; /* green‐400 */
+}
+.summary-card:nth-child(3) {
+  background-color: #f472b6; /* pink‐400 */
+}
+.summary-card:nth-child(4) {
+  background-color: #a78bfa; /* purple‐400 */
+}
+.summary-card:nth-child(5) {
+  background-color: #fbbf24; /* yellow‐400 */
+  color: #1f2937;           /* dark text for contrast */
+}
+.summary-card:nth-child(6) {
+  background-color: #f87171; /* red‐400 */
+}
+
+/* Back button container centers the button below the grid */
+.back-button-container {
+  margin-top: 3rem;
+  text-align: center;
+}
+
+/* Styling of the Back button */
+.back-button {
+  padding: 0.75rem 2rem;
+  background-color: #1f2937; /* dark gray */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.back-button:hover {
+  background-color: #111827;
+  transform: translateY(-2px);
+}
