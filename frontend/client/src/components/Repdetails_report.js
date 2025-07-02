@@ -24,7 +24,7 @@ const sampleProducts = [
 export default function RepdetailsReport() {
   const [step, setStep] = useState(1);
 
-  // ─── STEP 1 STATE ─────────────────────────────────────────────────────────────
+  // STEP 1 STATE 
   const [date, setDate] = useState("");
   const [range, setRange] = useState("");
   const [agency, setAgency] = useState("");
@@ -38,7 +38,7 @@ export default function RepdetailsReport() {
   const [selectedDoctors, setSelectedDoctors] = useState([]);
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
 
-    // ─── NEW OTHER BILLS STATE ────────────────────────────────────────────────────
+    // NEW OTHER BILLS STATE
   const [otherBillsOpen, setOtherBillsOpen] = useState(false);
   const [otherBills, setOtherBills] = useState({
     parking: { checked: false, amount: "" },
@@ -47,7 +47,7 @@ export default function RepdetailsReport() {
   });
   const [otherBillImages, setOtherBillImages] = useState([]);
 
-   // ─── OTHER BILLS HELPERS ─────────────────────────────────────────────────────
+   // OTHER BILLS HELPERS 
   const toggleOtherBillItem = (key) => {
     setOtherBills(prev => ({
       ...prev,
@@ -101,7 +101,7 @@ export default function RepdetailsReport() {
     town.trim() &&
     selectedDoctors.length > 0;
 
-  // ─── STEP 2 STATE ─────────────────────────────────────────────────────────────
+  // STEP 2 STATE 
   const [tableData, setTableData] = useState([]);
 
   // Generate table data based on selected doctors
@@ -136,7 +136,7 @@ export default function RepdetailsReport() {
     );
   };
 
-  // ─── Joint Visit toggle ───────────────────────────────────────────────────────
+  //Joint Visit toggle
   const toggleJointVisit = (idx) => {
     setTableData((prev) =>
       prev.map((doc, i) =>
@@ -145,7 +145,7 @@ export default function RepdetailsReport() {
     );
   };
 
-  // ─── EXPENSES STATE ────────────────────────────────────────────────────────────
+  //  EXPENSES STATE
   const [expenses, setExpenses] = useState({
     bata: false,
     nightOut: false,
@@ -156,13 +156,10 @@ export default function RepdetailsReport() {
     setExpenses((prev) => {
       const newVal = !prev[key];
       if (key === "bata" && newVal) {
-        // Selecting Bata unselects Night Out
         return { ...prev, bata: true, nightOut: false };
       } else if (key === "nightOut" && newVal) {
-        // Selecting Night Out unselects Bata
         return { ...prev, bata: false, nightOut: true };
       } else {
-        // Fuel or deselecting bata/nightOut
         return { ...prev, [key]: newVal };
       }
     });
