@@ -1,22 +1,21 @@
 // src/components/ItineraryForm.js
-import React, { useState, useEffect } from 'react';
-import './ItineraryForm.css';
-import { distributors } from '../data/distributors';
-import { API } from '../services/api';
+import React, { useState, useEffect } from 'react'
+import { distributors } from '../data/distributors'
+import { API } from '../services/api'
 
 export default function ItineraryForm() {
-  const [repName, setRepName]         = useState('');
-  const [distributor, setDistributor] = useState('');
-  const [month, setMonth]             = useState('2025-04');
-  const [itinerary, setItinerary]     = useState([]);
-  const [daysInMonth, setDaysInMonth] = useState(0);
+  const [repName, setRepName] = useState('')
+  const [distributor, setDistributor] = useState('')
+  const [month, setMonth] = useState('2025-04')
+  const [itinerary, setItinerary] = useState([])
+  const [daysInMonth, setDaysInMonth] = useState(0)
 
-  // rebuild rows whenever month changes
+  // build rows whenever month changes
   useEffect(() => {
-    if (!month) return;
-    const [y, m] = month.split('-').map(n => +n);
-    const dim = new Date(y, m, 0).getDate();
-    setDaysInMonth(dim);
+    if (!month) return
+    const [y, m] = month.split('-').map(n => +n)
+    const dim = new Date(y, m, 0).getDate()
+    setDaysInMonth(dim)
 
     const rows = Array.from({ length: dim }, (_, i) => ({
       date:         `${month}-${String(i+1).padStart(2,'0')}`,
@@ -26,145 +25,176 @@ export default function ItineraryForm() {
       chemistCalls: '',
       mileage:      '',
       nightOutArea: ''
-    }));
-    setItinerary(rows);
-  }, [month]);
+    }))
+    setItinerary(rows)
+  }, [month])
 
   const updateRow = (idx, field, value) => {
     setItinerary(rows => {
-      const copy = [...rows];
-      copy[idx] = { ...copy[idx], [field]: value };
-      return copy;
-    });
-  };
+      const copy = [...rows]
+      copy[idx] = { ...copy[idx], [field]: value }
+      return copy
+    })
+  }
 
   const handleSubmit = async e => {
-    e.preventDefault();
-    const payload = { repName, distributor, month, itinerary };
+    e.preventDefault()
+    const payload = { repName, distributor, month, itinerary }
     try {
-      await API.post('/itineraries', payload);
-      alert('Itinerary saved!');
+      await API.post('/itineraries', payload)
+      alert('Itinerary saved!')
     } catch {
-      alert('Save failed');
+      alert('Save failed')
     }
-  };
+  }
 
-  const minDate = `${month}-01`;
-  const maxDate = `${month}-${String(daysInMonth).padStart(2,'0')}`;
+  const minDate = `${month}-01`
+  const maxDate = `${month}-${String(daysInMonth).padStart(2,'0')}`
 
   return (
-    <form className="itinerary-form" onSubmit={handleSubmit}>
-      <h2>Monthly Itinerary Planner</h2>
+    <div className="fixed inset-0 bg-gray-100 flex items-center justify-center p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-full overflow-hidden flex flex-col"
+      >
+        {/* Header */}
+        <h2 className="text-2xl font-semibold text-center py-4 border-b">
+          Monthly Itinerary Planner
+        </h2>
 
-      <div className="top-fields">
-        <label>
-          Rep Name
-          <input
-            type="text"
-            value={repName}
-            onChange={e => setRepName(e.target.value)}
-            required
-          />
-        </label>
+        {/* Top fields */}
+        <div className="grid grid-cols-3 gap-6 px-6 py-4 border-b">
+          <label className="flex flex-col text-sm font-medium">
+            Rep Name
+            <input
+              type="text"
+              value={repName}
+              onChange={e => setRepName(e.target.value)}
+              required
+              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200"
+            />
+          </label>
 
-        <label>
-          Distributor
-          <select
-            value={distributor}
-            onChange={e => setDistributor(e.target.value)}
-            required
+          <label className="flex flex-col text-sm font-medium">
+            Distributor
+            <select
+              value={distributor}
+              onChange={e => setDistributor(e.target.value)}
+              required
+              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200"
+            >
+              <option value="">– select –</option>
+              {distributors.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col text-sm font-medium">
+            Month
+            <input
+              type="month"
+              value={month}
+              onChange={e => setMonth(e.target.value)}
+              min="2025-01"
+              required
+              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200"
+            />
+          </label>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto">
+          <table className="min-w-full table-auto border-collapse">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 border text-left text-sm">Date</th>
+                <th className="px-3 py-2 border text-left text-sm">Day No</th>
+                <th className="px-3 py-2 border text-left text-sm">Area</th>
+                <th className="px-3 py-2 border text-left text-sm">Doctor Calls</th>
+                <th className="px-3 py-2 border text-left text-sm">Chemist Calls</th>
+                <th className="px-3 py-2 border text-left text-sm">Mileage (km)</th>
+                <th className="px-3 py-2 border text-left text-sm">Night Out Area</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itinerary.map((row, i) => (
+                <tr
+                  key={i}
+                  className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                >
+                  <td className="px-2 py-1 border">
+                    <input
+                      type="date"
+                      value={row.date}
+                      min={minDate}
+                      max={maxDate}
+                      onChange={e => updateRow(i, 'date', e.target.value)}
+                      required
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                    />
+                  </td>
+                  <td className="px-2 py-1 border text-sm">{row.dayNo}</td>
+                  <td className="px-2 py-1 border">
+                    <input
+                      type="text"
+                      value={row.area}
+                      onChange={e => updateRow(i, 'area', e.target.value)}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                    />
+                  </td>
+                  <td className="px-2 py-1 border">
+                    <input
+                      type="number"
+                      min="0"
+                      value={row.doctorCalls}
+                      onChange={e => updateRow(i, 'doctorCalls', e.target.value)}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                    />
+                  </td>
+                  <td className="px-2 py-1 border">
+                    <input
+                      type="number"
+                      min="0"
+                      value={row.chemistCalls}
+                      onChange={e => updateRow(i, 'chemistCalls', e.target.value)}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                    />
+                  </td>
+                  <td className="px-2 py-1 border">
+                    <input
+                      type="number"
+                      min="0"
+                      value={row.mileage}
+                      onChange={e => updateRow(i, 'mileage', e.target.value)}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                    />
+                  </td>
+                  <td className="px-2 py-1 border">
+                    <input
+                      type="text"
+                      placeholder="Overnight area"
+                      value={row.nightOutArea}
+                      onChange={e => updateRow(i, 'nightOutArea', e.target.value)}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t flex justify-center">
+          <button
+            type="submit"
+            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-200"
           >
-            <option value="">– select –</option>
-            {distributors.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Month
-          <input
-            type="month"
-            value={month}
-            onChange={e => setMonth(e.target.value)}
-            min="2025-01"
-            required
-          />
-        </label>
-      </div>
-
-      <table className="itinerary-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Day No</th>
-            <th>Area</th>
-            <th>Doctor Calls</th>
-            <th>Chemist Calls</th>
-            <th>Mileage (km)</th>
-            <th>Night Out Area</th>
-          </tr>
-        </thead>
-        <tbody>
-          {itinerary.map((row, i) => (
-            <tr key={i}>
-              <td>
-                <input
-                  type="date"
-                  value={row.date}
-                  min={minDate}
-                  max={maxDate}
-                  onChange={e => updateRow(i, 'date', e.target.value)}
-                  required
-                />
-              </td>
-              <td>{row.dayNo}</td>
-              <td>
-                <input
-                  type="text"
-                  value={row.area}
-                  onChange={e => updateRow(i, 'area', e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  value={row.doctorCalls}
-                  onChange={e => updateRow(i, 'doctorCalls', e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  value={row.chemistCalls}
-                  onChange={e => updateRow(i, 'chemistCalls', e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  value={row.mileage}
-                  onChange={e => updateRow(i, 'mileage', e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  placeholder="Overnight area"
-                  value={row.nightOutArea}
-                  onChange={e => updateRow(i, 'nightOutArea', e.target.value)}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <button type="submit">Save Itinerary</button>
-    </form>
-  );
+            Save Itinerary
+          </button>
+        </div>
+      </form>
+    </div>
+  )
 }
-
