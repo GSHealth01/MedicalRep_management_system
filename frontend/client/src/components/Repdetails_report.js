@@ -548,7 +548,6 @@ export default function RepdetailsReport() {
               )}
             </div>
           </div>
-
           <div style={{ textAlign: "center", marginTop: "2rem" }}>
             <button
               disabled={!step1Valid}
@@ -999,126 +998,163 @@ export default function RepdetailsReport() {
           </table>
 
           {/* Right: Mileage Box */}
-          <table
-            style={{
-              marginTop: "2rem",
-              width: "100%",
-              maxWidth: "400px",
-              marginLeft: "20px",
-              borderCollapse: "collapse"
-            }}
-          >
-            <caption
-              style={{
-                captionSide: "top",
-                textAlign: "left",
-                fontSize: "1.2rem",
-                color: "#2c3e50",
-                marginBottom: "0.5rem",
-                fontWeight: "bold"
-              }}
-            >
-              Mileage
-            </caption>
-            <tbody>
-              <tr>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  Schedule mileage
-                </td>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  <input type="text" placeholder="1000 km" />
-                </td>
-              </tr>
-              <tr>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  Opening mileage
-                </td>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  <input type="text" />
-                </td>
-              </tr>
-              <tr>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  Odometer Reading
-                </td>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  <input type="file" accept="image/*" />
-                </td>
-              </tr>
-              <tr>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  Fuel Pumped
-                </td>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  <input type="text" />
-                </td>
-              </tr>
-              <tr>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  Cost
-                </td>
-                <td
-                  style={{
-                    padding: "0.75rem",
-                    borderBottom: "20px solid #ecf0f1"
-                  }}
-                >
-                  <input type="text" placeholder="Rs." />
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: "0.75rem" }}>Fuel Bill</td>
-                <td style={{ padding: "0.75rem" }}>
-                  <input type="file" accept="image/*" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+<table
+  style={{
+    marginTop: "2rem",
+    width: "100%",
+    maxWidth: "400px",
+    marginLeft: "20px",
+    borderCollapse: "collapse"
+  }}
+>
+  <caption
+    style={{
+      captionSide: "top",
+      textAlign: "left",
+      fontSize: "1.2rem",
+      color: "#2c3e50",
+      marginBottom: "0.5rem",
+      fontWeight: "bold"
+    }}
+  >
+    Mileage
+  </caption>
+  <tbody>
+    <tr>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        Schedule mileage
+      </td>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        <input type="text" placeholder="1000 km" />
+      </td>
+    </tr>
+    <tr>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        Opening mileage
+      </td>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        <input type="text" />
+      </td>
+    </tr>
+    <tr>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        Closing mileage
+      </td>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        <input type="text" />
+      </td>
+    </tr>
+    <tr>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        Private mileage
+      </td>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        <input type="text" />
+      </td>
+    </tr>
+    <tr>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        Odometer Reading
+      </td>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        <input type="file" accept="image/*" />
+      </td>
+    </tr>
+    <tr>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        Fuel Pumped
+      </td>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        <input type="text" />
+      </td>
+    </tr>
+    <tr>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        Cost
+      </td>
+      <td
+        style={{
+          padding: "0.75rem",
+          borderBottom: "20px solid #ecf0f1"
+        }}
+      >
+        <input type="text" placeholder="Rs." />
+      </td>
+    </tr>
+    <tr>
+      <td style={{ padding: "0.75rem" }}>Fuel Bill</td>
+      <td style={{ padding: "0.75rem" }}>
+        <input type="file" accept="image/*" />
+      </td>
+    </tr>
+  </tbody>
+</table>
+
 
           {/* REMARK SECTION */}
           <div
