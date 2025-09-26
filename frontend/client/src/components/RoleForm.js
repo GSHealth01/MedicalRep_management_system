@@ -2,124 +2,113 @@
 import { useState, useEffect } from "react";
 
 export default function RoleForm({ onSubmit, initialData }) {
-  const [formData, setFormData] = useState({
-    roleName: "",
-    description: "",
-    permissions: {
-      employees: { view: false, add: false, edit: false, delete: false },
-      products: { view: false, add: false, edit: false, delete: false },
-      distributors: { view: false, add: false, edit: false, delete: false },
-      doctors: { view: false, add: false, edit: false, delete: false },
-      teams: { view: false, add: false, edit: false, delete: false },
-      reports: { view: false, add: false, edit: false, delete: false },
-      itinerary: { view: false, add: false, edit: false, delete: false },
-    },
-  });
+  const designations = [
+    "Operations Manager",
+    "Senior Manager",
+    "Product Manager",
+    "Territory Manager",
+    "Senior Executive",
+    "Junior Executive",
+    "Field Coordinator",
+    "Medical Rep",
+  ];
 
-  // Load initial data for editing
+  const modules = [
+    "Manage Employees",
+    "Manage Products",
+    "Manage Distributors",
+    "Manage Doctors",
+    "Manage Teams",
+    "Reports / Summaries",
+    "Itinerary",
+  ];
+
+  const accessOptions = ["None", "View", "Add", "Edit", "Delete"];
+
+  // State: permissions[module][designation] = "Access Type"
+  const [permissions, setPermissions] = useState({});
+
+  // Load for edit OR initialize
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      setPermissions(initialData.permissions);
+    } else {
+      const initialPermissions = {};
+      modules.forEach((mod) => {
+        initialPermissions[mod] = {};
+        designations.forEach((des) => {
+          initialPermissions[mod][des] = "None";
+        });
+      });
+      setPermissions(initialPermissions);
     }
   }, [initialData]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handlePermissionChange = (module, action) => {
-    setFormData({
-      ...formData,
-      permissions: {
-        ...formData.permissions,
-        [module]: {
-          ...formData.permissions[module],
-          [action]: !formData.permissions[module][action],
-        },
+  const handlePermissionChange = (module, designation, value) => {
+    setPermissions((prev) => ({
+      ...prev,
+      [module]: {
+        ...prev[module],
+        [designation]: value,
       },
-    });
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (onSubmit) onSubmit(formData);
+    if (onSubmit) onSubmit({ permissions });
 
-    // Reset form
-    setFormData({
-      roleName: "",
-      description: "",
-      permissions: {
-        employees: { view: false, add: false, edit: false, delete: false },
-        products: { view: false, add: false, edit: false, delete: false },
-        distributors: { view: false, add: false, edit: false, delete: false },
-        doctors: { view: false, add: false, edit: false, delete: false },
-        teams: { view: false, add: false, edit: false, delete: false },
-        reports: { view: false, add: false, edit: false, delete: false },
-        itinerary: { view: false, add: false, edit: false, delete: false },
-      },
+    // reset
+    const resetPermissions = {};
+    modules.forEach((mod) => {
+      resetPermissions[mod] = {};
+      designations.forEach((des) => {
+        resetPermissions[mod][des] = "None";
+      });
     });
+    setPermissions(resetPermissions);
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-4xl bg-white shadow-lg rounded-lg p-6 space-y-6"
+      className="max-w-6xl bg-white shadow-lg rounded-lg p-6 space-y-6"
     >
-      {/* Role Name */}
-      <div>
-        <label className="block text-gray-700 mb-1">Role Name</label>
-        <input
-          type="text"
-          name="roleName"
-          value={formData.roleName}
-          onChange={handleChange}
-          placeholder="Enter role name"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="block text-gray-700 mb-1">Description</label>
-        <input
-          type="text"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          placeholder="Enter role description"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
       {/* Permissions Table */}
       <div>
         <label className="block text-gray-700 mb-2 font-semibold">
-          Permissions
+          Define Permissions
         </label>
-        <table className="w-full border-collapse bg-white shadow-sm rounded">
+        <table className="min-w-full border-collapse bg-white shadow rounded text-sm">
           <thead className="bg-gray-200">
             <tr>
-              <th className="py-2 px-4 text-center">Module</th>
-              <th className="py-2 px-4 text-center">View</th>
-              <th className="py-2 px-4 text-center">Add</th>
-              <th className="py-2 px-4 text-center">Edit</th>
-              <th className="py-2 px-4 text-center">Delete</th>
+              <th className="py-2 px-4 text-left">Module</th>
+              {designations.map((des) => (
+                <th key={des} className="py-2 px-4 text-center">
+                  {des}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {Object.keys(formData.permissions).map((module) => (
-              <tr key={module} className="border-b hover:bg-gray-50">
-                <td className="py-2 px-4 text-center capitalize">{module}</td>
-                {["view", "add", "edit", "delete"].map((action) => (
-                  <td key={action} className="py-2 px-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.permissions[module][action]}
-                      onChange={() => handlePermissionChange(module, action)}
-                      className="h-4 w-4 text-blue-600"
-                    />
+            {modules.map((mod) => (
+              <tr key={mod} className="border-b hover:bg-gray-50">
+                <td className="py-2 px-4 font-medium">{mod}</td>
+                {designations.map((des) => (
+                  <td key={des} className="py-2 px-4 text-center">
+                    <select
+                      value={permissions[mod]?.[des] || "None"}
+                      onChange={(e) =>
+                        handlePermissionChange(mod, des, e.target.value)
+                      }
+                      className="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      {accessOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                 ))}
               </tr>
@@ -133,9 +122,8 @@ export default function RoleForm({ onSubmit, initialData }) {
         type="submit"
         className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
       >
-        {initialData ? "Update Role" : "Add Role"}
+        Save Permissions
       </button>
     </form>
   );
 }
-
