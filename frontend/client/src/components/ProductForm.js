@@ -17,7 +17,6 @@ export default function ProductForm({ onSubmit }) {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
-    // Reset injection type if route is changed away from "Injection"
     if (name === "route" && value !== "Injection") {
       setFormData((prev) => ({ ...prev, injectionType: "" }));
     }
@@ -27,7 +26,7 @@ export default function ProductForm({ onSubmit }) {
     e.preventDefault();
     if (onSubmit) onSubmit(formData);
 
-    // Reset form
+
     setFormData({
       productName: "",
       therapeuticCategory: "",

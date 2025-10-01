@@ -1,6 +1,5 @@
 // src/components/ManagerDashboard.js
 import React from 'react';
-
 export default function ManagerDashboard() {
   return (
     <div style={{ padding: 20 }}>

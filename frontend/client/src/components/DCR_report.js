@@ -81,7 +81,6 @@ export default function RepdetailsReport() {
   };
 
   useEffect(() => {
-    // click outside closes dropdown
     const onClick = (e) => {
       if (showDoctorDropdown && !e.target.closest("#doctor-dropdown"))
         setShowDoctorDropdown(false);
@@ -101,10 +100,8 @@ export default function RepdetailsReport() {
     town.trim() &&
     selectedDoctors.length > 0;
 
-  // STEP 2 STATE 
   const [tableData, setTableData] = useState([]);
 
-  // Generate table data based on selected doctors
   useEffect(() => {
     if (step === 2 && selectedDoctors.length > 0) {
       const newTableData = selectedDoctors.map((doctor) => ({
@@ -135,8 +132,6 @@ export default function RepdetailsReport() {
       })
     );
   };
-
-  //Joint Visit toggle
   const toggleJointVisit = (idx) => {
     setTableData((prev) =>
       prev.map((doc, i) =>
@@ -145,7 +140,6 @@ export default function RepdetailsReport() {
     );
   };
 
-  //  EXPENSES STATE
   const [expenses, setExpenses] = useState({
     bata: false,
     nightOut: false,

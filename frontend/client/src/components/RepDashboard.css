@@ -81,7 +81,6 @@
   cursor: pointer;
 }
 
-/* KPI cards */
 .kpi-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
@@ -126,7 +125,7 @@
   flex: 1 1 320px;
 }
 .chart-panel { height: 260px; }
-.table-panel .table-wrapper {
+.table-panel .table-wrapper { 
   overflow-x: auto;
 }
 .table-panel table {

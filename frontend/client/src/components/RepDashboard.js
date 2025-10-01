@@ -23,7 +23,6 @@ import './RepDashboard.css';
 export default function RepDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // KPI summary
   const kpis = [
     { title: 'Total Calls',       value: 540, icon: <FaPhone /> },
     { title: 'Total Orders',      value:  75, icon: <FaBoxOpen /> },

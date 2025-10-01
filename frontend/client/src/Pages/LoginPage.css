@@ -7,32 +7,28 @@
   background: #f0f2f5;
 }
 
-/* The white card that holds the logo, fields, and button */
 .login-form {
   background: #ffffff;
-  padding: 1.5rem;        /* Comfortable padding around */
+  padding: 1.5rem;        
   width: 100%;
-  max-width: 360px;       /* Limit width so it doesn’t become too wide */
+  max-width: 360px;       
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
-/* Logo at the top, centered */
 .login-logo {
   width: 60px;
   margin: 0 auto 1rem;
   display: block;
 }
 
-/* Heading text */
 .login-form h2 {
   margin-bottom: 1rem;
   color: #333;
   font-size: 1.5rem;
 }
 
-/* Each label wraps a field and its text */
 .login-form label {
   display: block;
   text-align: left;
@@ -42,7 +38,6 @@
   font-size: 0.95rem;
 }
 
-/* All inputs and selects share this basic styling */
 .login-form input,
 .login-form select {
   width: 100%;
@@ -55,7 +50,6 @@
   box-sizing: border-box;
 }
 
-/* Submit button spans full width */
 .login-form button {
   width: 100%;
   padding: 0.75rem;
@@ -68,12 +62,11 @@
   transition: background-color 0.2s ease;
 }
 
-/* Darken the button slightly on hover */
 .login-form button:hover {
   background: #0056b3;
 }
 
-/* Style for validation errors */
+
 .login-error {
   margin-bottom: 1rem;
   color: #c00;
