@@ -1,5 +1,3 @@
-// src/App.js
-import React from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -23,6 +21,9 @@ import DoctorCallSummary  from './components/SummaryComponent/Doctor_Call_Summar
 import ChemistCallSummary from './components/SummaryComponent/Chemist_Call_Summary';
 
 import SummariesPage from './Pages/Summaries';
+
+//Protected Route import
+import ProtectedAdmin from './components/ProtectedRoute';
 
 //Admin import
 import AdminLayout        from './layouts/AdminLayout';
@@ -51,19 +52,29 @@ export default function App() {
         <Route path="/summaries/sample" element={<SampleSummary />} />
         <Route path="/summaries/doctor-calls" element={<DoctorCallSummary />} />
         <Route path="/summaries/chemist-calls" element={<ChemistCallSummary />} />
-        <Route path="/admin" element={<AdminLayout />}>
+        
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdmin>
+              <AdminLayout />
+            </ProtectedAdmin>
+          }
+        >
+          <Route index element={<Navigate to="portal" replace />} />
           <Route path="portal" element={<AdminPortal />} />
           <Route path="sectors" element={<ManageSectors />} />
-          <Route path="employees" element={<ManageEmployees />} /> 
-          <Route path="dashboard"element={<h1>Admin Dashboard Page</h1>} />
-          <Route path="profile" element={<h1>Admin Profile Page</h1>} />
-          <Route path="products" element={<ManageProducts />} /> 
-          <Route path="distributors" element={<ManageDistributors />} /> 
+          <Route path="employees" element={<ManageEmployees />} />
+          <Route path="products" element={<ManageProducts />} />
           <Route path="doctors" element={<ManageDoctors />} />
+          <Route path="distributors" element={<ManageDistributors />} />
           <Route path="teams" element={<ManageTeams />} />
           <Route path="roles" element={<ManageRoles />} />
         </Route>
+
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </BrowserRouter>
   );
