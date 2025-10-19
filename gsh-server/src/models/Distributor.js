@@ -3,18 +3,15 @@ const { Schema } = mongoose;
 
 const DistributorSchema = new Schema(
   {
-    name: { type: String, required: true, index: true }, // e.g., "British Agencies"
-    area: { type: String },                               // e.g., "North western Province 1"
-    town: { type: String },                               // e.g., "Puttalam"
+    sector: { type: Schema.Types.ObjectId, ref: "Sector", required: true, index: true },
+    name: { type: String, required: true, index: true },
+    area: { type: String },
+    town: { type: String },
     dateAdded: { type: Date, default: () => new Date() },
     isActive: { type: Boolean, default: true },
-
-    // assignments (Admin can link PM/TM/SE to this distributor)
     assignedPMs: [{ type: Schema.Types.ObjectId, ref: "User" }],
     assignedTMs: [{ type: Schema.Types.ObjectId, ref: "User" }],
     assignedSEs: [{ type: Schema.Types.ObjectId, ref: "User" }],
-
-    // optional metadata
     contactName: { type: String },
     contactPhone: { type: String },
     notes: { type: String }
@@ -22,7 +19,7 @@ const DistributorSchema = new Schema(
   { timestamps: true }
 );
 
-// search index
-DistributorSchema.index({ name: "text", area: "text", town: "text" });
+// Unique by (sector, name, town)
+DistributorSchema.index({ sector: 1, name: 1, town: 1 }, { unique: true });
 
 module.exports = mongoose.model("Distributor", DistributorSchema);

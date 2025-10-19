@@ -5,15 +5,16 @@ const AppError = require("../../../utils/AppError");
 
 /**
  * GET /api/v1/admin/distributors
- * Query: q, area, town, isActive, dateFrom, dateTo, page, limit, sortBy, order
+ * Query: sector, q, area, town, isActive, dateFrom, dateTo, page, limit, sortBy, order
  */
 exports.list = async (req, res) => {
   const {
-    q, area, town, isActive, dateFrom, dateTo,
+    sector, q, area, town, isActive, dateFrom, dateTo,
     page = 1, limit = 10, sortBy = "createdAt", order = "desc"
   } = req.query;
 
   const filter = {};
+  if (sector) filter.sector = sector;
   if (q) filter.$text = { $search: q };
   if (area) filter.area = area;
   if (town) filter.town = town;
@@ -28,34 +29,52 @@ exports.list = async (req, res) => {
   const sort = { [sortBy]: order === "asc" ? 1 : -1 };
 
   const [items, total] = await Promise.all([
-    Distributor.find(filter).sort(sort).skip(skip).limit(Number(limit)),
+    Distributor.find(filter).sort(sort).skip(skip).limit(Number(limit))
+      .populate("sector", "_id name code"),
     Distributor.countDocuments(filter)
   ]);
 
   return ApiResponse.ok(res, "Distributors fetched", {
-    items, page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit))
+    items,
+    page: Number(page),
+    limit: Number(limit),
+    total,
+    pages: Math.ceil(total / Number(limit))
   });
 };
 
-/** POST /api/v1/admin/distributors */
+/**
+ * POST /api/v1/admin/distributors
+ * Body must include: sector, name
+ * Uniqueness enforced **within the same sector**: (sector, name, town)
+ */
 exports.create = async (req, res) => {
-  const { name, area, town, dateAdded, isActive, contactName, contactPhone, notes } = req.body;
+  const {
+    sector, name, area, town, dateAdded, isActive,
+    contactName, contactPhone, notes
+  } = req.body;
 
-  // basic uniqueness guard (optional): name+town combo
-  const dup = await Distributor.findOne({ name, town });
-  if (dup) throw new AppError(409, "Distributor with same name & town already exists");
+  if (!sector) throw new AppError(400, "sector is required");
+  if (!name) throw new AppError(400, "name is required");
+
+  const dup = await Distributor.findOne({ sector, name, town });
+  if (dup) throw new AppError(409, "Distributor with same name & town already exists in this sector");
 
   const d = await Distributor.create({
-    name, area, town,
+    sector, name, area, town,
     dateAdded: dateAdded ? new Date(dateAdded) : undefined,
     isActive, contactName, contactPhone, notes
   });
+
   return ApiResponse.ok(res, "Distributor created", { id: d._id, name: d.name }, 201);
 };
 
-/** GET /api/v1/admin/distributors/:id */
+/**
+ * GET /api/v1/admin/distributors/:id
+ */
 exports.getOne = async (req, res) => {
   const d = await Distributor.findById(req.params.id)
+    .populate("sector", "_id name code")
     .populate("assignedPMs", "_id name email role")
     .populate("assignedTMs", "_id name email role")
     .populate("assignedSEs", "_id name email role");
@@ -63,20 +82,43 @@ exports.getOne = async (req, res) => {
   return ApiResponse.ok(res, "Distributor fetched", d);
 };
 
-/** PATCH /api/v1/admin/distributors/:id */
+/**
+ * PATCH /api/v1/admin/distributors/:id
+ * Allows sector/name/town changes; re-checks sector-scoped uniqueness.
+ */
 exports.update = async (req, res) => {
   const update = { ...req.body };
   if (update.dateAdded) update.dateAdded = new Date(update.dateAdded);
 
-  const d = await Distributor.findByIdAndUpdate(req.params.id, update, { new: true });
-  if (!d) throw new AppError(404, "Distributor not found");
+  const existing = await Distributor.findById(req.params.id);
+  if (!existing) throw new AppError(404, "Distributor not found");
+
+  const targetSector = update.sector || existing.sector;
+  const nextName = update.name ?? existing.name;
+  const nextTown = update.town ?? existing.town;
+
+  const clash = await Distributor.findOne({
+    sector: targetSector,
+    name: nextName,
+    town: nextTown,
+    _id: { $ne: existing._id }
+  });
+  if (clash) throw new AppError(409, "Distributor with same name & town already exists in this sector");
+
+  const d = await Distributor.findByIdAndUpdate(existing._id, update, { new: true })
+    .populate("sector", "_id name code");
   return ApiResponse.ok(res, "Distributor updated", d);
 };
 
-/** PATCH /api/v1/admin/distributors/:id/status  Body: { isActive: boolean } */
+/**
+ * PATCH /api/v1/admin/distributors/:id/status
+ * Body: { isActive: boolean }
+ */
 exports.updateStatus = async (req, res) => {
   const { isActive } = req.body;
-  const d = await Distributor.findByIdAndUpdate(req.params.id, { isActive: Boolean(isActive) }, { new: true });
+  const d = await Distributor.findByIdAndUpdate(
+    req.params.id, { isActive: Boolean(isActive) }, { new: true }
+  );
   if (!d) throw new AppError(404, "Distributor not found");
   return ApiResponse.ok(res, "Distributor status updated", { id: d._id, isActive: d.isActive });
 };
@@ -126,7 +168,9 @@ exports.unassign = async (req, res) => {
   return ApiResponse.ok(res, "Users unassigned from distributor", { id: d._id, role, userIds: d[field] });
 };
 
-/** DELETE /api/v1/admin/distributors/:id */
+/**
+ * DELETE /api/v1/admin/distributors/:id
+ */
 exports.remove = async (req, res) => {
   const del = await Distributor.findByIdAndDelete(req.params.id);
   if (!del) throw new AppError(404, "Distributor not found");
