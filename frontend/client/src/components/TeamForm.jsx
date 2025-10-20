@@ -1,11 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../services/api"; // baseURL should point to your BE (e.g., http://localhost:4000/api/v1)
+import { api } from "../services/api"; // uses your existing axios instance with auth
+
+// Map UI buckets -> BE roles
+// Tweak as you prefer (e.g., ops could be ["TM","PM"] if you want both).
+const BUCKET_ROLE_MAP = {
+  ops: ["TM"],   // Operations Manager picker shows Territory Managers by default
+  sms: ["SE"],   // "Senior Manager" picker shows Senior Executives
+  pms: ["PM"],
+  tms: ["TM"],
+  ses: ["SE"],
+  jes: ["JE"],
+  fcs: ["FC"],
+  mrs: ["MR"],
+};
 
 export default function TeamForm({ onSubmit }) {
   const [formData, setFormData] = useState({
-    sector: "",           // NEW: sector _id
-    subSector: "",        // NEW: sub-sector (agency) _id
+    sector: "",        // sector _id
+    subSector: "",     // sub-sector (agency) _id
     teamName: "",
+    // store selected USER IDs for each bucket
     ops: [],
     sms: [],
     pms: [],
@@ -16,16 +30,6 @@ export default function TeamForm({ onSubmit }) {
     mrs: [],
   });
 
-  // Dummy dropdown values for members (you can later fetch by role from BE)
-  const ops = ["Ops A", "Ops B"];
-  const sms = ["SM A", "SM B"];
-  const pms = ["PM A", "PM B"];
-  const tms = ["TM A", "TM B"];
-  const ses = ["SE A", "SE B"];
-  const jes = ["JE A", "JE B"];
-  const fcs = ["FC A", "FC B"];
-  const mrs = ["MR A", "MR B", "MR C"];
-
   const [sectors, setSectors] = useState([]);
   const [subSectors, setSubSectors] = useState([]);
   const [loadingSectors, setLoadingSectors] = useState(true);
@@ -33,13 +37,22 @@ export default function TeamForm({ onSubmit }) {
   const [errSectors, setErrSectors] = useState("");
   const [errSubs, setErrSubs] = useState("");
 
+  // Users in selected agency
+  const [agencyUsers, setAgencyUsers] = useState([]);   // raw list from BE
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [errUsers, setErrUsers] = useState("");
+  const [idToLabel, setIdToLabel] = useState({});       // { userId: "Label to show" }
+  const [byRole, setByRole] = useState({});             // { ROLE: User[] }
+
   // Helpers
   const normalizeItems = (res) => {
     const payload = res?.data?.data ?? res?.data ?? {};
     return Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
   };
+  const userLabel = (u) =>
+    `${u.name || u.email}${u.empNo ? ` · ${u.empNo}` : ""}${u.role ? ` · ${u.role}` : ""}`;
 
-  // Load sectors on mount
+  // Load sectors
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -47,7 +60,8 @@ export default function TeamForm({ onSubmit }) {
       setErrSectors("");
       try {
         const res = await api.get("/admin/sectors", { params: { isActive: true, limit: 200 } });
-        if (mounted) setSectors(normalizeItems(res));
+        const items = normalizeItems(res);
+        if (mounted) setSectors(items);
       } catch (e) {
         if (mounted) setErrSectors(e?.response?.data?.message || "Failed to load sectors");
       } finally {
@@ -57,7 +71,7 @@ export default function TeamForm({ onSubmit }) {
     return () => { mounted = false; };
   }, []);
 
-  // When sector changes, load its sub-sectors (agencies)
+  // Load sub-sectors when sector changes
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -67,7 +81,8 @@ export default function TeamForm({ onSubmit }) {
       setLoadingSubs(true);
       try {
         const res = await api.get(`/admin/subsectors/sector/${formData.sector}`);
-        if (mounted) setSubSectors(normalizeItems(res));
+        const items = normalizeItems(res);
+        if (mounted) setSubSectors(items);
       } catch (e) {
         if (mounted) setErrSubs(e?.response?.data?.message || "Failed to load agencies");
       } finally {
@@ -77,57 +92,153 @@ export default function TeamForm({ onSubmit }) {
     return () => { mounted = false; };
   }, [formData.sector]);
 
-  const canSubmit = useMemo(() => {
-    return !!formData.sector && !!formData.subSector && !!formData.teamName;
-  }, [formData]);
+  // Load users in the selected agency
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setAgencyUsers([]);
+      setErrUsers("");
+      setIdToLabel({});
+      setByRole({});
+      if (!formData.subSector) return;
+      setLoadingUsers(true);
+      try {
+        // fetch all users in this sub-sector; BE returns populated sector/agency
+        const res = await api.get("/admin/users", {
+          params: { agency: formData.subSector, limit: 500 },
+        });
+        const items = normalizeItems(res);
+        if (!mounted) return;
+
+        setAgencyUsers(items);
+        // id -> label map
+        const map = {};
+        items.forEach((u) => { map[u._id || u.id] = userLabel(u); });
+        setIdToLabel(map);
+        // group by role
+        const grouped = items.reduce((acc, u) => {
+          const r = String(u.role || "").toUpperCase();
+          acc[r] = acc[r] || [];
+          acc[r].push(u);
+          return acc;
+        }, {});
+        setByRole(grouped);
+
+        // clear current selections when agency changes
+        setFormData((s) => ({
+          ...s,
+          ops: [], sms: [], pms: [], tms: [], ses: [], jes: [], fcs: [], mrs: [],
+        }));
+      } catch (e) {
+        if (mounted) setErrUsers(e?.response?.data?.message || "Failed to load users in agency");
+      } finally {
+        if (mounted) setLoadingUsers(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [formData.subSector]);
+
+  const canSubmit = useMemo(() => !!formData.sector && !!formData.subSector && !!formData.teamName, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // clear subSector if sector is changed
+    // If sector changes, clear subSector and users
     if (name === "sector") {
       setFormData((s) => ({ ...s, sector: value, subSector: "" }));
+      setAgencyUsers([]);
+      setByRole({});
+      setIdToLabel({});
       return;
     }
     setFormData((s) => ({ ...s, [name]: value }));
   };
 
   const handleMultiSelect = (e, field) => {
-    const values = Array.from(e.target.selectedOptions, (opt) => opt.value);
+    const values = Array.from(e.target.selectedOptions, (opt) => opt.value); // store IDs
     setFormData((s) => ({ ...s, [field]: values }));
   };
 
-  const handleSubmit = (e) => {
+  // Build options for a bucket by its mapped BE roles
+  const optionsForBucket = (bucketKey) => {
+    const roles = BUCKET_ROLE_MAP[bucketKey] || [];
+    const users = roles.flatMap((r) => byRole[r] || []);
+    // de-dup if roles overlap
+    const seen = new Set();
+    return users
+      .filter((u) => {
+        const id = u._id || u.id;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      })
+      .map((u) => ({ id: u._id || u.id, label: userLabel(u) }));
+  };
+
+  const submit = (e) => {
     e.preventDefault();
     if (!canSubmit) return;
 
-    // Minimal BE payload (members can be added later via member endpoints)
-    const payload = {
-      name: formData.teamName,
-      // you can also send a code if your BE expects it:
-      // code: `TEAM-${formData.teamName.trim().toUpperCase().replace(/[^A-Z0-9]+/g,"-").slice(0,16)}`,
+    const payload = { name: formData.teamName }; // create team first
+
+    // Prepare human-readable labels for the table (no extra fetch needed)
+    const labels = {
+      ops: formData.ops.map((id) => idToLabel[id]).filter(Boolean),
+      sms: formData.sms.map((id) => idToLabel[id]).filter(Boolean),
+      pms: formData.pms.map((id) => idToLabel[id]).filter(Boolean),
+      tms: formData.tms.map((id) => idToLabel[id]).filter(Boolean),
+      ses: formData.ses.map((id) => idToLabel[id]).filter(Boolean),
+      jes: formData.jes.map((id) => idToLabel[id]).filter(Boolean),
+      fcs: formData.fcs.map((id) => idToLabel[id]).filter(Boolean),
+      mrs: formData.mrs.map((id) => idToLabel[id]).filter(Boolean),
     };
 
-    // Pass both normalized payload AND raw form (contains sector/subSector and members)
-    onSubmit && onSubmit(payload, formData);
+    onSubmit &&
+      onSubmit(payload, {
+        ...formData,        // contains selected IDs
+        labels,             // contains selected labels for table display
+      });
 
-    // Reset form
+    // reset (keep sector to add multiple teams in same agency if you want)
     setFormData({
       sector: "",
       subSector: "",
       teamName: "",
-      ops: [],
-      sms: [],
-      pms: [],
-      tms: [],
-      ses: [],
-      jes: [],
-      fcs: [],
-      mrs: [],
+      ops: [], sms: [], pms: [], tms: [], ses: [], jes: [], fcs: [], mrs: [],
     });
+    setAgencyUsers([]);
+    setByRole({});
+    setIdToLabel({});
+  };
+
+  // Reusable multi-select
+  const Bucket = ({ field, title }) => {
+    const opts = optionsForBucket(field);
+    return (
+      <div>
+        <label className="block text-gray-700 mb-1">{title}</label>
+        <select
+          multiple
+          value={formData[field]}
+          onChange={(e) => handleMultiSelect(e, field)}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={!formData.subSector || loadingUsers || opts.length === 0}
+        >
+          {opts.length === 0 ? (
+            <option value="" disabled>
+              {loadingUsers ? "Loading…" : "No users available"}
+            </option>
+          ) : (
+            opts.map((o) => (
+              <option key={o.id} value={o.id}>{o.label}</option>
+            ))
+          )}
+        </select>
+      </div>
+    );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl bg-white shadow-lg rounded-lg p-6 space-y-4">
+    <form onSubmit={submit} className="max-w-3xl bg-white shadow-lg rounded-lg p-6 space-y-4">
       {/* Sector */}
       <div>
         <label className="block text-gray-700 mb-1">Sector</label>
@@ -149,7 +260,7 @@ export default function TeamForm({ onSubmit }) {
         {errSectors && <p className="text-sm text-red-600 mt-1">{errSectors}</p>}
       </div>
 
-      {/* Sub-sector / Agency (dependent on Sector) */}
+      {/* Sub-sector / Agency */}
       <div>
         <label className="block text-gray-700 mb-1">Agency</label>
         <select
@@ -161,11 +272,7 @@ export default function TeamForm({ onSubmit }) {
           disabled={!formData.sector || loadingSubs || !!errSubs}
         >
           <option value="">
-            {!formData.sector
-              ? "Select sector first"
-              : loadingSubs
-              ? "Loading agencies..."
-              : "Select agency"}
+            {!formData.sector ? "Select sector first" : loadingSubs ? "Loading agencies..." : "Select agency"}
           </option>
           {subSectors.map((ss) => (
             <option key={ss._id || ss.id} value={ss._id || ss.id}>
@@ -190,69 +297,18 @@ export default function TeamForm({ onSubmit }) {
         />
       </div>
 
-      {/* Operations Manager */}
-      <div>
-        <label className="block text-gray-700 mb-1">Operations Manager</label>
-        <select multiple value={formData.ops} onChange={(e) => handleMultiSelect(e, "ops")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {ops.map((op) => <option key={op} value={op}>{op}</option>)}
-        </select>
-      </div>
+      {/* Member pickers */}
+      <Bucket field="ops" title="Operations Manager" />
+      <Bucket field="sms" title="Senior Manager" />
+      <Bucket field="pms" title="Product Managers" />
+      <Bucket field="tms" title="Territory Managers" />
+      <Bucket field="ses" title="Senior Executives" />
+      <Bucket field="jes" title="Junior Executives" />
+      <Bucket field="fcs" title="Field Coordinators (FC)" />
+      <Bucket field="mrs" title="Medical Reps (MR)" />
 
-      {/* Senior Manager */}
-      <div>
-        <label className="block text-gray-700 mb-1">Senior Manager</label>
-        <select multiple value={formData.sms} onChange={(e) => handleMultiSelect(e, "sms")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {sms.map((sm) => <option key={sm} value={sm}>{sm}</option>)}
-        </select>
-      </div>
-
-      {/* Project Manager */}
-      <div>
-        <label className="block text-gray-700 mb-1">Project Manager</label>
-        <select multiple value={formData.pms} onChange={(e) => handleMultiSelect(e, "pms")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {pms.map((pm) => <option key={pm} value={pm}>{pm}</option>)}
-        </select>
-      </div>
-
-      {/* Territory Manager */}
-      <div>
-        <label className="block text-gray-700 mb-1">Territory Manager</label>
-        <select multiple value={formData.tms} onChange={(e) => handleMultiSelect(e, "tms")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {tms.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
-        </select>
-      </div>
-
-      {/* Senior Executive */}
-      <div>
-        <label className="block text-gray-700 mb-1">Senior Executive</label>
-        <select multiple value={formData.ses} onChange={(e) => handleMultiSelect(e, "ses")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {ses.map((se) => <option key={se} value={se}>{se}</option>)}
-        </select>
-      </div>
-
-      {/* Junior Executive */}
-      <div>
-        <label className="block text-gray-700 mb-1">Junior Executive</label>
-        <select multiple value={formData.jes} onChange={(e) => handleMultiSelect(e, "jes")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {jes.map((je) => <option key={je} value={je}>{je}</option>)}
-        </select>
-      </div>
-
-      {/* Field Coordinators */}
-      <div>
-        <label className="block text-gray-700 mb-1">Field Coordinators (FC)</label>
-        <select multiple value={formData.fcs} onChange={(e) => handleMultiSelect(e, "fcs")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {fcs.map((fc) => <option key={fc} value={fc}>{fc}</option>)}
-        </select>
-      </div>
-
-      {/* Medical Reps */}
-      <div>
-        <label className="block text-gray-700 mb-1">Medical Reps (MR)</label>
-        <select multiple value={formData.mrs} onChange={(e) => handleMultiSelect(e, "mrs")} className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {mrs.map((mr) => <option key={mr} value={mr}>{mr}</option>)}
-        </select>
-      </div>
+      {/* Users load error */}
+      {errUsers && <p className="text-sm text-red-600">{errUsers}</p>}
 
       <button type="submit" disabled={!canSubmit} className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50">
         Add Team

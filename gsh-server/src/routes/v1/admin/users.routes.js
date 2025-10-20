@@ -7,7 +7,8 @@ const asyncHandler = require("../../../utils/asyncHandler");
 // All below are Admin-only
 router.use(requireAuth, requireRole("ADMIN"));
 
-router.get("/", asyncHandler(ctrl.list));                 // AdminController.list
+router.get("/", asyncHandler(ctrl.list));   
+router.get("/agency/:agencyId", ctrl.listByAgency);              // AdminController.list
 router.post("/", asyncHandler(ctrl.create));              // AdminController.create
 router.get("/:id", asyncHandler(ctrl.getOne));            // AdminController.getOne
 router.patch("/:id/role", asyncHandler(ctrl.updateRole)); // AdminController.updateRole
