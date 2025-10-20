@@ -5,17 +5,22 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { api, setAuthToken } from "../services/api";
+import {
+  api,
+  setAuthTokens,
+  clearAuthTokens,
+  onUnauthorized,
+} from "../services/api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [refreshToken, setRefreshToken] = useState(null);
+  const [accessToken, setAT] = useState(null);
+  const [refreshToken, setRT] = useState(null);
   const [ready, setReady] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from storage
   useEffect(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user") || "null");
@@ -23,13 +28,25 @@ export function AuthProvider({ children }) {
       const rt = localStorage.getItem("refreshToken");
       if (u && at) {
         setUser(u);
-        setAccessToken(at);
-        setRefreshToken(rt || null);
-        setAuthToken(at);
+        setAT(at);
+        setRT(rt);
+        setAuthTokens(at, rt); // seeds api's in-memory
       }
     } finally {
       setReady(true);
     }
+  }, []);
+
+  // Global unauthorized handler (refresh failed)
+  useEffect(() => {
+    onUnauthorized(() => {
+      // logout & send to login
+      clearAuthTokens();
+      setUser(null);
+      setAT(null);
+      setRT(null);
+      window.location.replace("/login");
+    });
   }, []);
 
   const login = async ({ email, password }) => {
@@ -43,28 +60,29 @@ export function AuthProvider({ children }) {
     if (!data.accessToken || !u?.role)
       throw new Error("Malformed signin response");
 
-    // persist + set headers
-    localStorage.setItem("accessToken", data.accessToken);
+    // persist
+    localStorage.setItem("user", JSON.stringify(u));
     if (data.refreshToken)
       localStorage.setItem("refreshToken", data.refreshToken);
-    localStorage.setItem("user", JSON.stringify(u));
-    setAuthToken(data.accessToken);
+    localStorage.setItem("accessToken", data.accessToken);
 
+    setAuthTokens(
+      data.accessToken,
+      data.refreshToken || localStorage.getItem("refreshToken")
+    );
     setUser(u);
-    setAccessToken(data.accessToken);
-    setRefreshToken(data.refreshToken || null);
+    setAT(data.accessToken);
+    setRT(data.refreshToken || null);
 
-    return u; // let caller navigate based on role
+    return u;
   };
 
   const logout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    clearAuthTokens();
     localStorage.removeItem("user");
-    setAuthToken(null);
     setUser(null);
-    setAccessToken(null);
-    setRefreshToken(null);
+    setAT(null);
+    setRT(null);
   };
 
   const value = useMemo(
