@@ -1,7 +1,7 @@
 // src/components/ItineraryForm.js
 import React, { useState, useEffect } from "react";
 import { distributors } from "../data/distributors";
-import { API } from "../services/api";
+import { api } from "../services/api";
 
 export default function ItineraryForm() {
   const [repName, setRepName] = useState("");
@@ -41,7 +41,7 @@ export default function ItineraryForm() {
     e.preventDefault();
     const payload = { repName, distributor, month, itinerary };
     try {
-      await API.post("/itineraries", payload);
+      await api.post("/itineraries", payload);
       alert("Itinerary saved!");
     } catch {
       alert("Save failed");
@@ -121,10 +121,7 @@ export default function ItineraryForm() {
             </thead>
             <tbody>
               {itinerary.map((row, i) => (
-                <tr
-                  key={i}
-                  className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                >
+                <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   <td className="px-2 py-1 border">
                     <input
                       type="date"
