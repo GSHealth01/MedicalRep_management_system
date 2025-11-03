@@ -51,13 +51,9 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password }) => {
     const res = await api.post("/auth/signin", { email, password });
-    const data = res?.data?.data || res?.data || {};
-    const u = data.user || {
-      id: data.userId,
-      email: data.email || email,
-      role: data.role,
-    };
-    if (!data.accessToken || !u?.role)
+    const data = res?.data || {};
+    const u = data.user;
+    if (!data.accessToken || !u?.designation)
       throw new Error("Malformed signin response");
 
     // persist
@@ -68,11 +64,11 @@ export function AuthProvider({ children }) {
 
     setAuthTokens(
       data.accessToken,
-      data.refreshToken || localStorage.getItem("refreshToken")
+      data.refreshToken
     );
     setUser(u);
     setAT(data.accessToken);
-    setRT(data.refreshToken || null);
+    setRT(data.refreshToken);
 
     return u;
   };

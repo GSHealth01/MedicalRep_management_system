@@ -11,6 +11,7 @@ router.get("/", asyncHandler(ctrl.list));                 // list + filters + pa
 router.post("/", asyncHandler(ctrl.create));              // create
 router.get("/:id", asyncHandler(ctrl.getOne));            // view
 router.patch("/:id", asyncHandler(ctrl.update));          // edit details
+router.put("/:id", asyncHandler(ctrl.updatePut));         // edit details (PUT alias)
 router.patch("/:id/status", asyncHandler(ctrl.updateStatus)); // activate/deactivate
 router.delete("/:id", asyncHandler(ctrl.remove));         // remove (hard delete)
 

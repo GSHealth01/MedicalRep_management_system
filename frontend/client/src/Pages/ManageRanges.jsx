@@ -3,55 +3,46 @@ import { api } from "../services/api"; // baseURL should be http://localhost:400
 
 export default function ManageSectors() {
   const [sectors, setSectors] = useState([]);
-  const [subsBySector, setSubsBySector] = useState({}); // { [sectorId]: SubSector[] }
   const [newSector, setNewSector] = useState("");
   const [newAgency, setNewAgency] = useState("");
   const [selectedSector, setSelectedSector] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [agencies, setAgencies] = useState([]);
 
-  // Helpers
-  const normalizeItems = (res) => {
-    const payload = res?.data?.data ?? res?.data ?? {};
-    return Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
-  };
-
-  const makeCodeFromName = (name) =>
-    (name || "")
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 16) || `SEC-${Date.now().toString(36).toUpperCase()}`;
-
-  // Load sectors on mount
+  // Load sectors and agencies on mount
   useEffect(() => {
     (async () => {
       setLoading(true);
       setErr("");
       try {
-        const res = await api.get("/admin/sectors", { params: { isActive: true, limit: 200 } });
-        setSectors(normalizeItems(res));
+        // Load ranges (sectors) from new API
+        const rangesRes = await api.get("/ranges");
+        setSectors(rangesRes.data.ranges || []);
+
+        // Load agencies for dropdown
+        const agenciesRes = await api.get("/agencies");
+        setAgencies(agenciesRes.data.agencies || []);
       } catch (e) {
-        setErr(e?.response?.data?.message || "Failed to load sectors");
+        setErr(e?.response?.data?.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // Add a new sector (POST /admin/sectors)
+  // Add a new sector (POST /ranges)
   const addSector = async () => {
     if (!newSector.trim()) return;
     try {
-      const body = { name: newSector.trim(), code: makeCodeFromName(newSector) };
-      const res = await api.post("/admin/sectors", body);
-      const created = res?.data?.data || {};
+      const body = { name: newSector.trim() };
+      const res = await api.post("/ranges", body);
+      const created = res?.data?.range || {};
       const row = {
-        _id: created.id || created._id,
-        name: created.name || body.name,
-        code: created.code || body.code,
-        isActive: created.isActive ?? true,
+        id: created.id,
+        name: created.name,
+        agency: created.agency,
+        _count: created._count || { users: 0, teams: 0 }
       };
       setSectors((s) => [...s, row]);
       setNewSector("");
@@ -60,38 +51,18 @@ export default function ManageSectors() {
     }
   };
 
-  // Lazy-load agencies (sub-sectors) for a sector
-  const loadAgencies = async (sectorId) => {
-    if (subsBySector[sectorId]) return; // already loaded
-    try {
-      const res = await api.get(`/admin/subsectors/sector/${sectorId}`);
-      const items = normalizeItems(res);
-      setSubsBySector((m) => ({ ...m, [sectorId]: items }));
-    } catch {
-      setSubsBySector((m) => ({ ...m, [sectorId]: [] }));
-    }
-  };
-
-  // Add an agency (POST /admin/subsectors/sector/:sectorId)
+  // Add an agency (POST /agencies)
   const addAgency = async (sector) => {
-    if (!newAgency.trim() || !sector?._id) return;
+    if (!newAgency.trim()) return;
     try {
-      const sectorCode = sector.code || makeCodeFromName(sector.name);
-      const code = `${sectorCode}-${makeCodeFromName(newAgency)}`.slice(0, 24);
-      const body = { name: newAgency.trim(), code };
-      const res = await api.post(`/admin/subsectors/sector/${sector._id}`, body);
-      const created = res?.data?.data || {};
+      const body = { name: newAgency.trim() };
+      const res = await api.post("/agencies", body);
+      const created = res?.data?.agency || {};
       const row = {
-        _id: created.id || created._id,
-        name: created.name || body.name,
-        code: created.code || body.code,
-        sector: sector._id,
-        isActive: created.isActive ?? true,
+        id: created.id,
+        name: created.name
       };
-      setSubsBySector((m) => {
-        const list = m[sector._id] || [];
-        return { ...m, [sector._id]: [...list, row] };
-      });
+      setAgencies((a) => [...a, row]);
       setNewAgency("");
       setSelectedSector(null);
     } catch (e) {
@@ -100,12 +71,12 @@ export default function ManageSectors() {
   };
 
   const agenciesText = (sectorId) =>
-    (subsBySector[sectorId] || []).map((s) => s.name || s.code).join(", ") || "None";
+    agencies.map((a) => a.name).join(", ") || "None";
 
   // UI
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Manage Sectors</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Manage Ranges (Sectors)</h1>
 
       {/* Add Sector */}
       <div className="mb-6 flex gap-2">
@@ -132,28 +103,27 @@ export default function ManageSectors() {
           <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
             <thead className="bg-blue-600 text-white">
               <tr>
-                <th className="py-2 px-4 text-left">Sector</th>
+                <th className="py-2 px-4 text-left">Range</th>
                 <th className="py-2 px-4 text-left">Agencies</th>
                 <th className="py-2 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sectors.map((sector) => (
-                <tr key={sector._id || sector.id} className="border-b hover:bg-gray-50">
+                <tr key={sector.id} className="border-b hover:bg-gray-50">
                   <td className="py-2 px-4">
                     <div className="font-medium">{sector.name}</div>
-                    <div className="text-xs text-gray-500">Code: {sector.code}</div>
+                    <div className="text-xs text-gray-500">
+                      Agency: {sector.agency?.name || 'N/A'} | Users: {sector._count?.users || 0} | Teams: {sector._count?.teams || 0}
+                    </div>
                   </td>
 
                   <td className="py-2 px-4">
-                    {/* if we haven't loaded agencies yet, trigger load when row becomes selected */}
-                    {selectedSector === (sector._id || sector.id) && !subsBySector[sector._id || sector.id]
-                      ? "Loading agencies…"
-                      : agenciesText(sector._id || sector.id)}
+                    {agenciesText(sector.id)}
                   </td>
 
                   <td className="py-2 px-4 text-center">
-                    {selectedSector === (sector._id || sector.id) ? (
+                    {selectedSector === sector.id ? (
                       <div className="flex gap-2 justify-center">
                         <input
                           type="text"
@@ -177,10 +147,8 @@ export default function ManageSectors() {
                       </div>
                     ) : (
                       <button
-                        onClick={async () => {
-                          const id = sector._id || sector.id;
-                          setSelectedSector(id);
-                          await loadAgencies(id);
+                        onClick={() => {
+                          setSelectedSector(sector.id);
                         }}
                         className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
                       >

@@ -1,0 +1,206 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------
+// Main Entities
+// ------------------
+
+// Top-level organization
+model agency {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  // 1:M -> 'agency has many ranges'
+  ranges       range[]
+  // 1:M -> 'agency has many users'
+  users        user[]
+  // 1:M -> 'agency has many distributors'
+  distributors distributor[]
+}
+
+// Replaces 'sector'. Belongs to one agency.
+model range {
+  id        Int     @id @default(autoincrement())
+  name      String?
+  // 1:M -> 'agency has many ranges'
+  agency_id Int
+  agency    agency  @relation(fields: [agency_id], references: [id])
+  // 1:M -> 'in one range has many users'
+  users     user[]
+  // 1:M -> 'team has one range'
+  teams     team[]
+  // 1:M -> 'range has many doctors'
+  doctors   doctor[]
+}
+
+// Team model with new fields
+model team {
+  id                 Int      @id @default(autoincrement())
+  team_name          String?
+  // Text fields for roles, as these are likely names
+  operations_manager String?
+  senior_manager     String?
+  territory_managers String?
+  senior_executives  String?
+  junior_executives  String?
+  field_coordinators String?
+  // 1:M -> 'team has one range'
+  range_id           Int
+  range              range    @relation(fields: [range_id], references: [id])
+  // 1:M -> 'one team has many users' (this will hold the MRs)
+  users              user[]
+  // M:N -> 'team has many products'
+  products           TeamProducts[]
+}
+
+model area {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  // 1:1 -> 'distributor has one area'
+  distributor distributor?
+  // M:N -> 'user works in many areas'
+  users       UserWorkAreas[]
+}
+
+// Distributor model with new fields
+model distributor {
+  id            Int       @id @default(autoincrement())
+  name          String?   @map("distributor_name") // "Distributor Name"
+  coverage_town String?   // "Coverage (Town)"
+  route         String?   // "Route"
+  // 1:M -> 'distributor belongs to one agency'
+  agency_id     Int
+  agency        agency    @relation(fields: [agency_id], references: [id])
+  // 1:1 -> 'distributor has one area'
+  area_id       Int       @unique
+  area          area      @relation(fields: [area_id], references: [id])
+  // 1:1 -> 'one user has one distributor'
+  user          user?
+  // M:N -> 'distributor has many products'
+  products      DistributorProducts[]
+}
+
+// Central 'user' model, replacing rep, manager, and auth user
+model user {
+id             Int       @id @default(autoincrement())
+email          String    @unique // Username (Email)
+password       String    // Password - Stored as a hash
+name           String?
+emp_no         String    @unique // Employee No
+designation    String?   // Designation: "Medical Rep", "Field Coordinator", "Junior Executive", "Senior Executive", "Territory Manager", "Product Manager", "Admin"
+join_date      DateTime? // Join Date
+birthday       DateTime? // Birthday
+// 1:M -> 'user has one agency'
+agency_id      Int?
+agency         agency?   @relation(fields: [agency_id], references: [id])
+// 1:M -> 'user has one range'
+range_id       Int?
+range          range?    @relation(fields: [range_id], references: [id])
+// 1:M -> 'user has one team'
+team_id        Int?
+team           team?     @relation(fields: [team_id], references: [id])
+// 1:1 -> 'one user has one distributor'
+distributor_id Int?      @unique
+distributor    distributor? @relation(fields: [distributor_id], references: [id])
+// M:N -> 'user works in many areas'
+work_areas     UserWorkAreas[]
+// M:N -> 'user has many doctors'
+doctors        UserDoctors[]
+}
+
+model doctor {
+  id            Int                   @id @default(autoincrement())
+  name          String
+  contactNumber String?
+  email         String?
+  specialty     String?
+  categorization String?
+  dateAdded     DateTime?             @default(now())
+  range_id      Int?
+  range         range?                @relation(fields: [range_id], references: [id])
+  // M:N -> 'doctor has many users'
+  users         UserDoctors[]
+  // M:N -> 'doctor prescribes many products'
+  prescriptions DoctorPrescriptions[]
+}
+
+// Product model with new fields
+model product {
+  id                      Int                   @id @default(autoincrement())
+  name                    String
+  therapeutic_category    String?
+  generic_name            String?
+  route_of_administration String?
+  pack_size               String?
+  strength                String?
+  // M:N -> 'product has many distributors'
+  distributors            DistributorProducts[]
+  // M:N -> 'product prescribed by many doctors'
+  doctors                 DoctorPrescriptions[]
+  // M:N -> 'product managed by many teams'
+  teams                   TeamProducts[]
+}
+
+
+// ------------------
+// Junction Tables (for Many-to-Many relationships)
+// ------------------
+
+// M:N Table for user and area
+model UserWorkAreas {
+  user    user   @relation(fields: [user_id], references: [id])
+  user_id Int
+  area    area   @relation(fields: [area_id], references: [id])
+  area_id Int
+
+  @@id([user_id, area_id]) // Composite primary key
+}
+
+// M:N Table for user and doctor
+model UserDoctors {
+  user      user   @relation(fields: [user_id], references: [id])
+  user_id   Int
+  doctor    doctor @relation(fields: [doctor_id], references: [id])
+  doctor_id Int
+
+  @@id([user_id, doctor_id])
+}
+
+// M:N Table for distributor and product
+model DistributorProducts {
+  distributor    distributor @relation(fields: [distributor_id], references: [id])
+  distributor_id Int
+  product        product     @relation(fields: [product_id], references: [id])
+  product_id     Int
+
+  @@id([distributor_id, product_id])
+}
+
+// M:N Table for doctor and product
+model DoctorPrescriptions {
+  doctor     doctor  @relation(fields: [doctor_id], references: [id])
+  doctor_id  Int
+  product    product @relation(fields: [product_id], references: [id])
+  product_id Int
+
+  @@id([doctor_id, product_id])
+}
+
+// M:N Table for team and product
+model TeamProducts {
+  team       team    @relation(fields: [team_id], references: [id])
+  team_id    Int
+  product    product @relation(fields: [product_id], references: [id])
+  product_id Int
+
+  @@id([team_id, product_id])
+}
+

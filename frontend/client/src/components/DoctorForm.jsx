@@ -12,23 +12,24 @@ export default function DoctorForm({ onSubmit }) {
     date: "",
   });
 
+
   const [sectors, setSectors] = useState([]);
   const [loadingSectors, setLoadingSectors] = useState(true);
   const [sectorError, setSectorError] = useState("");
 
-  // Load sectors from DB
+  // Load ranges (sectors) from DB
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoadingSectors(true);
       setSectorError("");
       try {
-        const res = await api.get("/admin/sectors", { params: { isActive: true, limit: 200 } });
-        const payload = res?.data?.data ?? res?.data ?? {};
-        const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+        const res = await api.get("/ranges", { params: { limit: 200 } });
+        const payload = res?.data?.ranges ?? res?.data ?? {};
+        const items = Array.isArray(payload) ? payload : [];
         if (mounted) setSectors(items);
       } catch (err) {
-        if (mounted) setSectorError(err?.response?.data?.message || "Failed to load sectors");
+        if (mounted) setSectorError(err?.response?.data?.message || "Failed to load ranges");
       } finally {
         if (mounted) setLoadingSectors(false);
       }
@@ -44,8 +45,8 @@ export default function DoctorForm({ onSubmit }) {
   const canSubmit = useMemo(() => {
     return (
       !!formData.sector &&
-      !!formData.doctorName &&
-      !!formData.contactNumber &&
+      !!formData.doctorName.trim() &&
+      !!formData.contactNumber.trim() &&
       // email optional in your BE, but keep if you want:
       (!!formData.email ? /\S+@\S+\.\S+/.test(formData.email) : true) &&
       !!formData.date
@@ -58,7 +59,7 @@ export default function DoctorForm({ onSubmit }) {
 
     // Normalize for BE
     const payload = {
-      sector: formData.sector,                 // required by BE
+      range_id: formData.sector,               // required by BE
       name: formData.doctorName,              // BE expects "name"
       contactNumber: formData.contactNumber,
       email: formData.email || undefined,
@@ -87,9 +88,9 @@ export default function DoctorForm({ onSubmit }) {
       onSubmit={handleSubmit}
       className="max-w-2xl bg-white shadow-lg rounded-lg p-6 space-y-4"
     >
-      {/* Sector */}
+      {/* Range (Sector) */}
       <div>
-        <label className="block text-gray-700 mb-1">Sector</label>
+        <label className="block text-gray-700 mb-1">Range (Sector)</label>
         <select
           name="sector"
           value={formData.sector}
@@ -98,10 +99,10 @@ export default function DoctorForm({ onSubmit }) {
           required
           disabled={loadingSectors || !!sectorError}
         >
-          <option value="">{loadingSectors ? "Loading sectors..." : "Select sector"}</option>
+          <option value="">{loadingSectors ? "Loading ranges..." : "Select range"}</option>
           {sectors.map((s) => (
-            <option key={s._id || s.id} value={s._id || s.id}>
-              {s.name} {s.code ? `(${s.code})` : ""}
+            <option key={s.id} value={s.id}>
+              {s.name} {s.agency ? `(Agency: ${s.agency.name})` : ""}
             </option>
           ))}
         </select>

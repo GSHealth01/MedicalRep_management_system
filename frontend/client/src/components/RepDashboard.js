@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   FaPhone,
   FaBoxOpen,
@@ -7,7 +9,8 @@ import {
   FaSearch,
   FaBell,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaSignOutAlt
 } from 'react-icons/fa';
 import {
   BarChart,
@@ -21,7 +24,15 @@ import {
 import './RepDashboard.css';
 
 export default function RepDashboard() {
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('Overview');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
 
   const kpis = [
     { title: 'Total Calls',       value: 540, icon: <FaPhone /> },
@@ -58,14 +69,24 @@ export default function RepDashboard() {
           {sidebarOpen ? <FaTimes/> : <FaBars/>}
         </button>
         <h2 className="logo">GSH Health</h2>
-        <nav>
+        <nav className="sidebar-nav">
           <ul>
-            <li className="active">Overview</li>
-            <li>Itinerary</li>
-            <li>Reports</li>
-            <li>Settings</li>
+            <li className={activeTab === 'Overview' ? 'active' : ''} onClick={() => setActiveTab('Overview')}>Overview</li>
+            <li className={activeTab === 'Itinerary' ? 'active' : ''} onClick={() => navigate('/itineraryForm')}>Itinerary</li>
+            <li className={activeTab === 'Reports' ? 'active' : ''} onClick={() => navigate('/DCR_report')}>Reports</li>
+            <li className={activeTab === 'Settings' ? 'active' : ''} onClick={() => setActiveTab('Settings')}>Settings</li>
           </ul>
         </nav>
+        <div className="sidebar-footer">
+          <button
+            className="logout-btn-sidebar"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <FaSignOutAlt />
+            <span>Logout</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
@@ -78,6 +99,9 @@ export default function RepDashboard() {
           </div>
           <div className="actions">
             <FaBell className="icon" />
+            <span className="user-info">
+              Welcome, {user?.name || 'User'}
+            </span>
             <img
               className="avatar"
               src="https://i.pravatar.cc/40?img=3"

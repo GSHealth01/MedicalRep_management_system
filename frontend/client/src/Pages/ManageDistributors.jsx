@@ -79,11 +79,11 @@ export default function ManageDistributors() {
             <thead className="bg-blue-600 text-white">
               <tr>
                 <th className="py-2 px-4 text-center">Distributor Name</th>
-                <th className="py-2 px-4 text-center">Sector</th>
+                <th className="py-2 px-4 text-center">Agency</th>
                 <th className="py-2 px-4 text-center">Area</th>
                 <th className="py-2 px-4 text-center">Town</th>
                 <th className="py-2 px-4 text-center">Route</th>
-                <th className="py-2 px-4 text-center">Date</th>
+                <th className="py-2 px-4 text-center">Date Added</th>
               </tr>
             </thead>
             <tbody>
@@ -104,9 +104,8 @@ export default function ManageDistributors() {
                       : dist.sector || "";
 
                   // Normalize date display
-                  const dt = dist.dateAdded || dist.date;
-                  const displayDate = dt
-                    ? new Date(dt).toISOString().slice(0, 10)
+                  const displayDate = dist.date
+                    ? new Date(dist.date).toISOString().slice(0, 10)
                     : "";
 
                   return (

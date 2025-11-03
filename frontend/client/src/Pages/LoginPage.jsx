@@ -22,19 +22,18 @@ export default function LoginPage() {
       setError('Please enter email and password.');
       return;
     }
-
     setLoading(true);
     try {
       // login() comes from AuthContext; it calls POST /auth/signin and stores tokens/user
       const user = await login({ email, password });
 
       // If ADMIN → admin portal
-      const role = String(user?.role || '').toUpperCase();
-      if (role === 'ADMIN') {
+      const designation = String(user?.designation || '').toUpperCase();
+      if (designation === 'ADMIN') {
         navigate('/admin/portal', { replace: true });
       } else {
-        // adjust non-admin landing if you have dashboards for other roles
-        navigate('/', { replace: true });
+        // Regular users → rep dashboard
+        navigate('/rep-dashboard', { replace: true });
       }
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Login failed.';

@@ -5,7 +5,7 @@ export default function ProtectedAdmin({ children }) {
   const { ready, user, accessToken } = useAuth();
 
   if (!ready) return null; // or a small spinner
-  const isAdmin = user && String(user.role).toUpperCase() === "ADMIN";
+  const isAdmin = user && String(user.designation).toUpperCase() === "ADMIN";
 
   if (!accessToken || !isAdmin) {
     return <Navigate to="/" replace />;

@@ -11,6 +11,7 @@ router.get("/",        asyncHandler(ctrl.list));         // list/filter/paginate
 router.post("/",       asyncHandler(ctrl.create));       // create
 router.get("/:id",     asyncHandler(ctrl.getOne));       // view
 router.patch("/:id",   asyncHandler(ctrl.update));       // update details
+router.put("/:id",     asyncHandler(ctrl.updatePut));    // update details (PUT alias)
 router.patch("/:id/status", asyncHandler(ctrl.updateStatus)); // activate/deactivate
 router.delete("/:id",  asyncHandler(ctrl.remove));       // remove
 

@@ -7,7 +7,12 @@ export default function AdminLayout() {
 
   const navLinks = [
     { name: "Admin Portal", path: "/admin/portal" },
-    { name: "Profile", path: "/admin/profile" },
+    { name: "Sectors", path: "/admin/sectors" },
+    { name: "Employees", path: "/admin/employees" },
+    { name: "Products", path: "/admin/products" },
+    { name: "Doctors", path: "/admin/doctors" },
+    { name: "Distributors", path: "/admin/distributors" },
+    { name: "Teams", path: "/admin/teams" },
   ];
 
   const handleLogout = () => {

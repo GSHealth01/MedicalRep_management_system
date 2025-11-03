@@ -67,12 +67,12 @@ export default function ManageDoctors() {
             <thead className="bg-blue-600 text-white">
               <tr>
                 <th className="py-2 px-4 text-center">Name</th>
-                <th className="py-2 px-4 text-center">Sector</th>
+                <th className="py-2 px-4 text-center">Range (Sector)</th>
                 <th className="py-2 px-4 text-center">Contact</th>
                 <th className="py-2 px-4 text-center">Email</th>
                 <th className="py-2 px-4 text-center">Speciality</th>
                 <th className="py-2 px-4 text-center">Categorization</th>
-                <th className="py-2 px-4 text-center">Date</th>
+                <th className="py-2 px-4 text-center">Date Added</th>
               </tr>
             </thead>
             <tbody>
@@ -88,9 +88,9 @@ export default function ManageDoctors() {
                     typeof doc.sector === "object"
                       ? (doc.sector?.name || doc.sector?.code || doc.sector?._id || "")
                       : doc.sector || "";
-                  const displayDate = doc.dateAdded
-                    ? new Date(doc.dateAdded).toISOString().slice(0, 10)
-                    : (doc.date ? new Date(doc.date).toISOString().slice(0, 10) : "");
+                  const displayDate = doc.date
+                    ? new Date(doc.date).toISOString().slice(0, 10)
+                    : "";
 
                   return (
                     <tr key={doc._id || doc.id} className="border-b hover:bg-gray-50">

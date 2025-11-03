@@ -13,6 +13,7 @@ router.post("/", asyncHandler(ctrl.create));              // AdminController.cre
 router.get("/:id", asyncHandler(ctrl.getOne));            // AdminController.getOne
 router.patch("/:id/role", asyncHandler(ctrl.updateRole)); // AdminController.updateRole
 router.patch("/:id", asyncHandler(ctrl.updateProfile));   // AdminController.updateProfile
+router.put("/:id", asyncHandler(ctrl.updateProfile));     // AdminController.updateProfile (PUT alias)
 router.delete("/:id", asyncHandler(ctrl.remove));         // AdminController.remove
 
 module.exports = router;

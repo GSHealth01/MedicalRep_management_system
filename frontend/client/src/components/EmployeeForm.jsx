@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../services/api"; // baseURL -> http://localhost:4000/api/v1
 
 export default function EmployeeForm({ onSubmit }) {
   const [formData, setFormData] = useState({
@@ -16,12 +15,27 @@ export default function EmployeeForm({ onSubmit }) {
     date: "",
   });
 
-  const [sectors, setSectors] = useState([]);
-  const [agencies, setAgencies] = useState([]);
-  const [loadingSectors, setLoadingSectors] = useState(true);
-  const [loadingAgencies, setLoadingAgencies] = useState(false);
-  const [errSectors, setErrSectors] = useState("");
-  const [errAgencies, setErrAgencies] = useState("");
+  // Hardcoded ranges and agencies
+  const ranges = useMemo(() => [
+    { id: 'A', name: 'A' },
+    { id: 'B', name: 'B' }
+  ], []);
+
+  const agencies = useMemo(() => [
+    { id: 'A1', name: 'A1', range: 'A' },
+    { id: 'A2', name: 'A2', range: 'A' },
+    { id: 'A3', name: 'A3', range: 'A' },
+    { id: 'A4', name: 'A4', range: 'A' },
+    { id: 'B1', name: 'B1', range: 'B' },
+    { id: 'B2', name: 'B2', range: 'B' },
+    { id: 'B3', name: 'B3', range: 'B' },
+    { id: 'B4', name: 'B4', range: 'B' },
+    { id: 'B5', name: 'B5', range: 'B' },
+    { id: 'B6', name: 'B6', range: 'B' },
+    { id: 'B7', name: 'B7', range: 'B' }
+  ], []);
+
+  const [filteredAgencies, setFilteredAgencies] = useState([]);
 
   // normalize payload shape in a way BE expects
   const canSubmit = useMemo(() => {
@@ -38,51 +52,24 @@ export default function EmployeeForm({ onSubmit }) {
     );
   }, [formData]);
 
-  // helpers
-  const normalizeItems = (res) => {
-    const payload = res?.data?.data ?? res?.data ?? {};
-    return Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
-  };
+  // helpers - kept for potential future use
+  // const normalizeItems = (res) => {
+  //   const payload = res?.data?.data ?? res?.data ?? {};
+  //   return Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+  // };
 
-  // load sectors on mount
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoadingSectors(true);
-      setErrSectors("");
-      try {
-        const res = await api.get("/admin/sectors", { params: { isActive: true, limit: 200 } });
-        const items = normalizeItems(res);
-        if (mounted) setSectors(items);
-      } catch (e) {
-        if (mounted) setErrSectors(e?.response?.data?.message || "Failed to load ranges (sectors)");
-      } finally {
-        if (mounted) setLoadingSectors(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  // Memoize agencies to avoid re-creating on every render
+  const memoizedAgencies = agencies;
 
-  // when range (sector) changes, load its agencies (sub-sectors)
+  // when range changes, filter agencies based on the selected range
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setAgencies([]);
-      setErrAgencies("");
-      if (!formData.range) return;
-      setLoadingAgencies(true);
-      try {
-        const res = await api.get(`/admin/subsectors/sector/${formData.range}`);
-        const items = normalizeItems(res);
-        if (mounted) setAgencies(items);
-      } catch (e) {
-        if (mounted) setErrAgencies(e?.response?.data?.message || "Failed to load agencies");
-      } finally {
-        if (mounted) setLoadingAgencies(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, [formData.range]);
+    if (!formData.range) {
+      setFilteredAgencies([]);
+      return;
+    }
+    const filtered = memoizedAgencies.filter(agency => agency.range === formData.range);
+    setFilteredAgencies(filtered);
+  }, [formData.range, memoizedAgencies]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -125,7 +112,21 @@ export default function EmployeeForm({ onSubmit }) {
       dateAdded: formData.date || undefined,
     };
 
-    onSubmit && onSubmit(payload, formData);
+    // For Prisma backend, we need to send the data to the correct endpoint
+    // The admin/users endpoint expects different field names
+    const prismaPayload = {
+      name: payload.name,
+      email: payload.email,
+      password: payload.password,
+      role: payload.role,
+      empNo: payload.empNo,
+      designation: payload.designation,
+      agency: payload.agency,
+      range: payload.range,
+      distributor: payload.distributor
+    };
+
+    onSubmit && onSubmit(prismaPayload, formData);
 
     // reset
     setFormData({
@@ -259,18 +260,14 @@ export default function EmployeeForm({ onSubmit }) {
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           required={formData.designation !== "ADMIN"}
-          disabled={loadingSectors || !!errSectors}
         >
-          <option value="">
-            {loadingSectors ? "Loading ranges..." : "Select range"}
-          </option>
-          {sectors.map((s) => (
-            <option key={s._id || s.id} value={s._id || s.id}>
-              {s.name} {s.code ? `(${s.code})` : ""}
+          <option value="">Select range</option>
+          {ranges.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
             </option>
           ))}
         </select>
-        {errSectors && <p className="text-xs text-red-600 mt-1">{errSectors}</p>}
       </div>
 
       {/* Agency (Sub-sector) */}
@@ -282,22 +279,19 @@ export default function EmployeeForm({ onSubmit }) {
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           required={formData.designation !== "ADMIN"}
-          disabled={!formData.range || loadingAgencies || !!errAgencies}
+          disabled={!formData.range}
         >
           <option value="">
             {!formData.range
               ? "Select range first"
-              : loadingAgencies
-              ? "Loading agencies..."
               : "Select agency"}
           </option>
-          {agencies.map((a) => (
-            <option key={a._id || a.id} value={a._id || a.id}>
-              {a.name} {a.code ? `(${a.code})` : ""}
+          {filteredAgencies.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
             </option>
           ))}
         </select>
-        {errAgencies && <p className="text-xs text-red-600 mt-1">{errAgencies}</p>}
       </div>
 
       {/* Distributor */}

@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 
 const adminCards = [
   {
-    title: "Sectors",
-    description: "Manage sectors such as Arrowil-A and Arrowil-B with their agencies.",
-    button: "Manage Sectors",
+    title: "Agencies",
+    description: "Manage agencies such as Arrowil-A and Arrowil-B with their sectors.",
+    button: "Manage Agencies",
     path: "/admin/sectors",
     icon: "🏢",
   },
@@ -16,13 +16,7 @@ const adminCards = [
     path: "/admin/employees",
     icon: "👤",
   },
-  {
-    title: "Roles & Permissions",
-    description: "Assign user roles and control system permissions.",
-    button: "Manage Roles",
-    path: "/admin/roles",
-    icon: "🔑",
-  },
+ 
   {
     title: "Products",
     description: "Add or edit medical products with codes and pricing.",

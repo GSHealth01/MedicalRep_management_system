@@ -1,10 +1,9 @@
-require("dotenv").config();
-
 const config = {
-  PORT: process.env.PORT || 4000,
-  MONGO_URI: process.env.MONGO_URI || "mongodb://localhost:27017/yourdb",
-  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || "dev-access",
-  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || "dev-refresh",
+  DATABASE_URL: "postgresql://postgres:admin1@localhost:5432/med_rep_db?schema=public",
+  PORT: process.env.PORT || 5000,
+  JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret_here",
+  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || "your_jwt_access_secret_here",
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || "your_jwt_refresh_secret_here",
   ACCESS_TTL: process.env.ACCESS_TTL || "15m",
   REFRESH_TTL: process.env.REFRESH_TTL || "7d"
 };

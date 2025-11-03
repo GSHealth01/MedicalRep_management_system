@@ -1,23 +1,72 @@
 const bcrypt = require("bcryptjs");
-const User = require("../models/User");
+const { prisma } = require("../../lib/prisma");
 
 async function ensureAdmin() {
-  const hasAdmin = await User.exists({ role: "ADMIN" });
+  const hasAdmin = await prisma.user.findFirst({
+    where: { designation: "ADMIN" }
+  });
+
   if (hasAdmin) {
     console.log("Admin already present. Skipping admin seed.");
     return;
   }
 
   const name = process.env.ADMIN_NAME || "System Admin";
-  const email = process.env.ADMIN_EMAIL || "admin@example.com";
+  const email = process.env.ADMIN_EMAIL || "admin@gsh.com";
   const password = process.env.ADMIN_PASSWORD || "ChangeMe#123";
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const admin = await User.create({
-    name,
-    email,
-    passwordHash,
-    role: "ADMIN"
+
+  // First create an agency if it doesn't exist
+  let agency = await prisma.agency.findFirst({
+    where: { name: "Default Agency" }
+  });
+
+  if (!agency) {
+    agency = await prisma.agency.create({
+      data: { name: "Default Agency" }
+    });
+  }
+
+  // Create a range if it doesn't exist
+  let range = await prisma.range.findFirst({
+    where: { name: "Default Range", agency_id: agency.id }
+  });
+
+  if (!range) {
+    range = await prisma.range.create({
+      data: {
+        name: "Default Range",
+        agency_id: agency.id
+      }
+    });
+  }
+
+  // Create a team if it doesn't exist
+  let team = await prisma.team.findFirst({
+    where: { team_name: "Admin Team", range_id: range.id }
+  });
+
+  if (!team) {
+    team = await prisma.team.create({
+      data: {
+        team_name: "Admin Team",
+        range_id: range.id
+      }
+    });
+  }
+
+  const admin = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: passwordHash,
+      emp_no: "ADMIN001",
+      designation: "ADMIN",
+      agency_id: agency.id,
+      range_id: range.id,
+      team_id: team.id
+    }
   });
 
   console.log(`Admin seeded → ${admin.email}`);

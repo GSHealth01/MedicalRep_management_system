@@ -28,13 +28,13 @@ import ProtectedAdmin from './components/ProtectedRoute';
 //Admin import
 import AdminLayout        from './layouts/AdminLayout';
 import AdminPortal        from './Pages/AdminPortal';
-import ManageSectors      from './Pages/ManageSections';
-import ManageEmployees    from './Pages/ManageEmployees';  
+import ManageSectors      from './Pages/Ranges';
+import ManageEmployees    from './Pages/ManageEmployees';
 import ManageProducts     from './Pages/ManageProduct';
 import ManageDistributors from "./Pages/ManageDistributors";
 import ManageDoctors      from "./Pages/ManageDoctors";
 import ManageTeams        from "./Pages/ManageTeams";
-import ManageRoles        from "./Pages/ManageRole";
+// Removed ManageRoles import
 
 export default function App() {
   return (
@@ -69,7 +69,7 @@ export default function App() {
           <Route path="doctors" element={<ManageDoctors />} />
           <Route path="distributors" element={<ManageDistributors />} />
           <Route path="teams" element={<ManageTeams />} />
-          <Route path="roles" element={<ManageRoles />} />
+          {/* Removed roles route */}
         </Route>
 
         {/* Fallback */}

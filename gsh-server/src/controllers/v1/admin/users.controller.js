@@ -1,8 +1,5 @@
+const { prisma } = require('../../../../lib/prisma');
 const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose");
-const User = require("../../../models/User");
-const Sector = require("../../../models/Sector");       // "range"
-const SubSector = require("../../../models/SubSector"); // "agency"
 const ApiResponse = require("../../../utils/ApiResponse");
 const AppError = require("../../../utils/AppError");
 
@@ -10,93 +7,100 @@ function normEmail(v) {
   return (v || "").trim().toLowerCase();
 }
 
-async function assertSubSectorBelongsToSector(agencyId, rangeId) {
-  if (!mongoose.isValidObjectId(agencyId) || !mongoose.isValidObjectId(rangeId)) {
-    throw new AppError(400, "Invalid sector/agency id");
-  }
-  const sub = await SubSector.findOne({ _id: agencyId, sector: rangeId }).select("_id sector");
-  if (!sub) throw new AppError(400, "Agency does not belong to the given range");
-}
-
 exports.list = async (req, res) => {
-  const { agency, range, role, q } = req.query;
+  try {
+    const users = await prisma.user.findMany({
+      include: {
+        range: { select: { id: true, name: true } },
+        agency: { select: { id: true, name: true } }
+      },
+      orderBy: { id: 'desc' }
+    });
 
-  const filter = {};
-  if (agency) filter.agency = agency;
-  if (range) filter.range = range;
-  if (role) filter.role = String(role).toUpperCase();
-  if (q) {
-    filter.$or = [
-      { email: new RegExp(q, "i") },
-      { name: new RegExp(q, "i") },
-      { empNo: new RegExp(q, "i") },
-      { designation: new RegExp(q, "i") },
-    ];
+    return ApiResponse.ok(res, "Users fetched", users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return ApiResponse.error(res, "Failed to fetch users");
   }
-
-  const users = await User.find(filter)
-    .select("_id name email role empNo designation agency range distributor createdAt isActive")
-    .populate("range", "name code")
-    .populate("agency", "name code")
-    .sort({ createdAt: -1 });
-
-  return ApiResponse.ok(res, "Users fetched", users);
 };
 
 exports.create = async (req, res) => {
-  const {
-    name,
-    email,
-    password,
-    role,
-    empNo,
-    designation,
-    agency,      // sub-sector (required for non-ADMIN)
-    range,       // sector     (required for non-ADMIN)
-    distributor
-  } = req.body;
+  try {
+    const {
+      name,
+      email,
+      password,
+      role,
+      empNo,
+      designation,
+      agency,
+      range,
+      distributor
+    } = req.body;
 
-  if (!email || !password || !role) {
-    throw new AppError(400, "name, email, password, and role are required");
-  }
-
-  const normalizedEmail = normEmail(email);
-  const exists = await User.findOne({ email: normalizedEmail });
-  if (exists) throw new AppError(409, "Email already registered");
-
-  const isAdmin = String(role).toUpperCase() === "ADMIN";
-
-  // Validate sector & sub-sector for non-admin users
-  if (!isAdmin) {
-    if (!range || !agency) {
-      throw new AppError(400, "range (sector) and agency (sub-sector) are required for non-admin users");
+    if (!email || !password || !role) {
+      throw new AppError(400, "name, email, password, and role are required");
     }
-    const sec = await Sector.findById(range).select("_id");
-    if (!sec) throw new AppError(404, "Range (sector) not found");
-    await assertSubSectorBelongsToSector(agency, range);
+
+    const normalizedEmail = normEmail(email);
+    const exists = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+    if (exists) throw new AppError(409, "Email already registered");
+
+    const isAdmin = String(role).toUpperCase() === "ADMIN";
+
+    // For non-admin users, validate range and agency
+    if (!isAdmin) {
+      if (!range || !agency) {
+        throw new AppError(400, "range and agency are required for non-admin users");
+      }
+      // Check if range exists by name (since we're using hardcoded values)
+      const rangeExists = await prisma.range.findFirst({
+        where: { name: range }
+      });
+      if (!rangeExists) throw new AppError(404, "Range not found");
+
+      // Check if agency exists by name
+      const agencyExists = await prisma.agency.findFirst({
+        where: { name: agency }
+      });
+      if (!agencyExists) throw new AppError(404, "Agency not found");
+    }
+
+    const passwordHash = await bcrypt.hash(password || "ChangeMe123!", 12);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email: normalizedEmail,
+        password: passwordHash,
+        designation: String(role).toUpperCase(),
+        emp_no: empNo,
+        agency: isAdmin ? undefined : {
+          connect: { id: (await prisma.agency.findFirst({ where: { name: agency } }))?.id }
+        },
+        range: isAdmin ? undefined : {
+          connect: { id: (await prisma.range.findFirst({ where: { name: range } }))?.id }
+        },
+        distributor: undefined
+      },
+      include: {
+        range: { select: { id: true, name: true } },
+        agency: { select: { id: true, name: true } }
+      }
+    });
+
+    return ApiResponse.ok(
+      res,
+      "User created",
+      { id: user.id, email: user.email, designation: user.designation, range: user.range, agency: user.agency },
+      201
+    );
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return ApiResponse.error(res, error.message || "Failed to create user");
   }
-
-  const passwordHash = await bcrypt.hash(password || "ChangeMe123!", 12);
-
-  const user = await User.create({
-    name,
-    email: normalizedEmail, 
-    passwordHash,
-    role: String(role).toUpperCase(),
-    empNo,
-    designation,
-    agency: isAdmin ? undefined : agency,
-    range: isAdmin ? undefined : range,
-    distributor,
-    isActive: true
-  });
-
-  return ApiResponse.ok(
-    res,
-    "User created",
-    { id: user._id, email: user.email, role: user.role, range: user.range, agency: user.agency },
-    201
-  );
 };
 
 exports.getOne = async (req, res) => {
@@ -124,47 +128,77 @@ exports.updateRole = async (req, res) => {
 };
 
 exports.updateProfile = async (req, res) => {
-  const { name, empNo, designation, agency, range, distributor, isActive } = req.body;
+  try {
+    const { id } = req.params;
+    const { name, empNo, designation, agency, range, distributor } = req.body;
 
-  const user = await User.findById(req.params.id);
-  if (!user) throw new AppError(404, "User not found");
+    const userId = parseInt(id);
 
-  if (agency || range) {
-    const nextRange = range || user.range;
-    const nextAgency = agency || user.agency;
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
 
-    if (!nextRange || !nextAgency) {
-      throw new AppError(400, "Both range and agency must be provided together");
+    if (!existingUser) {
+      return ApiResponse.error(res, "User not found", 404);
     }
 
-    const sec = await Sector.findById(nextRange).select("_id");
-    if (!sec) throw new AppError(404, "Range (sector) not found");
-    await assertSubSectorBelongsToSector(nextAgency, nextRange);
+    // Prepare update data
+    const updateData = {};
 
-    user.range = nextRange;
-    user.agency = nextAgency;
+    if (name !== undefined) updateData.name = name;
+    if (empNo !== undefined) updateData.emp_no = empNo;
+    if (designation !== undefined) updateData.designation = designation.toUpperCase();
+
+    // Handle agency and range updates
+    if (agency !== undefined || range !== undefined) {
+      if (agency && range) {
+        // Validate that agency and range exist
+        const agencyExists = await prisma.agency.findFirst({ where: { name: agency } });
+        const rangeExists = await prisma.range.findFirst({ where: { name: range } });
+
+        if (!agencyExists) return ApiResponse.error(res, "Agency not found", 404);
+        if (!rangeExists) return ApiResponse.error(res, "Range not found", 404);
+
+        updateData.agency = { connect: { id: agencyExists.id } };
+        updateData.range = { connect: { id: rangeExists.id } };
+      } else if (agency || range) {
+        return ApiResponse.error(res, "Both agency and range must be provided together", 400);
+      }
+    }
+
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      include: {
+        range: { select: { id: true, name: true } },
+        agency: { select: { id: true, name: true } }
+      }
+    });
+
+    return ApiResponse.ok(res, "User updated", updatedUser);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return ApiResponse.error(res, error.message || "Failed to update user");
   }
-
-  if (typeof name === "string") user.name = name;
-  if (typeof empNo === "string") user.empNo = empNo;
-  if (typeof designation === "string") user.designation = designation;
-  if (typeof distributor !== "undefined") user.distributor = distributor;
-  if (typeof isActive === "boolean") user.isActive = isActive;
-
-  await user.save();
-
-  const refreshed = await User.findById(user._id)
-    .select("_id name email role empNo designation agency range distributor createdAt isActive")
-    .populate("range", "name code")
-    .populate("agency", "name code");
-
-  return ApiResponse.ok(res, "User updated", refreshed);
 };
 
 exports.remove = async (req, res) => {
-  const deleted = await User.findByIdAndDelete(req.params.id);
-  if (!deleted) throw new AppError(404, "User not found");
-  return ApiResponse.ok(res, "User removed", null, 200);
+  try {
+    const userId = parseInt(req.params.id);
+    const deleted = await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    return ApiResponse.ok(res, "User removed", null, 200);
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    if (error.code === 'P2025') {
+      return ApiResponse.error(res, "User not found", 404);
+    }
+    return ApiResponse.error(res, "Failed to delete user");
+  }
 };
 
 exports.listByAgency = async (req, res) => {

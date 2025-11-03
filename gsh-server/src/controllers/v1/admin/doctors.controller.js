@@ -1,149 +1,215 @@
-const Doctor = require("../../../models/Doctor");
+const { prisma } = require('../../../../lib/prisma');
 const ApiResponse = require("../../../utils/ApiResponse");
 const AppError = require("../../../utils/AppError");
 
 /**
  * GET /api/v1/admin/doctors
- * Query: sector, q, specialty, categorization, isActive, city, dateFrom, dateTo, page, limit, sortBy, order
+ * Query: q, specialty, page, limit, sortBy, order
  */
 exports.list = async (req, res) => {
-  const {
-    sector, q, specialty, categorization, isActive, city,
-    dateFrom, dateTo,
-    page = 1, limit = 10, sortBy = "createdAt", order = "desc"
-  } = req.query;
+  try {
+    const {
+      q, specialty,
+      page = 1, limit = 100, sortBy = "id", order = "desc"
+    } = req.query;
 
-  const filter = {};
-  if (sector) filter.sector = sector;
-  if (q) filter.$text = { $search: q };
-  if (specialty) filter.specialty = specialty;
-  if (categorization) filter.categorization = categorization;
-  if (typeof isActive !== "undefined") filter.isActive = isActive === "true";
-  if (city) filter.city = city;
-  if (dateFrom || dateTo) {
-    filter.dateAdded = {};
-    if (dateFrom) filter.dateAdded.$gte = new Date(dateFrom);
-    if (dateTo)   filter.dateAdded.$lte = new Date(dateTo);
+    const filter = {};
+    if (q) filter.name = { contains: q, mode: 'insensitive' };
+    if (specialty) filter.specialty = { contains: specialty, mode: 'insensitive' };
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const orderBy = { [sortBy]: order };
+
+    const [items, total] = await Promise.all([
+      prisma.doctor.findMany({
+        where: filter,
+        include: {
+          range: {
+            select: {
+              id: true,
+              name: true,
+              agency: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          }
+        },
+        orderBy,
+        skip,
+        take: Number(limit)
+      }),
+      prisma.doctor.count({ where: filter })
+    ]);
+
+    return ApiResponse.ok(res, "Doctors fetched", {
+      items,
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      pages: Math.ceil(total / Number(limit))
+    });
+  } catch (error) {
+    console.error('Error fetching doctors:', error);
+    return ApiResponse.error(res, "Failed to fetch doctors");
   }
-
-  const skip = (Number(page) - 1) * Number(limit);
-  const sort = { [sortBy]: order === "asc" ? 1 : -1 };
-
-  const [items, total] = await Promise.all([
-    Doctor.find(filter).sort(sort).skip(skip).limit(Number(limit)).populate("sector", "_id name code"),
-    Doctor.countDocuments(filter)
-  ]);
-
-  return ApiResponse.ok(res, "Doctors fetched", {
-    items,
-    page: Number(page),
-    limit: Number(limit),
-    total,
-    pages: Math.ceil(total / Number(limit))
-  });
 };
 
 /**
  * POST /api/v1/admin/doctors
- * Body must include: sector, name
- * Uniqueness enforced **within the same sector**:
- *  - (sector, email) unique (sparse)
- *  - (sector, name, hospital) unique (partial)
  */
 exports.create = async (req, res) => {
-  const {
-    sector, name, contactNumber, email, specialty, categorization, dateAdded,
-    hospital, address, city, notes, isActive
-  } = req.body;
+  try {
+    const {
+      name, contactNumber, email, specialty, categorization, dateAdded, range_id
+    } = req.body;
 
-  if (!sector) throw new AppError(400, "sector is required");
-  if (!name) throw new AppError(400, "name is required");
+    if (!name) {
+      return ApiResponse.error(res, "Doctor name is required", 400);
+    }
 
-  if (email) {
-    const emailTaken = await Doctor.findOne({ sector, email });
-    if (emailTaken) throw new AppError(409, "Email already exists in this sector");
+    const doctor = await prisma.doctor.create({
+      data: {
+        name,
+        contactNumber,
+        email,
+        specialty,
+        categorization,
+        dateAdded: dateAdded ? new Date(dateAdded + 'T00:00:00.000Z') : undefined,
+        range_id: range_id ? parseInt(range_id) : undefined
+      },
+      include: {
+        range: {
+          select: {
+            id: true,
+            name: true,
+            agency: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return ApiResponse.ok(res, "Doctor created", doctor, 201);
+  } catch (error) {
+    console.error('Error creating doctor:', error);
+    if (error.code === 'P2002') {
+      return ApiResponse.error(res, "Doctor name already exists", 409);
+    }
+    return ApiResponse.error(res, "Failed to create doctor");
   }
-  if (name && hospital) {
-    const nameHospTaken = await Doctor.findOne({ sector, name, hospital });
-    if (nameHospTaken) throw new AppError(409, "Doctor with same name & hospital exists in this sector");
-  }
-
-  const doctor = await Doctor.create({
-    sector, name, contactNumber, email, specialty, categorization,
-    dateAdded: dateAdded ? new Date(dateAdded) : undefined,
-    hospital, address, city, notes, isActive
-  });
-
-  return ApiResponse.ok(res, "Doctor created", { id: doctor._id, name: doctor.name }, 201);
 };
 
 /**
  * GET /api/v1/admin/doctors/:id
  */
 exports.getOne = async (req, res) => {
-  const doctor = await Doctor.findById(req.params.id).populate("sector", "_id name code");
-  if (!doctor) throw new AppError(404, "Doctor not found");
-  return ApiResponse.ok(res, "Doctor fetched", doctor);
+  try {
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        range: {
+          select: {
+            id: true,
+            name: true,
+            agency: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!doctor) {
+      return ApiResponse.error(res, "Doctor not found", 404);
+    }
+
+    return ApiResponse.ok(res, "Doctor fetched", doctor);
+  } catch (error) {
+    console.error('Error fetching doctor:', error);
+    return ApiResponse.error(res, "Failed to fetch doctor");
+  }
 };
 
 /**
  * PATCH /api/v1/admin/doctors/:id
- * Allows sector change; re-checks uniqueness in the target sector.
  */
 exports.update = async (req, res) => {
-  const update = { ...req.body };
-  if (update.dateAdded) update.dateAdded = new Date(update.dateAdded);
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
 
-  const existing = await Doctor.findById(req.params.id);
-  if (!existing) throw new AppError(404, "Doctor not found");
+    // Handle date conversion if dateAdded is provided
+    if (updateData.dateAdded) {
+      updateData.dateAdded = new Date(updateData.dateAdded + 'T00:00:00.000Z');
+    }
 
-  // Determine target uniqueness scope
-  const targetSector = update.sector || existing.sector;
-  const nextEmail = update.email ?? existing.email;
-  const nextName = update.name ?? existing.name;
-  const nextHospital = update.hospital ?? existing.hospital;
+    // Handle range_id conversion if provided
+    if (updateData.range_id) {
+      updateData.range_id = parseInt(updateData.range_id);
+    }
 
-  if (nextEmail) {
-    const emailTaken = await Doctor.findOne({
-      sector: targetSector,
-      email: nextEmail,
-      _id: { $ne: existing._id }
+    const doctor = await prisma.doctor.update({
+      where: { id: parseInt(id) },
+      data: updateData,
+      include: {
+        range: {
+          select: {
+            id: true,
+            name: true,
+            agency: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
     });
-    if (emailTaken) throw new AppError(409, "Email already exists in this sector");
-  }
 
-  if (nextName && nextHospital) {
-    const nameHospTaken = await Doctor.findOne({
-      sector: targetSector,
-      name: nextName,
-      hospital: nextHospital,
-      _id: { $ne: existing._id }
-    });
-    if (nameHospTaken) throw new AppError(409, "Doctor with same name & hospital exists in this sector");
+    return ApiResponse.ok(res, "Doctor updated", doctor);
+  } catch (error) {
+    console.error('Error updating doctor:', error);
+    if (error.code === 'P2025') {
+      return ApiResponse.error(res, "Doctor not found", 404);
+    }
+    return ApiResponse.error(res, "Failed to update doctor");
   }
-
-  const doctor = await Doctor.findByIdAndUpdate(existing._id, update, { new: true }).populate("sector", "_id name code");
-  return ApiResponse.ok(res, "Doctor updated", doctor);
 };
 
 /**
- * PATCH /api/v1/admin/doctors/:id/status
- * Body: { isActive: boolean }
+ * PUT /api/v1/admin/doctors/:id
  */
-exports.updateStatus = async (req, res) => {
-  const { isActive } = req.body;
-  const doctor = await Doctor.findByIdAndUpdate(
-    req.params.id, { isActive: Boolean(isActive) }, { new: true }
-  );
-  if (!doctor) throw new AppError(404, "Doctor not found");
-  return ApiResponse.ok(res, "Doctor status updated", { id: doctor._id, isActive: doctor.isActive });
+exports.updatePut = async (req, res) => {
+  return exports.update(req, res);
 };
 
 /**
  * DELETE /api/v1/admin/doctors/:id
  */
 exports.remove = async (req, res) => {
-  const deleted = await Doctor.findByIdAndDelete(req.params.id);
-  if (!deleted) throw new AppError(404, "Doctor not found");
-  return ApiResponse.ok(res, "Doctor removed", null, 200);
+  try {
+    const doctorId = parseInt(req.params.id);
+    await prisma.doctor.delete({
+      where: { id: doctorId }
+    });
+
+    return ApiResponse.ok(res, "Doctor removed", null, 200);
+  } catch (error) {
+    console.error('Error deleting doctor:', error);
+    if (error.code === 'P2025') {
+      return ApiResponse.error(res, "Doctor not found", 404);
+    }
+    return ApiResponse.error(res, "Failed to delete doctor");
+  }
 };
