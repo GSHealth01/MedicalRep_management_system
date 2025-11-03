@@ -26,20 +26,30 @@ exports.list = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
+    console.log('Request body:', req.body); // Debug log
+
     const {
       name,
       email,
       password,
-      role,
       empNo,
       designation,
-      agency,
-      range,
-      distributor
+      join_date,
+      birthday,
+      agency_id,
+      range_id,
+      team_id,
+      distributor_id
     } = req.body;
 
-    if (!email || !password || !role) {
-      throw new AppError(400, "name, email, password, and role are required");
+    // Map empNo to emp_no for consistency
+    const emp_no = empNo;
+
+    console.log('Extracted fields:', { name, email, password, emp_no, designation }); // Debug log
+
+    // Check required fields - make designation optional for now since it might be empty
+    if (!email || !password || !name || !emp_no) {
+      throw new AppError(400, "email, password, name, and emp_no are required");
     }
 
     const normalizedEmail = normEmail(email);
@@ -48,53 +58,52 @@ exports.create = async (req, res) => {
     });
     if (exists) throw new AppError(409, "Email already registered");
 
-    const isAdmin = String(role).toUpperCase() === "ADMIN";
+    // Check for duplicate emp_no
+    const empNoExists = await prisma.user.findUnique({
+      where: { emp_no: emp_no }
+    });
+    if (empNoExists) throw new AppError(409, "Employee number already exists");
 
-    // For non-admin users, validate range and agency
-    if (!isAdmin) {
-      if (!range || !agency) {
-        throw new AppError(400, "range and agency are required for non-admin users");
-      }
-      // Check if range exists by name (since we're using hardcoded values)
-      const rangeExists = await prisma.range.findFirst({
-        where: { name: range }
-      });
-      if (!rangeExists) throw new AppError(404, "Range not found");
-
-      // Check if agency exists by name
-      const agencyExists = await prisma.agency.findFirst({
-        where: { name: agency }
-      });
-      if (!agencyExists) throw new AppError(404, "Agency not found");
-    }
-
-    const passwordHash = await bcrypt.hash(password || "ChangeMe123!", 12);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
       data: {
         name,
         email: normalizedEmail,
         password: passwordHash,
-        designation: String(role).toUpperCase(),
-        emp_no: empNo,
-        agency: isAdmin ? undefined : {
-          connect: { id: (await prisma.agency.findFirst({ where: { name: agency } }))?.id }
-        },
-        range: isAdmin ? undefined : {
-          connect: { id: (await prisma.range.findFirst({ where: { name: range } }))?.id }
-        },
-        distributor: undefined
+        designation: designation ? designation.toUpperCase() : 'USER',
+        emp_no: emp_no,
+        join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,
+        birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,
+        agency_id: agency_id ? parseInt(agency_id) : undefined,
+        range_id: range_id ? parseInt(range_id) : undefined,
+        team_id: team_id ? parseInt(team_id) : undefined,
+        distributor_id: distributor_id ? parseInt(distributor_id) : undefined
       },
       include: {
         range: { select: { id: true, name: true } },
-        agency: { select: { id: true, name: true } }
+        agency: { select: { id: true, name: true } },
+        team: { select: { id: true, team_name: true } },
+        distributor: { select: { id: true, name: true } }
       }
     });
 
     return ApiResponse.ok(
       res,
       "User created",
-      { id: user.id, email: user.email, designation: user.designation, range: user.range, agency: user.agency },
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        emp_no: user.emp_no,
+        designation: user.designation,
+        join_date: user.join_date,
+        birthday: user.birthday,
+        range: user.range,
+        agency: user.agency,
+        team: user.team,
+        distributor: user.distributor
+      },
       201
     );
   } catch (error) {

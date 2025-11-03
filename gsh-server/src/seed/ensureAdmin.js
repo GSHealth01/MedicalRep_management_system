@@ -11,6 +11,22 @@ async function ensureAdmin() {
     return;
   }
 
+  // Check if admin email already exists and delete it if it does
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: process.env.ADMIN_EMAIL || "admin@gsh.com" }
+  });
+
+  if (existingAdmin) {
+    try {
+      await prisma.user.delete({
+        where: { id: existingAdmin.id }
+      });
+      console.log("Removed existing admin user with duplicate email.");
+    } catch (error) {
+      console.log("Could not delete existing admin user, but continuing with seeding.");
+    }
+  }
+
   const name = process.env.ADMIN_NAME || "System Admin";
   const email = process.env.ADMIN_EMAIL || "admin@gsh.com";
   const password = process.env.ADMIN_PASSWORD || "ChangeMe#123";
