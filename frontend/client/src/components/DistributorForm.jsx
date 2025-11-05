@@ -21,21 +21,17 @@ export default function DistributorForm({ onSubmit }) {
       setLoadingSectors(true);
       setSectorError("");
       try {
-        // Try both shapes: {data:{items:[...]}} or {data:[...]}
-        const res = await api.get("/admin/sectors", {
-          params: { isActive: true, limit: 200 },
+        // Use ranges endpoint instead of sectors
+        const res = await api.get("/ranges", {
+          params: { limit: 200 },
         });
-        const payload = res?.data?.data ?? res?.data ?? {};
-        const items = Array.isArray(payload?.items)
-          ? payload.items
-          : Array.isArray(payload)
-          ? payload
-          : [];
+        const payload = res?.data?.ranges ?? res?.data ?? [];
+        const items = Array.isArray(payload) ? payload : [];
         if (mounted) setSectors(items);
       } catch (err) {
         if (mounted)
           setSectorError(
-            err?.response?.data?.message || "Failed to load sectors"
+            err?.response?.data?.message || "Failed to load ranges"
           );
       } finally {
         if (mounted) setLoadingSectors(false);
@@ -57,8 +53,7 @@ export default function DistributorForm({ onSubmit }) {
       !!formData.distributorName &&
       !!formData.area &&
       !!formData.town &&
-      !!formData.route &&
-      !!formData.date
+      !!formData.route
     );
   }, [formData]);
 
@@ -68,12 +63,11 @@ export default function DistributorForm({ onSubmit }) {
 
     // Normalize payload for BE
     const payload = {
-      sector: formData.sector, // required by BE
       name: formData.distributorName, // BE expects "name"
-      area: formData.area,
-      town: formData.town,
-      // route is not in BE model; keep it if you later add it server-side
-      dateAdded: formData.date, // BE supports dateAdded
+      coverage_town: formData.town, // BE expects "coverage_town"
+      route: formData.route,
+      agency_id: parseInt(formData.sector), // sector field maps to agency_id
+      area_id: parseInt(formData.area), // area field should be area_id
     };
 
     if (onSubmit) onSubmit(payload, formData); // pass both normalized & raw
@@ -85,7 +79,6 @@ export default function DistributorForm({ onSubmit }) {
       area: "",
       town: "",
       route: "",
-      date: "",
     });
   };
 
@@ -94,9 +87,9 @@ export default function DistributorForm({ onSubmit }) {
       onSubmit={handleSubmit}
       className="max-w-2xl bg-white shadow-lg rounded-lg p-6 space-y-4"
     >
-      {/* Sector */}
+      {/* Range (Sector) */}
       <div>
-        <label className="block text-gray-700 mb-1">Sector</label>
+        <label className="block text-gray-700 mb-1">Range (Sector)</label>
         <select
           name="sector"
           value={formData.sector}
@@ -106,11 +99,11 @@ export default function DistributorForm({ onSubmit }) {
           disabled={loadingSectors || !!sectorError}
         >
           <option value="">
-            {loadingSectors ? "Loading sectors..." : "Select sector"}
+            {loadingSectors ? "Loading ranges..." : "Select range"}
           </option>
           {sectors.map((s) => (
-            <option key={s._id || s.id} value={s._id || s.id}>
-              {s.name} {s.code ? `(${s.code})` : ""}
+            <option key={s.id} value={s.id}>
+              {s.name} {s.agency ? `(Agency: ${s.agency.name})` : ""}
             </option>
           ))}
         </select>
@@ -136,15 +129,19 @@ export default function DistributorForm({ onSubmit }) {
       {/* Area */}
       <div>
         <label className="block text-gray-700 mb-1">Area</label>
-        <input
-          type="text"
+        <select
           name="area"
           value={formData.area}
           onChange={handleChange}
-          placeholder="Enter area"
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
-        />
+        >
+          <option value="">Select Area</option>
+          <option value="1">Colombo</option>
+          <option value="2">Gampaha</option>
+          <option value="3">Kalutara</option>
+          <option value="4">Ratmalana</option>
+        </select>
       </div>
 
       {/* Coverage (Town) */}
@@ -178,18 +175,6 @@ export default function DistributorForm({ onSubmit }) {
         </select>
       </div>
 
-      {/* Date */}
-      <div>
-        <label className="block text-gray-700 mb-1">Date</label>
-        <input
-          type="date"
-          name="date"
-          value={formData.date}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
-      </div>
 
       {/* Submit */}
       <button

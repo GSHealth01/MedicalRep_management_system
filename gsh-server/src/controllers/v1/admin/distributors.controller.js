@@ -51,9 +51,13 @@ exports.list = async (req, res) => {
  */
 exports.create = async (req, res) => {
   try {
+    console.log('Distributor create request body:', req.body); // Debug log
+
     const {
       name, coverage_town, route, agency_id, area_id
     } = req.body;
+
+    console.log('Extracted fields:', { name, coverage_town, route, agency_id, area_id }); // Debug log
 
     if (!name || !agency_id || !area_id) {
       return ApiResponse.error(res, "Name, agency_id, and area_id are required", 400);

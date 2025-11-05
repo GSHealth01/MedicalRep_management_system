@@ -79,9 +79,10 @@ model distributor {
   // 1:M -> 'distributor belongs to one agency'
   agency_id     Int
   agency        agency    @relation(fields: [agency_id], references: [id])
-  // 1:1 -> 'distributor has one area'
-  area_id       Int       @unique
+  // 1:M -> 'distributor belongs to one area'
+  area_id       Int
   area          area      @relation(fields: [area_id], references: [id])
+  @@unique([area_id]) // Make area_id unique for one-to-one relation
   // 1:1 -> 'one user has one distributor'
   user          user?
   // M:N -> 'distributor has many products'

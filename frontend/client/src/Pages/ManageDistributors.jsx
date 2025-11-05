@@ -23,7 +23,18 @@ export default function ManageDistributors() {
           : Array.isArray(payload)
           ? payload
           : [];
-        if (mounted) setDistributors(items);
+        console.log('Distributors response:', res.data); // Debug log
+        console.log('Items:', items); // Debug log
+
+        // Ensure all nested objects are properly handled
+        const safeItems = items.map(item => ({
+          ...item,
+          agency: typeof item.agency === 'object' ? item.agency?.name || 'Unknown' : item.agency || 'Unknown',
+          area: typeof item.area === 'object' ? item.area?.name || 'Unknown' : item.area || 'Unknown',
+          coverage_town: item.coverage_town || item.town || 'Unknown',
+        }));
+
+        if (mounted) setDistributors(safeItems);
       } catch (e) {
         if (mounted)
           setErr(e?.response?.data?.message || "Failed to load distributors");
@@ -38,22 +49,25 @@ export default function ManageDistributors() {
 
   const handleAddDistributor = async (payload, rawForm) => {
     try {
+      console.log('Sending payload:', payload); // Debug log
       const res = await api.post("/admin/distributors", payload);
-      // The controller returns { id, name } or full doc depending on your setup.
-      // To keep UI immediate, add a local item combining what we have:
-      const created = res?.data?.data || {};
+      console.log('Response:', res.data); // Debug log
+
+      // The controller returns the distributor object with agency and area included
+      const created = res?.data?.data || res?.data || {};
       const newRow = {
-        _id: created.id || created._id || Math.random().toString(36).slice(2),
-        name: payload.name,
-        area: payload.area,
-        town: payload.town,
-        route: rawForm.route, // local UI-only field
-        dateAdded: payload.dateAdded,
-        sector: created.sector || { _id: payload.sector }, // populate might return sector object
+        id: created.id,
+        name: created.name,
+        area: created.area?.name || payload.area, // Use area name from response
+        town: created.coverage_town,
+        route: created.route,
+        agency: created.agency?.name || 'Unknown', // Use agency name from response
+        sector: created.agency?.name || 'Unknown', // For backward compatibility
       };
       setDistributors((list) => [newRow, ...list]);
       alert(`Distributor ${payload.name} added ✅`);
     } catch (e) {
+      console.error('Error adding distributor:', e); // Debug log
       alert(e?.response?.data?.message || "Failed to add distributor");
     }
   };
@@ -95,34 +109,28 @@ export default function ManageDistributors() {
                 </tr>
               ) : (
                 distributors.map((dist) => {
-                  const sectorName =
-                    typeof dist.sector === "object"
-                      ? dist.sector?.name ||
-                        dist.sector?.code ||
-                        dist.sector?._id ||
-                        ""
-                      : dist.sector || "";
-
-                  // Normalize date display
-                  const displayDate = dist.date
-                    ? new Date(dist.date).toISOString().slice(0, 10)
-                    : "";
-
+                  console.log('Rendering distributor:', dist); // Debug log
                   return (
                     <tr
-                      key={dist._id || dist.id}
+                      key={dist.id || dist._id}
                       className="border-b hover:bg-gray-50"
                     >
                       <td className="py-2 px-4 text-center">
-                        {dist.name || dist.distributorName}
+                        {String(dist.name || dist.distributorName || 'Unknown')}
                       </td>
-                      <td className="py-2 px-4 text-center">{sectorName}</td>
-                      <td className="py-2 px-4 text-center">{dist.area}</td>
-                      <td className="py-2 px-4 text-center">{dist.town}</td>
                       <td className="py-2 px-4 text-center">
-                        {dist.route || "-"}
+                        {String(dist.agency || 'Unknown')}
                       </td>
-                      <td className="py-2 px-4 text-center">{displayDate}</td>
+                      <td className="py-2 px-4 text-center">
+                        {String(dist.area || 'Unknown')}
+                      </td>
+                      <td className="py-2 px-4 text-center">
+                        {String(dist.coverage_town || 'Unknown')}
+                      </td>
+                      <td className="py-2 px-4 text-center">
+                        {String(dist.route || '-')}
+                      </td>
+                      <td className="py-2 px-4 text-center">-</td>
                     </tr>
                   );
                 })

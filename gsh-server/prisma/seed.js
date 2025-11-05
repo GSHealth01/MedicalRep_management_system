@@ -72,8 +72,7 @@ async function main() {
         password: hashedPassword,
         name: 'Admin',
         emp_no: 'A-001', // This must be unique
-        designation: 'Administrator',
-        role: 'ADMIN',   // This is the important part
+        designation: 'ADMIN',
         agency_id: agency.id,
         range_id: range.id,
         team_id: team.id,
