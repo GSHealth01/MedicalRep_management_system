@@ -3,7 +3,10 @@ const router = express.Router();
 const { requireAuth } = require('../../middlewares/auth');
 const ctrl = require('../../controllers/v1/area.controller');
 
-// All routes require authentication
+// GET /api/v1/areas - Get all areas (public for forms)
+router.get('/', ctrl.getAllAreas);
+
+// All other routes require authentication
 router.use(requireAuth);
 
 // POST /api/v1/areas - Create new area

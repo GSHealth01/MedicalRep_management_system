@@ -9,12 +9,12 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
     email: employee?.email || '',
     empNo: employee?.emp_no || employee?.empNo || '',
     designation: employee?.designation || '',
-    range: employee?.range?.name || '',
-    agency: employee?.agency?.name || '',
+    range: employee?.range?.name || employee?.range || '',
+    agency: employee?.agency?.name || employee?.agency || '',
     distributor: employee?.distributor || '',
     birthday: employee?.birthday ? new Date(employee.birthday).toISOString().slice(0, 10) : '',
-    joinDate: employee?.join_date ? new Date(employee.join_date).toISOString().slice(0, 10) : '',
-    promotionDate: employee?.promotion_date ? new Date(employee.promotion_date).toISOString().slice(0, 10) : '',
+    joinDate: employee?.join_date || employee?.joinDate ? new Date(employee.join_date || employee.joinDate).toISOString().slice(0, 10) : '',
+    promotionDate: employee?.promotion_date || employee?.promotionDate ? new Date(employee.promotion_date || employee.promotionDate).toISOString().slice(0, 10) : '',
     date: employee?.date ? new Date(employee.date).toISOString().slice(0, 10) : ''
   });
   const [loading, setLoading] = useState(false);
@@ -220,6 +220,7 @@ export default function ManageEmployees() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   // Load from BE
   useEffect(() => {
@@ -341,22 +342,23 @@ export default function ManageEmployees() {
     }
   };
 
+  // Removed edit and delete functions as requested
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Manage Employees</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Manage Employees</h1>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {showForm ? 'Hide Form' : 'Add Employee'}
+        </button>
+      </div>
 
-      {editingEmployee && (
-        <EditEmployeeModal
-          employee={editingEmployee}
-          onClose={() => setEditingEmployee(null)}
-          onSave={handleSaveEmployee}
-        />
-      )}
-
-      <EmployeeForm onSubmit={handleAddEmployee} />
-
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-2">Employee List</h2>
+      {/* Employee List - Display first */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">Employee List</h2>
 
         {err && <div className="text-red-600 mb-3">{err}</div>}
         {loading ? (
@@ -400,7 +402,7 @@ export default function ManageEmployees() {
                     <td className="py-2 px-4">{showAgency(emp.agency)}</td>
                     <td className="py-2 px-4">{emp.distributor || "-"}</td>
                     <td className="py-2 px-4">{fmtDate(emp.date)}</td>
-                    <td className="py-2 px-4">
+                    <td className="py-2 px-4 text-center">
                       <div className="flex justify-center space-x-2">
                         <button
                           onClick={() => handleEditEmployee(emp)}
@@ -425,6 +427,18 @@ export default function ManageEmployees() {
           </table>
         )}
       </div>
+
+      {/* Edit Employee Modal */}
+      {editingEmployee && (
+        <EditEmployeeModal
+          employee={editingEmployee}
+          onClose={() => setEditingEmployee(null)}
+          onSave={handleSaveEmployee}
+        />
+      )}
+
+      {/* Add Employee Form - Display after list */}
+      {showForm && <EmployeeForm onSubmit={handleAddEmployee} />}
     </div>
   );
 }

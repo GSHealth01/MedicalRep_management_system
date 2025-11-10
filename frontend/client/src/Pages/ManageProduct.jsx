@@ -127,6 +127,7 @@ export default function ManageProducts() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   // Load existing products from BE
   useEffect(() => {
@@ -220,14 +221,20 @@ export default function ManageProducts() {
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingProduct(null);
-  };
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Manage Products</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {showForm ? 'Hide Form' : 'Add Product'}
+        </button>
+      </div>
 
+      {/* Edit Product Modal */}
       {editingProduct && (
         <EditProductModal
           product={editingProduct}
@@ -236,15 +243,12 @@ export default function ManageProducts() {
         />
       )}
 
-      <ProductForm
-        onSubmit={editingProduct ? handleSaveEdit : handleAddProduct}
-        initialData={editingProduct}
-        isEditing={!!editingProduct}
-        onCancel={handleCancelEdit}
-      />
+      {/* Add Product Form - Display after list */}
+      {showForm && <ProductForm onSubmit={handleAddProduct} />}
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-2">Product List</h2>
+      {/* Product List - Display first */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">Product List</h2>
 
         {err && <div className="text-red-600 mb-3">{err}</div>}
         {loading ? (

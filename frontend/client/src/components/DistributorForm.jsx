@@ -12,16 +12,20 @@ export default function DistributorForm({ onSubmit }) {
   });
 
   const [sectors, setSectors] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [loadingSectors, setLoadingSectors] = useState(true);
+  const [loadingAreas, setLoadingAreas] = useState(true);
   const [sectorError, setSectorError] = useState("");
+  const [areaError, setAreaError] = useState("");
 
   useEffect(() => {
     let mounted = true;
+
+    // Load ranges (sectors)
     (async () => {
       setLoadingSectors(true);
       setSectorError("");
       try {
-        // Use ranges endpoint instead of sectors
         const res = await api.get("/ranges", {
           params: { limit: 200 },
         });
@@ -37,6 +41,26 @@ export default function DistributorForm({ onSubmit }) {
         if (mounted) setLoadingSectors(false);
       }
     })();
+
+    // Load areas
+    (async () => {
+      setLoadingAreas(true);
+      setAreaError("");
+      try {
+        const res = await api.get("/areas");
+        const payload = res?.data?.areas ?? [];
+        const items = Array.isArray(payload) ? payload : [];
+        if (mounted) setAreas(items);
+      } catch (err) {
+        if (mounted)
+          setAreaError(
+            err?.response?.data?.message || "Failed to load areas"
+          );
+      } finally {
+        if (mounted) setLoadingAreas(false);
+      }
+    })();
+
     return () => {
       mounted = false;
     };
@@ -135,13 +159,20 @@ export default function DistributorForm({ onSubmit }) {
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
+          disabled={loadingAreas || !!areaError}
         >
-          <option value="">Select Area</option>
-          <option value="1">Colombo</option>
-          <option value="2">Gampaha</option>
-          <option value="3">Kalutara</option>
-          <option value="4">Ratmalana</option>
+          <option value="">
+            {loadingAreas ? "Loading areas..." : "Select area"}
+          </option>
+          {areas.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.name}
+            </option>
+          ))}
         </select>
+        {areaError && (
+          <p className="text-sm text-red-600 mt-1">{areaError}</p>
+        )}
       </div>
 
       {/* Coverage (Town) */}
