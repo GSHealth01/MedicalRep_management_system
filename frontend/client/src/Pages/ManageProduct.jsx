@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import ProductForm from "../components/ProductForm";
 import { api } from "../services/api";
+import { useNotification } from "../components/NotificationPopup";
+import { useConfirm } from "../components/ConfirmDialog";
 
 // Edit Product Modal Component
 function EditProductModal({ product, onClose, onSave }) {
@@ -44,7 +46,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
           </div>
@@ -55,7 +57,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="therapeutic_category"
               value={formData.therapeutic_category}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
           </div>
@@ -66,7 +68,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="generic_name"
               value={formData.generic_name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
           </div>
@@ -77,7 +79,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="route_of_administration"
               value={formData.route_of_administration}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
           <div>
@@ -87,7 +89,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="pack_size"
               value={formData.pack_size}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
           <div>
@@ -97,7 +99,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="strength"
               value={formData.strength}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
           <div className="flex justify-end space-x-3 pt-4">
@@ -123,6 +125,8 @@ function EditProductModal({ product, onClose, onSave }) {
 }
 
 export default function ManageProducts() {
+  const { showNotification, NotificationComponent } = useNotification();
+  const { showConfirm, ConfirmDialogComponent } = useConfirm();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -163,9 +167,9 @@ export default function ManageProducts() {
         strength: created.strength
       };
       setProducts((list) => [newRow, ...list]);
-      alert(`Product ${payload.name} added ✅`);
+      showNotification(`Product ${payload.name} added successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to add product");
+      showNotification(e?.response?.data?.message || "Failed to add product", 'error');
     }
   };
 
@@ -201,26 +205,31 @@ export default function ManageProducts() {
         )
       );
 
-      alert(`Product ${formData.name} updated successfully!`);
+      showNotification(`Product ${formData.name} updated successfully!`, 'success');
     } catch (e) {
       throw new Error(e?.response?.data?.message || "Failed to update product");
     }
   };
 
   const handleDeleteProduct = async (product) => {
-    if (!window.confirm(`Are you sure you want to delete product ${product.name}?`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: "Delete Product",
+      message: `Are you sure you want to delete product "${product.name}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+
+    if (!confirmed) return;
 
     try {
       await api.delete(`/admin/products/${product.id}`);
       setProducts((list) => list.filter((prod) => prod.id !== product.id));
-      alert(`Product ${product.name} deleted ✅`);
+      showNotification(`Product ${product.name} deleted successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to delete product");
+      showNotification(e?.response?.data?.message || "Failed to delete product", 'error');
     }
   };
-
 
   return (
     <div>
@@ -228,7 +237,7 @@ export default function ManageProducts() {
         <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
         >
           {showForm ? 'Hide Form' : 'Add Product'}
         </button>
@@ -246,65 +255,73 @@ export default function ManageProducts() {
       {/* Add Product Form - Display after list */}
       {showForm && <ProductForm onSubmit={handleAddProduct} />}
 
-      {/* Product List - Display first */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Product List</h2>
+      {/* Product List - Display only when form is hidden */}
+      {!showForm && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">Product List</h2>
 
-        {err && <div className="text-red-600 mb-3">{err}</div>}
-        {loading ? (
-          <div className="text-gray-600">Loading…</div>
-        ) : (
-          <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
-            <thead className="bg-blue-600 text-white">
-              <tr>
-                <th className="py-2 px-4 text-center">Product Name</th>
-                <th className="py-2 px-4 text-center">Therapeutic Category</th>
-                <th className="py-2 px-4 text-center">Generic Name</th>
-                <th className="py-2 px-4 text-center">Route of Administration</th>
-                <th className="py-2 px-4 text-center">Pack Size</th>
-                <th className="py-2 px-4 text-center">Strength</th>
-                <th className="py-2 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.length === 0 ? (
+          {err && <div className="text-red-600 mb-3">{err}</div>}
+          {loading ? (
+            <div className="text-gray-600">Loading…</div>
+          ) : (
+            <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
+              <thead className="bg-red-600 text-white">
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500">No products added yet</td>
+                  <th className="py-2 px-4 text-center">Product Name</th>
+                  <th className="py-2 px-4 text-center">Therapeutic Category</th>
+                  <th className="py-2 px-4 text-center">Generic Name</th>
+                  <th className="py-2 px-4 text-center">Route of Administration</th>
+                  <th className="py-2 px-4 text-center">Pack Size</th>
+                  <th className="py-2 px-4 text-center">Strength</th>
+                  <th className="py-2 px-4 text-center">Actions</th>
                 </tr>
-              ) : (
-                products.map((prod) => (
-                  <tr key={prod.id} className="border-b hover:bg-gray-50 text-center">
-                    <td className="py-2 px-4">{prod.name}</td>
-                    <td className="py-2 px-4">{prod.therapeutic_category || "-"}</td>
-                    <td className="py-2 px-4">{prod.generic_name || "-"}</td>
-                    <td className="py-2 px-4">{prod.route_of_administration || "-"}</td>
-                    <td className="py-2 px-4">{prod.pack_size || "-"}</td>
-                    <td className="py-2 px-4">{prod.strength || "-"}</td>
-                    <td className="py-2 px-4">
-                      <div className="flex justify-center space-x-2">
-                        <button
-                          onClick={() => handleEditProduct(prod)}
-                          className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
-                          title="Edit Product"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(prod)}
-                          className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
-                          title="Delete Product"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+              </thead>
+              <tbody>
+                {products.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-4 text-gray-500">No products added yet</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+                ) : (
+                  products.map((prod) => (
+                    <tr key={prod.id} className="border-b hover:bg-gray-50 text-center">
+                      <td className="py-2 px-4">{prod.name}</td>
+                      <td className="py-2 px-4">{prod.therapeutic_category || "-"}</td>
+                      <td className="py-2 px-4">{prod.generic_name || "-"}</td>
+                      <td className="py-2 px-4">{prod.route_of_administration || "-"}</td>
+                      <td className="py-2 px-4">{prod.pack_size || "-"}</td>
+                      <td className="py-2 px-4">{prod.strength || "-"}</td>
+                      <td className="py-2 px-4">
+                        <div className="flex justify-center space-x-2">
+                          <button
+                            onClick={() => handleEditProduct(prod)}
+                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                            title="Edit Product"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(prod)}
+                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                            title="Delete Product"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+      
+      {/* Notification Component */}
+      <NotificationComponent />
+      
+      {/* Confirmation Dialog Component */}
+      <ConfirmDialogComponent />
     </div>
   );
 }

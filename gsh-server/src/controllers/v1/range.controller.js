@@ -81,7 +81,7 @@ async function getOneRange(req, res) {
         teams: {
           select: {
             id: true,
-            team_name: true
+            name: true
           }
         }
       }

@@ -9,13 +9,40 @@ function normEmail(v) {
 
 exports.list = async (req, res) => {
   try {
+    const { range, agency, limit } = req.query;
+    
+    // Build where clause for filtering
+    const where = {};
+    
+    if (range) {
+      where.range_id = parseInt(range);
+    }
+    
+    if (agency) {
+      where.agency_id = parseInt(agency);
+    }
+
+    console.log('Filtering users with:', where); // Debug log
+
     const users = await prisma.user.findMany({
+      where,
       include: {
         range: { select: { id: true, name: true } },
         agency: { select: { id: true, name: true } }
       },
-      orderBy: { id: 'desc' }
+      orderBy: { id: 'desc' },
+      take: limit ? parseInt(limit) : undefined
     });
+
+    console.log(`Found ${users.length} users`); // Debug log
+    if (users.length > 0) {
+      console.log('Sample user:', {
+        id: users[0].id,
+        name: users[0].name,
+        designation: users[0].designation,
+        emp_no: users[0].emp_no
+      });
+    }
 
     return ApiResponse.ok(res, "Users fetched", users);
   } catch (error) {
@@ -66,27 +93,101 @@ exports.create = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    // Find or create agency and range by name since frontend sends string names
+    let agencyId, rangeId;
+    
+    if (agency_id) {
+      let agency = await prisma.agency.findFirst({ where: { name: agency_id } });
+      if (!agency) {
+        // Create agency if it doesn't exist
+        agency = await prisma.agency.create({
+          data: { name: agency_id }
+        });
+      }
+      agencyId = agency.id;
+    }
+    
+    if (range_id) {
+      let range = await prisma.range.findFirst({ where: { name: range_id } });
+      if (!range) {
+        // Create range if it doesn't exist
+        range = await prisma.range.create({
+          data: {
+            name: range_id,
+            agency_id: agencyId // Link to the agency if available
+          }
+        });
+      }
+      rangeId = range.id;
+    }
+
+    console.log('Found/Created agency_id:', agencyId, 'range_id:', rangeId); // Debug log
+    console.log('Distributor to store:', distributor_id); // Debug log
+
+    // Build user creation data with distributor text directly
+    const userData = {
+      name,
+      email: normalizedEmail,
+      password: passwordHash,
+      designation: designation ? designation.toUpperCase() : 'USER',
+      emp_no: emp_no,
+      join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,
+      birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,
+      team_id: team_id && !isNaN(parseInt(team_id)) ? parseInt(team_id) : undefined,
+      distributor_code: distributor_id || undefined // Store the distributor text directly
+    };
+
+    console.log('User data to create:', userData); // Debug log
+    console.log('Agency/Range IDs:', { agencyId, rangeId }); // Debug log
+
     const user = await prisma.user.create({
-      data: {
-        name,
-        email: normalizedEmail,
-        password: passwordHash,
-        designation: designation ? designation.toUpperCase() : 'USER',
-        emp_no: emp_no,
-        join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,
-        birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,
-        agency_id: agency_id ? parseInt(agency_id) : undefined,
-        range_id: range_id ? parseInt(range_id) : undefined,
-        team_id: team_id ? parseInt(team_id) : undefined,
-        distributor_id: distributor_id ? parseInt(distributor_id) : undefined
-      },
+      data: userData,
       include: {
         range: { select: { id: true, name: true } },
         agency: { select: { id: true, name: true } },
-        team: { select: { id: true, team_name: true } },
-        distributor: { select: { id: true, name: true } }
+        team: { select: { id: true, name: true } },
+        distributor: { select: { distributor_code: true, name: true } }
       }
     });
+
+    // Update user with agency/range if they were found
+    if (agencyId || rangeId) {
+      const updateData = {};
+      if (agencyId) updateData.agency_id = agencyId;
+      if (rangeId) updateData.range_id = rangeId;
+      
+      console.log('Updating user with:', updateData);
+      
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: updateData,
+        include: {
+          range: { select: { id: true, name: true } },
+          agency: { select: { id: true, name: true } },
+          team: { select: { id: true, name: true } },
+          distributor: { select: { distributor_code: true, name: true } }
+        }
+      });
+      
+      return ApiResponse.ok(
+        res,
+        "User created",
+        {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          emp_no: updatedUser.emp_no,
+          designation: updatedUser.designation,
+          join_date: updatedUser.join_date,
+          birthday: updatedUser.birthday,
+          range: updatedUser.range,
+          agency: updatedUser.agency,
+          team: updatedUser.team,
+          distributor: updatedUser.distributor
+        },
+        201
+      );
+    }
 
     return ApiResponse.ok(
       res,
@@ -219,4 +320,29 @@ exports.listByAgency = async (req, res) => {
     .sort({ createdAt: -1 });
 
   return ApiResponse.ok(res, "Users fetched", users);
+};
+
+exports.getCurrentUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        range: { select: { id: true, name: true } },
+        agency: { select: { id: true, name: true } },
+        team: { select: { id: true, name: true } },
+        distributor: { select: { id: true, name: true } }
+      }
+    });
+
+    if (!user) {
+      return ApiResponse.error(res, "User not found", 404);
+    }
+
+    return ApiResponse.ok(res, "User profile fetched", user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return ApiResponse.error(res, "Failed to fetch user profile");
+  }
 };

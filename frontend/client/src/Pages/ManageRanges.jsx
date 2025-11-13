@@ -89,7 +89,7 @@ export default function ManageSectors() {
         />
         <button
           onClick={addSector}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
         >
           Add Sector
         </button>

@@ -10,7 +10,7 @@ exports.list = async (req, res) => {
   try {
     const {
       q,
-      page = 1, limit = 100, sortBy = "id", order = "desc"
+      page = 1, limit = 100, sortBy = "distributor_code", order = "desc"
     } = req.query;
 
     const filter = {};
@@ -54,26 +54,53 @@ exports.create = async (req, res) => {
     console.log('Distributor create request body:', req.body); // Debug log
 
     const {
-      name, coverage_town, route, agency_id, area_id
+      name, coverage_town, route, agency_id, area_id, area, range_id, distributor_code
     } = req.body;
 
-    console.log('Extracted fields:', { name, coverage_town, route, agency_id, area_id }); // Debug log
+    console.log('Extracted fields:', { name, coverage_town, route, agency_id, area_id, area, range_id, distributor_code }); // Debug log
 
-    if (!name || !agency_id || !area_id) {
-      return ApiResponse.error(res, "Name, agency_id, and area_id are required", 400);
+    if (!name || !distributor_code || !agency_id || !range_id) {
+      return ApiResponse.error(res, "Name, distributor_code, agency_id, and range_id are required", 400);
+    }
+
+    let areaIdToUse = area_id;
+    
+    // Handle area field - if area_id is not provided, try to find or create area by name
+    if (!areaIdToUse && area) {
+      // Try to find existing area by name
+      let existingArea = await prisma.area.findFirst({
+        where: { name: { equals: area, mode: 'insensitive' } }
+      });
+      
+      if (existingArea) {
+        areaIdToUse = existingArea.id;
+      } else {
+        // Create new area if it doesn't exist
+        const newArea = await prisma.area.create({
+          data: { name: area.trim() }
+        });
+        areaIdToUse = newArea.id;
+      }
+    }
+
+    if (!areaIdToUse) {
+      return ApiResponse.error(res, "Area is required (either area_id or area name)", 400);
     }
 
     const distributor = await prisma.distributor.create({
       data: {
+        distributor_code,
         name,
         coverage_town,
         route,
         agency_id: parseInt(agency_id),
-        area_id: parseInt(area_id)
+        area_id: parseInt(areaIdToUse),
+        range_id: parseInt(range_id)
       },
       include: {
         agency: { select: { id: true, name: true } },
-        area: { select: { id: true, name: true } }
+        area: { select: { id: true, name: true } },
+        range: { select: { id: true, name: true } }
       }
     });
 
@@ -81,7 +108,7 @@ exports.create = async (req, res) => {
   } catch (error) {
     console.error('Error creating distributor:', error);
     if (error.code === 'P2002') {
-      return ApiResponse.error(res, "Distributor name already exists", 409);
+      return ApiResponse.error(res, "Distributor code or name already exists", 409);
     }
     if (error.code === 'P2003') {
       return ApiResponse.error(res, "Invalid agency or area reference", 400);
@@ -96,10 +123,11 @@ exports.create = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     const distributor = await prisma.distributor.findUnique({
-      where: { id: parseInt(req.params.id) },
+      where: { distributor_code: req.params.id },
       include: {
         agency: { select: { id: true, name: true } },
-        area: { select: { id: true, name: true } }
+        area: { select: { id: true, name: true } },
+        range: { select: { id: true, name: true } }
       }
     });
 
@@ -125,13 +153,15 @@ exports.update = async (req, res) => {
     // Convert string IDs to integers if present
     if (updateData.agency_id) updateData.agency_id = parseInt(updateData.agency_id);
     if (updateData.area_id) updateData.area_id = parseInt(updateData.area_id);
+    if (updateData.range_id) updateData.range_id = parseInt(updateData.range_id);
 
     const distributor = await prisma.distributor.update({
-      where: { id: parseInt(id) },
+      where: { distributor_code: id },
       data: updateData,
       include: {
         agency: { select: { id: true, name: true } },
-        area: { select: { id: true, name: true } }
+        area: { select: { id: true, name: true } },
+        range: { select: { id: true, name: true } }
       }
     });
 
@@ -160,9 +190,8 @@ exports.updatePut = async (req, res) => {
  */
 exports.remove = async (req, res) => {
   try {
-    const distributorId = parseInt(req.params.id);
     await prisma.distributor.delete({
-      where: { id: distributorId }
+      where: { distributor_code: req.params.id }
     });
 
     return ApiResponse.ok(res, "Distributor removed", null, 200);

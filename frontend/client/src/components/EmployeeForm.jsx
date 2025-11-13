@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { api } from "../services/api"; // Add import for API
 
 export default function EmployeeForm({ onSubmit }) {
   const [formData, setFormData] = useState({
@@ -8,12 +9,35 @@ export default function EmployeeForm({ onSubmit }) {
     designation: "",    // maps to role (MR/FC/JE/SE/TM/PM/ADMIN)
     birthday: "",
     joinDate: "",
-    promotionDate: "",
     agency: "",         // subSector _id
     range: "",          // sector _id
-    distributor: "",
-    date: "",
+    distributor: ""
   });
+
+  // Add distributors state
+  const [distributors, setDistributors] = useState([]);
+  const [loadingDistributors, setLoadingDistributors] = useState(true);
+  const [distributorError, setDistributorError] = useState("");
+
+  // Load distributors from API
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingDistributors(true);
+      setDistributorError("");
+      try {
+        const res = await api.get("/admin/distributors", { params: { limit: 200 } });
+        const payload = res?.data?.data ?? res?.data ?? {};
+        const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+        if (mounted) setDistributors(items);
+      } catch (err) {
+        if (mounted) setDistributorError(err?.response?.data?.message || "Failed to load distributors");
+      } finally {
+        if (mounted) setLoadingDistributors(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Hardcoded ranges and agencies
   const ranges = useMemo(() => [
@@ -40,26 +64,15 @@ export default function EmployeeForm({ onSubmit }) {
   // normalize payload shape in a way BE expects
   const canSubmit = useMemo(() => {
     const hasEmail = /\S+@\S+\.\S+/.test(formData.username);
-    const needsPromo = formData.designation && formData.designation !== "MR" ? !!formData.promotionDate : true;
     return (
       hasEmail &&
       !!formData.password &&
       !!formData.empNo &&
       !!formData.designation &&
       !!formData.range &&
-      !!formData.agency &&
-      needsPromo
+      !!formData.agency
     );
   }, [formData]);
-
-  // helpers - kept for potential future use
-  // const normalizeItems = (res) => {
-  //   const payload = res?.data?.data ?? res?.data ?? {};
-  //   return Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
-  // };
-
-  // Memoize agencies to avoid re-creating on every render
-  const memoizedAgencies = agencies;
 
   // when range changes, filter agencies based on the selected range
   useEffect(() => {
@@ -67,9 +80,9 @@ export default function EmployeeForm({ onSubmit }) {
       setFilteredAgencies([]);
       return;
     }
-    const filtered = memoizedAgencies.filter(agency => agency.range === formData.range);
+    const filtered = agencies.filter(agency => agency.range === formData.range);
     setFilteredAgencies(filtered);
-  }, [formData.range, memoizedAgencies]);
+  }, [formData.range, agencies]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -88,42 +101,22 @@ export default function EmployeeForm({ onSubmit }) {
     const email = formData.username.trim().toLowerCase();
     const nameGuess = email.includes("@") ? email.split("@")[0] : formData.username.trim();
 
-    const payload = {
-      // BE-required
+    // For Prisma backend, we need to send the data to the correct endpoint
+    // The admin/users endpoint expects specific field names that match the database schema
+    const prismaPayload = {
       name: nameGuess || formData.empNo,
-      email,
-      password: formData.password,           // NEW
-      role: String(formData.designation || "").toUpperCase(),
-      range: formData.range,                // "range" in FE -> sector in BE
-      agency: formData.agency,            // "agency" in FE -> subSector in BE
-
-      // optional metadata your schema already supports
+      email: email,
+      password: formData.password,
       empNo: formData.empNo,
       designation: formData.designation,
-      distributor: formData.distributor,
-
-      // dates (ignored if schema doesn't have them; fine under mongoose strict)
+      agency_id: formData.agency,           // Convert to agency_id (string is fine for now)
+      range_id: formData.range,             // Convert to range_id (string is fine for now)
+      
+      // Dates with correct field names
       birthday: formData.birthday || undefined,
-      joinDate: formData.joinDate || undefined,
-      promotionDate:
-        formData.designation && formData.designation !== "MR"
-          ? (formData.promotionDate || undefined)
-          : undefined,
-      dateAdded: formData.date || undefined,
-    };
-
-    // For Prisma backend, we need to send the data to the correct endpoint
-    // The admin/users endpoint expects different field names
-    const prismaPayload = {
-      name: payload.name,
-      email: payload.email,
-      password: payload.password,
-      role: payload.role,
-      empNo: payload.empNo,
-      designation: payload.designation,
-      agency: payload.agency,
-      range: payload.range,
-      distributor: payload.distributor
+      join_date: formData.joinDate || undefined,  // joinDate -> join_date
+      team_id: undefined, // Optional, can be added later
+      distributor_id: formData.distributor || undefined, // Add distributor field
     };
 
     onSubmit && onSubmit(prismaPayload, formData);
@@ -136,11 +129,9 @@ export default function EmployeeForm({ onSubmit }) {
       designation: "",
       birthday: "",
       joinDate: "",
-      promotionDate: "",
       agency: "",
       range: "",
-      distributor: "",
-      date: "",
+      distributor: ""
     });
   };
 
@@ -155,7 +146,7 @@ export default function EmployeeForm({ onSubmit }) {
           value={formData.username}
           onChange={handleChange}
           placeholder="user@example.com"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required
         />
       </div>
@@ -169,7 +160,7 @@ export default function EmployeeForm({ onSubmit }) {
           value={formData.password}
           onChange={handleChange}
           placeholder="Enter a temporary password"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required
           minLength={7}
         />
@@ -185,7 +176,7 @@ export default function EmployeeForm({ onSubmit }) {
           value={formData.empNo}
           onChange={handleChange}
           placeholder="Enter employee number"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required
         />
       </div>
@@ -198,7 +189,7 @@ export default function EmployeeForm({ onSubmit }) {
           name="joinDate"
           value={formData.joinDate}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
         />
       </div>
 
@@ -210,7 +201,7 @@ export default function EmployeeForm({ onSubmit }) {
           name="birthday"
           value={formData.birthday}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
         />
       </div>
 
@@ -221,7 +212,7 @@ export default function EmployeeForm({ onSubmit }) {
           name="designation"
           value={formData.designation}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required
         >
           <option value="">Select designation</option>
@@ -231,25 +222,10 @@ export default function EmployeeForm({ onSubmit }) {
           <option value="SE">Senior Executive</option>
           <option value="TM">Territory Manager</option>
           <option value="PM">Product Manager</option>
+          <option value="OM">Operations Manager</option>
           <option value="ADMIN">Admin</option>
         </select>
       </div>
-
-      {/* Promotion Date (exclude for MR) */}
-      {formData.designation && formData.designation !== "MR" && (
-        <div>
-          <label className="block text-gray-700 mb-1">
-            Date of Promotion as {formData.designation}
-          </label>
-          <input
-            type="date"
-            name="promotionDate"
-            value={formData.promotionDate}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      )}
 
       {/* Range (Sector) */}
       <div>
@@ -258,7 +234,7 @@ export default function EmployeeForm({ onSubmit }) {
           name="range"
           value={formData.range}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required={formData.designation !== "ADMIN"}
         >
           <option value="">Select range</option>
@@ -277,7 +253,7 @@ export default function EmployeeForm({ onSubmit }) {
           name="agency"
           value={formData.agency}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required={formData.designation !== "ADMIN"}
           disabled={!formData.range}
         >
@@ -297,33 +273,30 @@ export default function EmployeeForm({ onSubmit }) {
       {/* Distributor */}
       <div>
         <label className="block text-gray-700 mb-1">Distributor</label>
-        <input
-          type="text"
+        <select
           name="distributor"
           value={formData.distributor}
           onChange={handleChange}
-          placeholder="Enter distributor"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      {/* Date (record date) */}
-      <div>
-        <label className="block text-gray-700 mb-1">Date</label>
-        <input
-          type="date"
-          name="date"
-          value={formData.date}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          disabled={loadingDistributors || !!distributorError}
+        >
+          <option value="">
+            {loadingDistributors ? "Loading distributors..." : "Select distributor"}
+          </option>
+          {distributors.map((d) => (
+            <option key={d.distributor_code || d.id} value={d.name || d.distributor_name}>
+              {d.name || d.distributor_name} ({d.distributor_code || d.id})
+            </option>
+          ))}
+        </select>
+        {distributorError && <p className="text-sm text-red-600 mt-1">{distributorError}</p>}
       </div>
 
       {/* Submit */}
       <button
         type="submit"
         disabled={!canSubmit}
-        className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+        className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-2 rounded-md hover:from-red-700 hover:to-red-800 transition disabled:opacity-50 shadow-lg"
       >
         Add Employee
       </button>

@@ -7,7 +7,13 @@ async function ensureAdmin() {
   });
 
   if (hasAdmin) {
-    console.log("Admin already present. Skipping admin seed.");
+    console.log("Admin found. Resetting admin password to ensure correct hash...");
+    const passwordHash = await bcrypt.hash("admin123@", 12);
+    await prisma.user.update({
+      where: { email: "admin@gsh.com" },
+      data: { password: passwordHash }
+    });
+    console.log("Admin password reset successfully.");
     return;
   }
 
@@ -60,14 +66,15 @@ async function ensureAdmin() {
 
   // Create a team if it doesn't exist
   let team = await prisma.team.findFirst({
-    where: { team_name: "Admin Team", range_id: range.id }
+    where: { name: "Admin Team", range_id: range.id }
   });
 
   if (!team) {
     team = await prisma.team.create({
       data: {
-        team_name: "Admin Team",
-        range_id: range.id
+        name: "Admin Team",
+        range_id: range.id,
+        agency_id: agency.id
       }
     });
   }

@@ -1,6 +1,8 @@
 import EmployeeForm from "../components/EmployeeForm";
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
+import { useNotification } from "../components/NotificationPopup";
+import { useConfirm } from "../components/ConfirmDialog";
 
 // Edit Employee Modal Component
 function EditEmployeeModal({ employee, onClose, onSave }) {
@@ -13,9 +15,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
     agency: employee?.agency?.name || employee?.agency || '',
     distributor: employee?.distributor || '',
     birthday: employee?.birthday ? new Date(employee.birthday).toISOString().slice(0, 10) : '',
-    joinDate: employee?.join_date || employee?.joinDate ? new Date(employee.join_date || employee.joinDate).toISOString().slice(0, 10) : '',
-    promotionDate: employee?.promotion_date || employee?.promotionDate ? new Date(employee.promotion_date || employee.promotionDate).toISOString().slice(0, 10) : '',
-    date: employee?.date ? new Date(employee.date).toISOString().slice(0, 10) : ''
+    joinDate: employee?.join_date || employee?.joinDate ? new Date(employee.join_date || employee.joinDate).toISOString().slice(0, 10) : ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -49,7 +49,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               required
             />
           </div>
@@ -60,7 +60,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               required
             />
           </div>
@@ -71,7 +71,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="empNo"
               value={formData.empNo}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               required
             />
           </div>
@@ -81,7 +81,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="designation"
               value={formData.designation}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               required
             >
               <option value="">Select Designation</option>
@@ -100,7 +100,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="range"
               value={formData.range}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
             >
               <option value="">Select Range</option>
               <option value="A">A</option>
@@ -113,7 +113,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="agency"
               value={formData.agency}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
             >
               <option value="">Select Agency</option>
               {formData.range === 'A' && (
@@ -145,7 +145,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="birthday"
               value={formData.birthday}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
             />
           </div>
 
@@ -156,18 +156,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="joinDate"
               value={formData.joinDate}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Promotion Date</label>
-            <input
-              type="date"
-              name="promotionDate"
-              value={formData.promotionDate}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
             />
           </div>
 
@@ -178,19 +167,8 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               name="distributor"
               value={formData.distributor}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               placeholder="Enter distributor"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex justify-end space-x-3 pt-4">
@@ -204,7 +182,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-md hover:from-red-700 hover:to-red-800 disabled:opacity-50 transition-all duration-200 shadow-md"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -216,6 +194,8 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
 }
 
 export default function ManageEmployees() {
+  const { showNotification, NotificationComponent } = useNotification();
+  const { showConfirm, ConfirmDialogComponent } = useConfirm();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -230,9 +210,32 @@ export default function ManageEmployees() {
       setErr("");
       try {
         const res = await api.get("/admin/users", { params: { limit: 200 } });
-        const payload = res?.data?.data ?? res?.data ?? {};
-        const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
-        if (mounted) setEmployees(items);
+        
+        // The Prisma API returns data directly in res.data, not res.data.data
+        const items = Array.isArray(res.data) ? res.data : (Array.isArray(res?.data?.data) ? res?.data?.data : []);
+        
+        console.log('Raw API response:', res.data); // Debug log
+        console.log('Extracted items:', items); // Debug log
+        
+        // Normalize the data to ensure all fields are present and consistently named
+        const normalizedItems = items.map(item => ({
+          _id: item._id || item.id,
+          id: item.id || item._id,
+          name: item.name || "",
+          email: item.email || "",
+          emp_no: item.emp_no || item.empNo || "",
+          designation: item.designation || "",
+          range: item.range || { name: item.range_name || "" },
+          agency: item.agency || { name: item.agency_name || "" },
+          distributor: item.distributor_code || "", // Fix: map distributor_code to distributor
+          birthday: item.birthday || "",
+          join_date: item.join_date || "",
+          createdAt: item.createdAt || item.created_at || item.date || item.dateAdded || new Date()
+        }));
+        
+        console.log('Normalized items:', normalizedItems); // Debug log
+        
+        if (mounted) setEmployees(normalizedItems);
       } catch (e) {
         if (mounted) setErr(e?.response?.data?.message || "Failed to load employees");
       } finally {
@@ -252,22 +255,21 @@ export default function ManageEmployees() {
         _id: created.id || created._id || Math.random().toString(36).slice(2),
         name: payload.name,
         email: payload.email,
-        empNo: payload.empNo,
-        designation: payload.role,
+        emp_no: payload.empNo,
+        designation: payload.designation,
         distributor: payload.distributor,
         // show populated names if BE returns them, otherwise show raw ids
-        range: created.range || payload.sector || payload.range,
-        agency: created.agency || payload.subSector || payload.agency,
+        range: created.range || payload.range,
+        agency: created.agency || payload.agency,
         birthday: rawForm.birthday,
-        joinDate: rawForm.joinDate,
-        promotionDate: rawForm.promotionDate,
-        date: rawForm.date,
+        join_date: rawForm.joinDate,
+        createdAt: new Date()
       };
 
       setEmployees((list) => [row, ...list]);
-      alert(`Employee ${payload.email} added ✅`);
+      showNotification(`Employee ${payload.email} added successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to add employee");
+      showNotification(e?.response?.data?.message || "Failed to add employee", 'error');
     }
   };
 
@@ -289,9 +291,7 @@ export default function ManageEmployees() {
         range: formData.range,
         birthday: formData.birthday || undefined,
         joinDate: formData.joinDate || undefined,
-        promotionDate: formData.promotionDate || undefined,
-        distributor: formData.distributor || undefined,
-        date: formData.date || undefined
+        distributor: formData.distributor || undefined
       };
 
       await api.put(`/admin/users/${editingEmployee.id || editingEmployee._id}`, updateData);
@@ -309,24 +309,28 @@ export default function ManageEmployees() {
                 range: formData.range ? { name: formData.range } : emp.range,
                 birthday: formData.birthday,
                 join_date: formData.joinDate,
-                promotion_date: formData.promotionDate,
-                distributor: formData.distributor,
-                date: formData.date
+                distributor: formData.distributor
               }
             : emp
         )
       );
 
-      alert(`Employee ${formData.email} updated successfully!`);
+      showNotification(`Employee ${formData.email || formData.empNo} updated successfully!`, 'success');
     } catch (e) {
       throw new Error(e?.response?.data?.message || "Failed to update employee");
     }
   };
 
   const handleDeleteEmployee = async (employee) => {
-    if (!window.confirm(`Are you sure you want to delete employee ${employee.email}?`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: "Delete Employee",
+      message: `Are you sure you want to delete employee ${employee.email}? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+
+    if (!confirmed) return;
 
     try {
       await api.delete(`/admin/users/${employee.id || employee._id}`);
@@ -336,13 +340,11 @@ export default function ManageEmployees() {
         const deleteId = employee.id || employee._id;
         return empId !== deleteId;
       }));
-      alert(`Employee ${employee.email} deleted successfully!`);
+      showNotification(`Employee ${employee.email} deleted successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to delete employee");
+      showNotification(e?.response?.data?.message || "Failed to delete employee", 'error');
     }
   };
-
-  // Removed edit and delete functions as requested
 
   return (
     <div>
@@ -350,83 +352,83 @@ export default function ManageEmployees() {
         <h1 className="text-2xl font-bold text-gray-800">Manage Employees</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
         >
           {showForm ? 'Hide Form' : 'Add Employee'}
         </button>
       </div>
 
-      {/* Employee List - Display first */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Employee List</h2>
+      {/* Employee List - Display only when form is hidden */}
+      {!showForm && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">Employee List</h2>
 
-        {err && <div className="text-red-600 mb-3">{err}</div>}
-        {loading ? (
-          <div className="text-gray-600">Loading…</div>
-        ) : (
-          <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
-            <thead className="bg-blue-600 text-white">
-              <tr>
-                <th className="py-2 px-4 text-center">Username (Email)</th>
-                <th className="py-2 px-4 text-center">Emp No</th>
-                <th className="py-2 px-4 text-center">Designation</th>
-                <th className="py-2 px-4 text-center">Birthday</th>
-                <th className="py-2 px-4 text-center">Join Date</th>
-                <th className="py-2 px-4 text-center">Promotion Date</th>
-                <th className="py-2 px-4 text-center">Range</th>
-                <th className="py-2 px-4 text-center">Agency</th>
-                <th className="py-2 px-4 text-center">Distributor</th>
-                <th className="py-2 px-4 text-center">Date Added</th>
-                <th className="py-2 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.length === 0 ? (
+          {err && <div className="text-red-600 mb-3">{err}</div>}
+          {loading ? (
+            <div className="text-gray-600">Loading…</div>
+          ) : (
+            <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
+              <thead className="bg-gradient-to-r from-red-600 to-red-700 text-white">
                 <tr>
-                  <td colSpan="11" className="text-center py-4 text-gray-500">
-                    No employees added yet
-                  </td>
+                  <th className="py-2 px-4 text-center">Username (Email)</th>
+                  <th className="py-2 px-4 text-center">Emp No</th>
+                  <th className="py-2 px-4 text-center">Name</th>
+                  <th className="py-2 px-4 text-center">Designation</th>
+                  <th className="py-2 px-4 text-center">Birthday</th>
+                  <th className="py-2 px-4 text-center">Join Date</th>
+                  <th className="py-2 px-4 text-center">Range</th>
+                  <th className="py-2 px-4 text-center">Agency</th>
+                  <th className="py-2 px-4 text-center">Distributor</th>
+                  <th className="py-2 px-4 text-center">Date Added</th>
+                  <th className="py-2 px-4 text-center">Actions</th>
                 </tr>
-              ) : (
-                employees.map((emp) => (
-                  <tr key={emp._id || emp.id} className="border-b hover:bg-gray-50 text-center">
-                    <td className="py-2 px-4">{emp.email || emp.username}</td>
-                    <td className="py-2 px-4">{emp.emp_no || emp.empNo || "-"}</td>
-                    <td className="py-2 px-4">{emp.designation || emp.role || "-"}</td>
-                    <td className="py-2 px-4">{fmtDate(emp.birthday)}</td>
-                    <td className="py-2 px-4">{fmtDate(emp.joinDate)}</td>
-                    <td className="py-2 px-4">
-                      {(emp.designation || emp.role) !== "MR" ? fmtDate(emp.promotionDate) : "-"}
-                    </td>
-                    <td className="py-2 px-4">{showRange(emp.range)}</td>
-                    <td className="py-2 px-4">{showAgency(emp.agency)}</td>
-                    <td className="py-2 px-4">{emp.distributor || "-"}</td>
-                    <td className="py-2 px-4">{fmtDate(emp.date)}</td>
-                    <td className="py-2 px-4 text-center">
-                      <div className="flex justify-center space-x-2">
-                        <button
-                          onClick={() => handleEditEmployee(emp)}
-                          className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
-                          title="Edit Employee"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEmployee(emp)}
-                          className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
-                          title="Delete Employee"
-                        >
-                          Delete
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {employees.length === 0 ? (
+                  <tr>
+                    <td colSpan="11" className="text-center py-4 text-gray-500">
+                      No employees added yet
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+                ) : (
+                  employees.map((emp) => (
+                    <tr key={emp._id || emp.id} className="border-b hover:bg-gray-50 text-center">
+                      <td className="py-2 px-4">{emp.email || emp.username}</td>
+                      <td className="py-2 px-4">{emp.emp_no || "-"}</td>
+                      <td className="py-2 px-4">{emp.name || "-"}</td>
+                      <td className="py-2 px-4">{emp.designation || "-"}</td>
+                      <td className="py-2 px-4">{fmtDate(emp.birthday)}</td>
+                      <td className="py-2 px-4">{fmtDate(emp.joinDate || emp.join_date)}</td>
+                      <td className="py-2 px-4">{showRange(emp.range)}</td>
+                      <td className="py-2 px-4">{showAgency(emp.agency)}</td>
+                      <td className="py-2 px-4">{emp.distributor || "-"}</td>
+                      <td className="py-2 px-4">{fmtDate(emp.createdAt || emp.dateAdded || new Date())}</td>
+                      <td className="py-2 px-4 text-center">
+                        <div className="flex justify-center space-x-2">
+                          <button
+                            onClick={() => handleEditEmployee(emp)}
+                            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-md hover:bg-gradient-to-r from-red-600 to-red-700 text-sm transition-colors shadow-md"
+                            title="Edit Employee"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEmployee(emp)}
+                            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-md hover:bg-gradient-to-r from-red-600 to-red-700 text-sm transition-colors"
+                            title="Delete Employee"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Edit Employee Modal */}
       {editingEmployee && (
@@ -439,6 +441,12 @@ export default function ManageEmployees() {
 
       {/* Add Employee Form - Display after list */}
       {showForm && <EmployeeForm onSubmit={handleAddEmployee} />}
+      
+      {/* Notification Component */}
+      <NotificationComponent />
+      
+      {/* Confirmation Dialog Component */}
+      <ConfirmDialogComponent />
     </div>
   );
 }

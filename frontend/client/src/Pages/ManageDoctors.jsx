@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import DoctorForm from "../components/DoctorForm";
 import { api } from "../services/api";
+import { useNotification } from "../components/NotificationPopup";
+import { useConfirm } from "../components/ConfirmDialog";
 
 // Edit Doctor Modal Component
 function EditDoctorModal({ doctor, onClose, onSave }) {
@@ -45,7 +47,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
           </div>
@@ -56,7 +58,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               name="contactNumber"
               value={formData.contactNumber}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
           <div>
@@ -66,7 +68,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
           <div>
@@ -76,7 +78,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               name="specialty"
               value={formData.specialty}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
           <div>
@@ -85,7 +87,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               name="categorization"
               value={formData.categorization}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               <option value="">Select Categorization</option>
               <option value="A">A</option>
@@ -99,7 +101,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               name="sector"
               value={formData.sector}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               <option value="">Select Sector</option>
               <option value="A">A</option>
@@ -113,7 +115,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               name="dateAdded"
               value={formData.dateAdded}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
           <div className="flex justify-end space-x-3 pt-4">
@@ -139,6 +141,8 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
 }
 
 export default function ManageDoctors() {
+  const { showNotification, NotificationComponent } = useNotification();
+  const { showConfirm, ConfirmDialogComponent } = useConfirm();
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -180,9 +184,9 @@ export default function ManageDoctors() {
         range: created.range || { id: payload.range_id, name: 'Unknown' }, // BE returns populated range
       };
       setDoctors((list) => [newRow, ...list]);
-      alert(`Doctor ${payload.name} added ✅`);
+      showNotification(`Doctor ${payload.name} added successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to add doctor");
+      showNotification(e?.response?.data?.message || "Failed to add doctor", 'error');
     }
   };
 
@@ -219,16 +223,22 @@ export default function ManageDoctors() {
         )
       );
 
-      alert(`Doctor ${formData.name} updated successfully!`);
+      showNotification(`Doctor ${formData.name} updated successfully!`, 'success');
     } catch (e) {
       throw new Error(e?.response?.data?.message || "Failed to update doctor");
     }
   };
 
   const handleDeleteDoctor = async (doctor) => {
-    if (!window.confirm(`Are you sure you want to delete doctor ${doctor.name}?`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: "Delete Doctor",
+      message: `Are you sure you want to delete doctor "${doctor.name}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+
+    if (!confirmed) return;
 
     try {
       await api.delete(`/admin/doctors/${doctor.id || doctor._id}`);
@@ -237,9 +247,9 @@ export default function ManageDoctors() {
         const deleteId = doctor.id || doctor._id;
         return docId !== deleteId;
       }));
-      alert(`Doctor ${doctor.name} deleted successfully!`);
+      showNotification(`Doctor ${doctor.name} deleted successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to delete doctor");
+      showNotification(e?.response?.data?.message || "Failed to delete doctor", 'error');
     }
   };
 
@@ -249,7 +259,7 @@ export default function ManageDoctors() {
         <h1 className="text-2xl font-bold text-gray-800">Manage Doctors</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
         >
           {showForm ? 'Hide Form' : 'Add Doctor'}
         </button>
@@ -267,7 +277,8 @@ export default function ManageDoctors() {
       {/* Add Doctor Form - Display after list */}
       {showForm && <DoctorForm onSubmit={handleAddDoctor} />}
 
-      {/* Doctor List - Display first */}
+      {/* Doctor List - Display only when form is hidden */}
+      {!showForm && (
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Doctor List</h2>
 
@@ -276,7 +287,7 @@ export default function ManageDoctors() {
           <div className="text-gray-600">Loading…</div>
         ) : (
           <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
-            <thead className="bg-blue-600 text-white">
+            <thead className="bg-red-600 text-white">
               <tr>
                 <th className="py-2 px-4 text-center">Name</th>
                 <th className="py-2 px-4 text-center">Agency</th>
@@ -326,7 +337,7 @@ export default function ManageDoctors() {
                         <div className="flex justify-center space-x-2">
                           <button
                             onClick={() => handleEditDoctor(doc)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
+                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
                             title="Edit Doctor"
                           >
                             Edit
@@ -348,6 +359,13 @@ export default function ManageDoctors() {
           </table>
         )}
       </div>
-    </div>
-  );
+    )}
+    
+    {/* Notification Component */}
+    <NotificationComponent />
+    
+    {/* Confirmation Dialog Component */}
+    <ConfirmDialogComponent />
+  </div>
+);
 }

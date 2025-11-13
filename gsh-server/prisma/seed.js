@@ -22,6 +22,25 @@ async function main() {
   });
   console.log('Created area:', area.name);
 
+  // Create the specific areas for distributor form
+  const areas = [
+    { name: 'Colombo' },
+    { name: 'Gampaha' },
+    { name: 'Kandy' },
+    { name: 'Kurunegala' }
+  ];
+
+  const createdAreas = [];
+  for (const areaData of areas) {
+    const newArea = await prisma.area.upsert({
+      where: { name: areaData.name },
+      update: {},
+      create: areaData,
+    });
+    createdAreas.push(newArea);
+    console.log('Created area:', newArea.name);
+  }
+
   const range = await prisma.range.upsert({
     where: { id: 1 }, // Use a predictable ID for the first one
     update: {},
@@ -36,8 +55,9 @@ async function main() {
     where: { id: 1 }, // Use a predictable ID
     update: {},
     create: {
-      team_name: 'Admin Team',
+      name: 'Admin Team', // Updated from team_name to name
       range_id: range.id,
+      agency_id: agency.id, // Added required agency_id field
     },
   });
   console.log('Created team:', team.team_name);
@@ -49,6 +69,7 @@ async function main() {
       name: 'Main Distributor',
       agency_id: agency.id,
       area_id: area.id,
+      range_id: range.id, // Added required range_id field
     },
   });
   console.log('Created distributor:', distributor.name);

@@ -1,4 +1,7 @@
+
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 
 // Sample data
 const doctors = [
@@ -198,7 +201,10 @@ const LiveSummaryTable = ({ tableData }) => {
 
 // --- Main Component ---
 export default function RepdetailsReport() {
+  const { user } = useAuth();
   const [step, setStep] = useState(1); 
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Step 1 State
   const [date, setDate] = useState("");
@@ -228,6 +234,36 @@ export default function RepdetailsReport() {
   const [remarks, setRemarks] = useState("");
   const [orderFormImage, setOrderFormImage] = useState(null);
 
+  // Fetch user profile data on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await api.get('/users/profile');
+        const profile = response.data.user;
+        setUserProfile(profile);
+        
+        // Auto-populate form fields with user profile data
+        if (profile) {
+          setRepName(profile.name || "");
+          setEmpNo(profile.emp_no || "");
+          setAgency(profile.agency?.name || "");
+          setRange(profile.range?.name || "");
+          setDistributor(profile.distributor?.name || "");
+          // Auto-populate Area and Town from distributor data
+          setArea(profile.distributor?.area?.name || "");
+          setTown(profile.distributor?.coverage_town || "");
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user && user.email) {
+      fetchUserProfile();
+    }
+  }, [user]);
 
   // --- Step 1 Functions ---
   const toggleDoctor = (doc) => {
@@ -246,9 +282,9 @@ export default function RepdetailsReport() {
   }, [showDoctorDropdown]);
 
   const step1Valid =
-    date && range.trim() && agency.trim() && repName.trim() &&
-    empNo.trim() && distributor.trim() && area.trim() &&
-    town.trim() && selectedDoctors.length > 0;
+    date && selectedDoctors.length > 0;
+    // Only date and doctors are now required (editable fields)
+    // Range, Agency, Rep Name, Emp No, Distributor, Area, Town are auto-populated and readonly
 
   // --- Step 2 Functions ---
   useEffect(() => {
@@ -375,7 +411,7 @@ export default function RepdetailsReport() {
           details: otherBills,
           images: otherBillImages.map(f => f.name) 
       },
-    
+     
       remarks,
       orderFormImage: orderFormImage ? orderFormImage.name : null 
     };
@@ -393,14 +429,28 @@ export default function RepdetailsReport() {
     
   };
 
-  const renderStep1 = () => (
+  const renderStep1 = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-gray-600">Loading profile data...</span>
+        </div>
+      );
+    }
+
+    return (
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-2">Daily Call Report</h2>
         <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-600 mx-auto rounded-full" />
+        {userProfile && (
+          <p className="text-sm text-gray-600 mt-2">
+            Logged in as: <span className="font-semibold">{userProfile.name}</span> ({userProfile.emp_no})
+          </p>
+        )}
       </div>
-      {/* ... (Step 1 form fields - unchanged) ... */}
-       {/* Date */}
+      {/* Date */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Date</label>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
@@ -408,37 +458,37 @@ export default function RepdetailsReport() {
       {/* Range */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Range</label>
-        <input type="text" value={range} placeholder="Enter Range" onChange={(e) => setRange(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        <input type="text" value={range} onChange={(e) => setRange(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
       </div>
       {/* Agency */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Agency</label>
-        <input type="text" value={agency} placeholder="Enter Agency" onChange={(e) => setAgency(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        <input type="text" value={agency} onChange={(e) => setAgency(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
       </div>
       {/* Rep Name */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Rep Name</label>
-        <input type="text" value={repName} placeholder="Enter Rep Name" onChange={(e) => setRepName(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        <input type="text" value={repName} onChange={(e) => setRepName(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
       </div>
       {/* Emp No */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Emp No</label>
-        <input type="text" value={empNo} placeholder="Enter Emp No" onChange={(e) => setEmpNo(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        <input type="text" value={empNo} onChange={(e) => setEmpNo(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
       </div>
       {/* Distributor */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Distributor</label>
-        <input type="text" value={distributor} placeholder="Enter Distributor" onChange={(e) => setDistributor(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        <input type="text" value={distributor} onChange={(e) => setDistributor(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
       </div>
       {/* Area + Town */}
       <div className="flex gap-6 mb-6">
         <div className="flex-1">
           <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Area</label>
-          <input type="text" value={area} placeholder="Enter Area" onChange={(e) => setArea(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          <input type="text" value={area} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
         </div>
         <div className="flex-1">
           <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Town</label>
-          <input type="text" value={town} placeholder="Enter Town" onChange={(e) => setTown(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          <input type="text" value={town} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
         </div>
       </div>
       {/* Doctor dropdown */}
@@ -479,7 +529,8 @@ export default function RepdetailsReport() {
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
  const renderStep2 = () => (
     <div className="w-full mx-auto">
@@ -519,7 +570,7 @@ export default function RepdetailsReport() {
               <th style={{ ...stickyBase, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center text-xs">No.</th>
               {/* Doctor */}
               <th style={{ ...stickyBase, left: LEFTS.doctor, width: FROZEN.doctor }} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center text-xs">Doctors</th>
-              {/* Joint Visit - REMOVED border */}
+              {/* Joint Visit */}
               <th style={{ ...stickyBase, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center text-xs">Joint Visit</th>
               {/* Dynamic Product Columns */}
               {productCategories[selectedProductTab].map((product, i) => (
@@ -537,7 +588,7 @@ export default function RepdetailsReport() {
                   <td style={{ ...stickyCellStyle, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 text-center text-sm">{docIdx + 1}</td>
                   {/* Doctor */}
                   <td style={{ ...stickyCellStyle, left: LEFTS.doctor, width: FROZEN.doctor }} className="border border-gray-200 px-3 py-2 font-medium whitespace-nowrap text-sm">{doc.doctor}</td>
-                  {/* Joint Visit & Manager Checkboxes - REMOVED border */}
+                  {/* Joint Visit & Manager Checkboxes */}
                   <td style={{ ...stickyCellStyle, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2">
                     <div className="flex flex-col items-start gap-2">
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -621,7 +672,6 @@ export default function RepdetailsReport() {
       </div>
     </div>
   );
-
 
   // Combined Step 3 (Layout adjusted: Expenses, Mileage, Remarks in a single column)
   const renderStep3 = () => (
@@ -748,7 +798,7 @@ export default function RepdetailsReport() {
         </button>
         <button
           onClick={handleSubmit} 
-          className="px-6 py-3 text-base font-semibold rounded-md bg-green-500 hover:bg-green-600 text-white"
+          className="px-6 py-3 text-base font-semibold rounded-md bg-red-500 hover:bg-red-600 text-white"
         >
           Submit
         </button>
@@ -776,3 +826,4 @@ export default function RepdetailsReport() {
     </div>
   );
 }
+              {/* Joint Visit */}

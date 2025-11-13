@@ -15,4 +15,7 @@ router.post('/', ctrl.createUser);
 // GET /api/v1/users - Get all users
 router.get('/', ctrl.getAllUsers);
 
+// GET /api/v1/users/profile - Get current user's complete profile
+router.get('/profile', ctrl.getCurrentUserProfile);
+
 module.exports = router;

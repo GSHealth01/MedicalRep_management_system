@@ -1,17 +1,34 @@
 import { useEffect, useState } from "react";
 import DistributorForm from "../components/DistributorForm";
 import { api } from "../services/api";
+import { useNotification } from "../components/NotificationPopup";
+import { useConfirm } from "../components/ConfirmDialog";
 
 // Edit Distributor Modal Component
 function EditDistributorModal({ distributor, onClose, onSave }) {
   const [formData, setFormData] = useState({
-    name: distributor?.name || '',
-    area: distributor?.area || '',
-    town: distributor?.coverage_town || distributor?.town || '',
-    route: distributor?.route || '',
-    agency: distributor?.agency || ''
+    name: '',
+    distributorCode: '',
+    area: '',
+    town: '',
+    route: '',
+    agency: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Update form data when distributor changes
+  useEffect(() => {
+    if (distributor) {
+      setFormData({
+        name: distributor?.name || '',
+        distributorCode: distributor?.distributor_code || '',
+        area: typeof distributor?.area === 'object' ? distributor?.area?.name || '' : distributor?.area || '',
+        town: distributor?.coverage_town || distributor?.town || '',
+        route: distributor?.route || '',
+        agency: typeof distributor?.agency === 'object' ? distributor?.agency?.name || '' : distributor?.agency || ''
+      });
+    }
+  }, [distributor]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,46 +60,34 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               required
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Distributor Code *</label>
+            <input
+              type="text"
+              name="distributorCode"
+              value={formData.distributorCode}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
+              required
+              disabled
+              title="Distributor code cannot be edited"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Area *</label>
-            <select
+            <input
+              type="text"
               name="area"
               value={formData.area}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               required
-            >
-              <option value="">Select Area</option>
-              <option value="Colombo">Colombo</option>
-              <option value="Gampaha">Gampaha</option>
-              <option value="Kalutara">Kalutara</option>
-              <option value="Kandy">Kandy</option>
-              <option value="Matale">Matale</option>
-              <option value="Nuwara Eliya">Nuwara Eliya</option>
-              <option value="Galle">Galle</option>
-              <option value="Matara">Matara</option>
-              <option value="Hambantota">Hambantota</option>
-              <option value="Jaffna">Jaffna</option>
-              <option value="Kilinochchi">Kilinochchi</option>
-              <option value="Mannar">Mannar</option>
-              <option value="Vavuniya">Vavuniya</option>
-              <option value="Mullaitivu">Mullaitivu</option>
-              <option value="Batticaloa">Batticaloa</option>
-              <option value="Ampara">Ampara</option>
-              <option value="Trincomalee">Trincomalee</option>
-              <option value="Kurunegala">Kurunegala</option>
-              <option value="Puttalam">Puttalam</option>
-              <option value="Anuradhapura">Anuradhapura</option>
-              <option value="Polonnaruwa">Polonnaruwa</option>
-              <option value="Badulla">Badulla</option>
-              <option value="Moneragala">Moneragala</option>
-              <option value="Ratnapura">Ratnapura</option>
-              <option value="Kegalle">Kegalle</option>
-            </select>
+              placeholder="Enter area name"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Town</label>
@@ -91,7 +96,7 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
               name="town"
               value={formData.town}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               placeholder="Enter town name"
             />
           </div>
@@ -102,7 +107,7 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
               name="route"
               value={formData.route}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
               placeholder="Enter route"
             />
           </div>
@@ -112,7 +117,7 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
               name="agency"
               value={formData.agency}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
             >
               <option value="">Select Agency</option>
               <option value="A1">A1</option>
@@ -139,7 +144,7 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-md hover:from-red-700 hover:to-red-800 disabled:opacity-50 transition-all duration-200 shadow-md"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -151,6 +156,8 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
 }
 
 export default function ManageDistributors() {
+  const { showNotification, NotificationComponent } = useNotification();
+  const { showConfirm, ConfirmDialogComponent } = useConfirm();
   const [distributors, setDistributors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -207,6 +214,7 @@ export default function ManageDistributors() {
       const created = res?.data?.data || res?.data || {};
       const newRow = {
         id: created.id,
+        distributor_code: created.distributor_code,
         name: created.name,
         area: created.area?.name || payload.area, // Use area name from response
         town: created.coverage_town,
@@ -215,10 +223,10 @@ export default function ManageDistributors() {
         sector: created.agency?.name || 'Unknown', // For backward compatibility
       };
       setDistributors((list) => [newRow, ...list]);
-      alert(`Distributor ${payload.name} added ✅`);
+      showNotification(`Distributor ${payload.name} added successfully!`, 'success');
     } catch (e) {
       console.error('Error adding distributor:', e); // Debug log
-      alert(e?.response?.data?.message || "Failed to add distributor");
+      showNotification(e?.response?.data?.message || "Failed to add distributor", 'error');
     }
   };
 
@@ -230,16 +238,23 @@ export default function ManageDistributors() {
     try {
       const updateData = {};
       if (formData.name.trim()) updateData.name = formData.name.trim();
-      if (formData.area) updateData.area = formData.area;
       if (formData.town.trim()) updateData.coverage_town = formData.town.trim();
       if (formData.route.trim()) updateData.route = formData.route.trim();
+      
+      // For agency and area, we need to find the IDs or handle them properly
+      // Since these are complex relationships, let's update them as strings for now
       if (formData.agency) updateData.agency = formData.agency;
+      if (formData.area) updateData.area = formData.area;
 
-      await api.put(`/admin/distributors/${editingDistributor.id || editingDistributor._id}`, updateData);
+      const distributorCode = editingDistributor.distributor_code || editingDistributor.distributorCode;
+      console.log('Updating distributor with code:', distributorCode);
+      console.log('Update data:', updateData);
+
+      await api.put(`/admin/distributors/${distributorCode}`, updateData);
 
       setDistributors((list) =>
         list.map((dist) =>
-          dist.id === editingDistributor.id || dist._id === editingDistributor._id
+          (dist.distributor_code === distributorCode || dist.distributorCode === distributorCode)
             ? {
                 ...dist,
                 name: formData.name,
@@ -253,27 +268,35 @@ export default function ManageDistributors() {
         )
       );
 
-      alert(`Distributor ${formData.name} updated successfully!`);
+      showNotification(`Distributor ${formData.name} updated successfully!`, 'success');
     } catch (e) {
+      console.error('Error updating distributor:', e);
       throw new Error(e?.response?.data?.message || "Failed to update distributor");
     }
   };
 
   const handleDeleteDistributor = async (distributor) => {
-    if (!window.confirm(`Are you sure you want to delete distributor ${distributor.name}?`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: "Delete Distributor",
+      message: `Are you sure you want to delete distributor "${distributor.name}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+
+    if (!confirmed) return;
 
     try {
-      await api.delete(`/admin/distributors/${distributor.id || distributor._id}`);
+      const distributorCode = distributor.distributor_code || distributor.distributorCode;
+      await api.delete(`/admin/distributors/${distributorCode}`);
       setDistributors((list) => list.filter((dist) => {
-        const distId = dist.id || dist._id;
-        const deleteId = distributor.id || distributor._id;
-        return distId !== deleteId;
+        const distCode = dist.distributor_code || dist.distributorCode;
+        const deleteCode = distributor.distributor_code || distributor.distributorCode;
+        return distCode !== deleteCode;
       }));
-      alert(`Distributor ${distributor.name} deleted successfully!`);
+      showNotification(`Distributor ${distributor.name} deleted successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to delete distributor");
+      showNotification(e?.response?.data?.message || "Failed to delete distributor", 'error');
     }
   };
 
@@ -283,7 +306,7 @@ export default function ManageDistributors() {
         <h1 className="text-2xl font-bold text-gray-800">Manage Distributors</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-md hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 shadow-lg"
         >
           {showForm ? 'Hide Form' : 'Add Distributor'}
         </button>
@@ -301,7 +324,8 @@ export default function ManageDistributors() {
       {/* Add Distributor Form - Display after list */}
       {showForm && <DistributorForm onSubmit={handleAddDistributor} />}
 
-      {/* Distributor List - Display first */}
+      {/* Distributor List - Display only when form is hidden */}
+      {!showForm && (
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Distributor List</h2>
 
@@ -310,8 +334,9 @@ export default function ManageDistributors() {
           <div className="text-gray-600">Loading…</div>
         ) : (
           <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
-            <thead className="bg-blue-600 text-white">
+            <thead className="bg-gradient-to-r from-red-600 to-red-700 text-white">
               <tr>
+                <th className="py-2 px-4 text-center">Distributor Code</th>
                 <th className="py-2 px-4 text-center">Distributor Name</th>
                 <th className="py-2 px-4 text-center">Agency</th>
                 <th className="py-2 px-4 text-center">Area</th>
@@ -324,7 +349,7 @@ export default function ManageDistributors() {
             <tbody>
               {distributors.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500">
+                  <td colSpan="8" className="text-center py-4 text-gray-500">
                     No distributors added yet
                   </td>
                 </tr>
@@ -333,9 +358,12 @@ export default function ManageDistributors() {
                   console.log('Rendering distributor:', dist); // Debug log
                   return (
                     <tr
-                      key={dist.id || dist._id}
+                      key={dist.distributor_code || dist.distributorCode || Math.random()}
                       className="border-b hover:bg-gray-50 text-center"
                     >
+                      <td className="py-2 px-4 font-medium">
+                        {String(dist.distributor_code || dist.distributorCode || 'Unknown')}
+                      </td>
                       <td className="py-2 px-4">
                         {String(dist.name || dist.distributorName || 'Unknown')}
                       </td>
@@ -356,14 +384,14 @@ export default function ManageDistributors() {
                         <div className="flex justify-center space-x-2">
                           <button
                             onClick={() => handleEditDistributor(dist)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
+                            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-md hover:bg-gradient-to-r from-red-600 to-red-700 text-sm transition-colors shadow-md"
                             title="Edit Distributor"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteDistributor(dist)}
-                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-md hover:bg-gradient-to-r from-red-600 to-red-700 text-sm transition-colors"
                             title="Delete Distributor"
                           >
                             Delete
@@ -378,6 +406,13 @@ export default function ManageDistributors() {
           </table>
         )}
       </div>
+      )}
+      
+      {/* Notification Component */}
+      <NotificationComponent />
+      
+      {/* Confirmation Dialog Component */}
+      <ConfirmDialogComponent />
     </div>
   );
 }

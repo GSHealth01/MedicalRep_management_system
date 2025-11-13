@@ -6,7 +6,7 @@ import { api } from "../services/api";
 function EditTeamModal({ team, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: team?.name || '',
-    subSector: team?.subSector || '',
+    range: team?.range_id || '',
     ops: team?.ops || [],
     sms: team?.sms || [],
     pms: team?.pms || [],
@@ -58,25 +58,18 @@ function EditTeamModal({ team, onClose, onSave }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sub Sector</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Range</label>
             <select
-              name="subSector"
-              value={formData.subSector}
+              name="range"
+              value={formData.range}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select Sub Sector</option>
-              <option value="A1">A1</option>
-              <option value="A2">A2</option>
-              <option value="A3">A3</option>
-              <option value="A4">A4</option>
-              <option value="B1">B1</option>
-              <option value="B2">B2</option>
-              <option value="B3">B3</option>
-              <option value="B4">B4</option>
-              <option value="B5">B5</option>
-              <option value="B6">B6</option>
-              <option value="B7">B7</option>
+              <option value="">Select Range</option>
+              <option value="1">Range 1</option>
+              <option value="2">Range 2</option>
+              <option value="3">Range 3</option>
+              <option value="4">Range 4</option>
             </select>
           </div>
 
@@ -226,8 +219,12 @@ export default function ManageTeams() {
 
   const handleAddTeam = async (payload, rawForm) => {
     try {
-      const subSectorId = rawForm.subSector;
-      const res = await api.post(`/admin/subsectors/${subSectorId}/teams`, payload);
+      const rangeId = rawForm.range;
+      const teamPayload = {
+        ...payload,
+        range_id: parseInt(rangeId)
+      };
+      const res = await api.post("/admin/teams", teamPayload);
       const created = res?.data?.data || {};
 
       // Prefer labels from the form for instant display
@@ -235,6 +232,7 @@ export default function ManageTeams() {
       const row = {
         _id: created.id || created._id || Math.random().toString(36).slice(2),
         name: created.name || payload.name,
+        range_id: rangeId,
         ses: L.ses || rawForm.ses,   // arrays of display strings
         tms: L.tms || rawForm.tms,
         pms: L.pms || rawForm.pms,
@@ -248,12 +246,6 @@ export default function ManageTeams() {
 
       setTeams((list) => [row, ...list]);
       alert(`Team "${payload.name}" added ✅`);
-
-      // (Optional) If you have an endpoint to attach members now, you can call it here
-      // await api.patch(`/admin/teams/${row._id}/members`, {
-      //   opsIds: rawForm.ops, smsIds: rawForm.sms, pmsIds: rawForm.pms, tmsIds: rawForm.tms,
-      //   sesIds: rawForm.ses, jesIds: rawForm.jes, fcsIds: rawForm.fcs, mrsIds: rawForm.mrs
-      // });
     } catch (e) {
       alert(e?.response?.data?.message || "Failed to add team");
     }
@@ -329,7 +321,7 @@ export default function ManageTeams() {
         <h1 className="text-2xl font-bold text-gray-800">Manage Teams</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-md hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 shadow-lg"
         >
           {showForm ? 'Hide Form' : 'Add Team'}
         </button>
@@ -347,7 +339,8 @@ export default function ManageTeams() {
       {/* Add Team Form - Display after list */}
       {showForm && <TeamForm onSubmit={handleAddTeam} />}
 
-      {/* Team List - Display first */}
+      {/* Team List - Display only when form is hidden */}
+      {!showForm && (
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Team List</h2>
         {err && <div className="text-red-600 mb-3">{err}</div>}
@@ -355,7 +348,7 @@ export default function ManageTeams() {
           <div className="text-gray-600">Loading…</div>
         ) : (
           <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
-            <thead className="bg-blue-600 text-white">
+            <thead className="bg-gradient-to-r from-red-600 to-red-700 text-white">
               <tr>
                 <th className="py-2 px-4 text-center">Team Name</th>
                 <th className="py-2 px-4 text-center">Ops</th>
@@ -411,6 +404,7 @@ export default function ManageTeams() {
           </table>
         )}
       </div>
+      )}
     </div>
   );
 }

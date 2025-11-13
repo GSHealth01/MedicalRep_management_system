@@ -3,14 +3,14 @@ const router = express.Router();
 const { requireAuth } = require('../../middlewares/auth');
 const ctrl = require('../../controllers/v1/agency.controller');
 
-// All routes require authentication
+// GET /api/v1/agencies - Get all agencies (public for forms)
+router.get('/', ctrl.getAllAgencies);
+
+// All other routes require authentication
 router.use(requireAuth);
 
 // POST /api/v1/agencies - Create new agency
 router.post('/', ctrl.createAgency);
-
-// GET /api/v1/agencies - Get all agencies
-router.get('/', ctrl.getAllAgencies);
 
 // GET /api/v1/agencies/:id - Get one agency
 router.get('/:id', ctrl.getOneAgency);

@@ -18,103 +18,121 @@ datasource db {
 model agency {
   id           Int           @id @default(autoincrement())
   name         String        @unique
+  dateAdded    DateTime?     @default(now()) // Date Added for table display
   // 1:M -> 'agency has many ranges'
   ranges       range[]
   // 1:M -> 'agency has many users'
   users        user[]
   // 1:M -> 'agency has many distributors'
   distributors distributor[]
+  // 1:M -> 'agency has many teams'
+  teams        team[]
 }
 
 // Replaces 'sector'. Belongs to one agency.
 model range {
-  id        Int     @id @default(autoincrement())
-  name      String?
+  id           Int            @id @default(autoincrement())
+  name         String?
+  dateAdded    DateTime?      @default(now()) // Date Added for table display
   // 1:M -> 'agency has many ranges'
-  agency_id Int
-  agency    agency  @relation(fields: [agency_id], references: [id])
+  agency_id    Int
+  agency       agency         @relation(fields: [agency_id], references: [id])
   // 1:M -> 'in one range has many users'
-  users     user[]
+  users        user[]
   // 1:M -> 'team has one range'
-  teams     team[]
+  teams        team[]
   // 1:M -> 'range has many doctors'
-  doctors   doctor[]
+  doctors      doctor[]
+  // 1:M -> 'range has many distributors'
+  distributors distributor[]
 }
 
 // Team model with new fields
 model team {
   id                 Int      @id @default(autoincrement())
-  team_name          String?
+  name               String?  @map("team_name") // "Team Name" - renamed from team_name
   // Text fields for roles, as these are likely names
   operations_manager String?
   senior_manager     String?
   territory_managers String?
+  product_managers   String?  // Added missing PM field
   senior_executives  String?
   junior_executives  String?
   field_coordinators String?
+  medical_representatives String? // Added missing MR field
+  // Date tracking
+  dateAdded          DateTime? @default(now()) // Added missing Date Added field
   // 1:M -> 'team has one range'
   range_id           Int
   range              range    @relation(fields: [range_id], references: [id])
+  // 1:M -> 'team belongs to one agency' (added for agency field)
+  agency_id          Int
+  agency             agency   @relation(fields: [agency_id], references: [id])
   // 1:M -> 'one team has many users' (this will hold the MRs)
   users              user[]
   // M:N -> 'team has many products'
   products           TeamProducts[]
 }
 
+// Area model for geographic locations
 model area {
   id          Int            @id @default(autoincrement())
   name        String         @unique
+  dateAdded   DateTime?      @default(now()) // Date Added for table display
   // 1:1 -> 'distributor has one area'
   distributor distributor?
   // M:N -> 'user works in many areas'
   users       UserWorkAreas[]
 }
 
-// Distributor model with new fields
+// Distributor model with distributor code as primary key
 model distributor {
-  id            Int       @id @default(autoincrement())
-  name          String?   @map("distributor_name") // "Distributor Name"
-  coverage_town String?   // "Coverage (Town)"
-  route         String?   // "Route"
+  distributor_code String     @id // Primary key: DIS001, DIS002, etc. - no hardcoded default
+  name             String?    @map("distributor_name") // "Distributor Name"
+  coverage_town    String?    // "Coverage (Town)"
+  route            String?    // "Route"
+  dateAdded        DateTime?  @default(now()) // Date Added for table display
   // 1:M -> 'distributor belongs to one agency'
-  agency_id     Int
-  agency        agency    @relation(fields: [agency_id], references: [id])
+  agency_id        Int
+  agency           agency     @relation(fields: [agency_id], references: [id])
   // 1:M -> 'distributor belongs to one area'
-  area_id       Int
-  area          area      @relation(fields: [area_id], references: [id])
+  area_id          Int
+  area             area       @relation(fields: [area_id], references: [id])
   @@unique([area_id]) // Make area_id unique for one-to-one relation
-  // 1:1 -> 'one user has one distributor'
-  user          user?
+  // 1:M -> 'distributor belongs to one range' (added for range field)
+  range_id         Int
+  range            range      @relation(fields: [range_id], references: [id])
+  // Removed: 'one user has one distributor' - no longer needed
   // M:N -> 'distributor has many products'
-  products      DistributorProducts[]
+  products         DistributorProducts[]
 }
 
 // Central 'user' model, replacing rep, manager, and auth user
 model user {
-id             Int       @id @default(autoincrement())
-email          String    @unique // Username (Email)
-password       String    // Password - Stored as a hash
-name           String?
-emp_no         String    @unique // Employee No
-designation    String?   // Designation: "Medical Rep", "Field Coordinator", "Junior Executive", "Senior Executive", "Territory Manager", "Product Manager", "Admin"
-join_date      DateTime? // Join Date
-birthday       DateTime? // Birthday
+id               Int       @id @default(autoincrement())
+email            String    @unique // Username (Email)
+password         String    // Password - Stored as a hash
+name             String?
+emp_no           String    @unique // Employee No
+designation      String?   // Designation: "Medical Rep", "Field Coordinator", "Junior Executive", "Senior Executive", "Territory Manager", "Product Manager", "Admin"
+join_date        DateTime? // Join Date
+birthday         DateTime? // Birthday
+dateAdded        DateTime? @default(now()) // Date Added for table display
 // 1:M -> 'user has one agency'
-agency_id      Int?
-agency         agency?   @relation(fields: [agency_id], references: [id])
+agency_id        Int?
+agency           agency?   @relation(fields: [agency_id], references: [id])
 // 1:M -> 'user has one range'
-range_id       Int?
-range          range?    @relation(fields: [range_id], references: [id])
+range_id         Int?
+range            range?    @relation(fields: [range_id], references: [id])
 // 1:M -> 'user has one team'
-team_id        Int?
-team           team?     @relation(fields: [team_id], references: [id])
-// 1:1 -> 'one user has one distributor'
-distributor_id Int?      @unique
-distributor    distributor? @relation(fields: [distributor_id], references: [id])
+team_id          Int?
+team             team?     @relation(fields: [team_id], references: [id])
+// Distributor name as text (no foreign key constraint)
+distributor_code String?   // Store distributor name directly, made nullable
 // M:N -> 'user works in many areas'
-work_areas     UserWorkAreas[]
+work_areas       UserWorkAreas[]
 // M:N -> 'user has many doctors'
-doctors        UserDoctors[]
+doctors          UserDoctors[]
 }
 
 model doctor {
@@ -142,6 +160,7 @@ model product {
   route_of_administration String?
   pack_size               String?
   strength                String?
+  dateAdded               DateTime?             @default(now()) // Date Added for table display
   // M:N -> 'product has many distributors'
   distributors            DistributorProducts[]
   // M:N -> 'product prescribed by many doctors'
@@ -177,12 +196,12 @@ model UserDoctors {
 
 // M:N Table for distributor and product
 model DistributorProducts {
-  distributor    distributor @relation(fields: [distributor_id], references: [id])
-  distributor_id Int
-  product        product     @relation(fields: [product_id], references: [id])
-  product_id     Int
+  distributor       distributor @relation(fields: [distributor_code], references: [distributor_code])
+  distributor_code  String
+  product           product     @relation(fields: [product_id], references: [id])
+  product_id        Int
 
-  @@id([distributor_id, product_id])
+  @@id([distributor_code, product_id])
 }
 
 // M:N Table for doctor and product
