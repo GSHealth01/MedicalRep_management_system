@@ -105,6 +105,8 @@ model distributor {
   // Removed: 'one user has one distributor' - no longer needed
   // M:N -> 'distributor has many products'
   products         DistributorProducts[]
+  // M:N -> 'distributor has many users'
+  users            UserDistributors[]
 }
 
 // Central 'user' model, replacing rep, manager, and auth user
@@ -127,8 +129,8 @@ range            range?    @relation(fields: [range_id], references: [id])
 // 1:M -> 'user has one team'
 team_id          Int?
 team             team?     @relation(fields: [team_id], references: [id])
-// Distributor name as text (no foreign key constraint)
-distributor_code String?   // Store distributor name directly, made nullable
+// M:N -> 'user has many distributors'
+distributors     UserDistributors[]
 // M:N -> 'user works in many areas'
 work_areas       UserWorkAreas[]
 // M:N -> 'user has many doctors'
@@ -182,6 +184,16 @@ model UserWorkAreas {
   area_id Int
 
   @@id([user_id, area_id]) // Composite primary key
+}
+
+// M:N Table for user and distributor
+model UserDistributors {
+  user                user         @relation(fields: [user_id], references: [id])
+  user_id             Int
+  distributor         distributor  @relation(fields: [distributor_code], references: [distributor_code])
+  distributor_code    String
+
+  @@id([user_id, distributor_code]) // Composite primary key
 }
 
 // M:N Table for user and doctor

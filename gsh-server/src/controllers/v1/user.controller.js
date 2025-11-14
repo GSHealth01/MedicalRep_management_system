@@ -168,7 +168,7 @@ async function getCurrentUserProfile(req, res) {
     const userId = req.user.id; // From JWT middleware
     console.log('Fetching profile for user ID:', userId);
     
-    // Get user data first
+    // Get user data with new distributors relationship
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -179,10 +179,24 @@ async function getCurrentUserProfile(req, res) {
         designation: true,
         join_date: true,
         birthday: true,
-        distributor_code: true,
         agency: { select: { id: true, name: true } },
         range: { select: { id: true, name: true } },
-        team: { select: { id: true, name: true } }
+        team: { select: { id: true, name: true } },
+        distributors: {
+          include: {
+            distributor: {
+              select: {
+                distributor_code: true,
+                name: true,
+                coverage_town: true,
+                route: true,
+                area: { select: { name: true } },
+                range: { select: { name: true } },
+                agency: { select: { name: true } }
+              }
+            }
+          }
+        }
       }
     });
 
@@ -192,34 +206,35 @@ async function getCurrentUserProfile(req, res) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Get distributor information manually if distributor_code exists
+    // Get first distributor info for backward compatibility (DCR form expects single distributor)
     let distributorInfo = null;
-    if (user.distributor_code) {
-      console.log('Looking up distributor with code:', user.distributor_code);
-      distributorInfo = await prisma.distributor.findUnique({
-        where: { distributor_code: user.distributor_code },
-        select: {
-          distributor_code: true,
-          name: true,
-          coverage_town: true,
-          route: true,
-          area: { select: { name: true } },
-          range: { select: { name: true } },
-          agency: { select: { name: true } }
-        }
-      });
-      console.log('Distributor info found:', distributorInfo);
+    if (user.distributors && user.distributors.length > 0) {
+      console.log('Found distributors for user:', user.distributors.length);
+      distributorInfo = user.distributors[0].distributor;
+      console.log('Primary distributor info:', distributorInfo);
     } else {
-      console.log('No distributor_code found for user');
+      console.log('No distributors found for user');
     }
 
-    // Combine user and distributor data
+    // Return data in the format DCR form expects
     const userWithDistributor = {
-      ...user,
-      distributor: distributorInfo
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      emp_no: user.emp_no,
+      designation: user.designation,
+      join_date: user.join_date,
+      birthday: user.birthday,
+      agency: user.agency,
+      range: user.range,
+      team: user.team,
+      // For DCR compatibility - return first distributor as 'distributor'
+      distributor: distributorInfo,
+      // Also provide all distributors as array
+      distributors: user.distributors.map(ud => ud.distributor)
     };
 
-    console.log('Final user data with distributor:', userWithDistributor);
+    console.log('Final user data with distributors:', userWithDistributor);
 
     res.json({ user: userWithDistributor });
   } catch (error) {

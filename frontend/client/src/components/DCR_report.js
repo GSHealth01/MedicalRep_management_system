@@ -242,19 +242,39 @@ export default function RepdetailsReport() {
         const profile = response.data.user;
         setUserProfile(profile);
         
+        console.log('DCR: Fetched user profile:', profile); // Debug log
+        
         // Auto-populate form fields with user profile data
         if (profile) {
           setRepName(profile.name || "");
           setEmpNo(profile.emp_no || "");
           setAgency(profile.agency?.name || "");
           setRange(profile.range?.name || "");
-          setDistributor(profile.distributor?.name || "");
-          // Auto-populate Area and Town from distributor data
-          setArea(profile.distributor?.area?.name || "");
-          setTown(profile.distributor?.coverage_town || "");
+          
+          // Handle both single distributor (for backward compatibility) and multiple distributors
+          if (profile.distributor) {
+            // Single distributor (backward compatibility)
+            setDistributor(profile.distributor.name || "");
+            setArea(profile.distributor.area?.name || "");
+            setTown(profile.distributor.coverage_town || "");
+          } else if (profile.distributors && profile.distributors.length > 0) {
+            // Multiple distributors - use the first one for DCR form
+            const primaryDistributor = profile.distributors[0];
+            setDistributor(primaryDistributor.name || primaryDistributor.distributor_code || "");
+            setArea(primaryDistributor.area?.name || "");
+            setTown(primaryDistributor.coverage_town || "");
+            console.log('DCR: Using primary distributor:', primaryDistributor); // Debug log
+          } else {
+            // No distributors found
+            setDistributor("");
+            setArea("");
+            setTown("");
+            console.log('DCR: No distributors found for user'); // Debug log
+          }
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
+        // Still stop loading even if there's an error
       } finally {
         setLoading(false);
       }
@@ -262,6 +282,9 @@ export default function RepdetailsReport() {
 
     if (user && user.email) {
       fetchUserProfile();
+    } else if (!user) {
+      // If no user, stop loading
+      setLoading(false);
     }
   }, [user]);
 

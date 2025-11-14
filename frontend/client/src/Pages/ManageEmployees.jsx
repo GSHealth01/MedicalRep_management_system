@@ -4,7 +4,6 @@ import { api } from "../services/api";
 import { useNotification } from "../components/NotificationPopup";
 import { useConfirm } from "../components/ConfirmDialog";
 
-// Edit Employee Modal Component
 function EditEmployeeModal({ employee, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: employee?.name || '',
@@ -14,14 +13,67 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
     range: employee?.range?.name || employee?.range || '',
     agency: employee?.agency?.name || employee?.agency || '',
     distributor: employee?.distributor || '',
+    distributors: employee?.distributors?.map(d => d.distributor?.distributor_code || d.distributor?.name) || [], // Extract distributor codes
     birthday: employee?.birthday ? new Date(employee.birthday).toISOString().slice(0, 10) : '',
     joinDate: employee?.join_date || employee?.joinDate ? new Date(employee.join_date || employee.joinDate).toISOString().slice(0, 10) : ''
   });
   const [loading, setLoading] = useState(false);
+  const [distributors, setDistributors] = useState([]);
+  const [loadingDistributors, setLoadingDistributors] = useState(true);
+  const [distributorError, setDistributorError] = useState("");
+
+  // Load distributors
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingDistributors(true);
+      setDistributorError("");
+      try {
+        const res = await api.get("/admin/distributors", { params: { limit: 100 } });
+        const payload = res?.data?.data ?? res?.data ?? {};
+        const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+        if (mounted) {
+          // Transform to extract distributor codes and names
+          const transformedDistributors = items.map(item => ({
+            distributor_code: item.distributor_code || item.id,
+            name: item.name || item.distributor_name || item.distributor_code || item.id
+          }));
+          setDistributors(transformedDistributors);
+        }
+      } catch (err) {
+        if (mounted) {
+          setDistributorError("Failed to load distributors");
+          console.error('Error loading distributors:', err);
+        }
+      } finally {
+        if (mounted) setLoadingDistributors(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDistributorChange = (distributorCode, checked) => {
+    setFormData(prev => {
+      const currentDistributors = prev.distributors || [];
+      if (checked) {
+        // Add distributor
+        return {
+          ...prev,
+          distributors: [...currentDistributors, distributorCode]
+        };
+      } else {
+        // Remove distributor
+        return {
+          ...prev,
+          distributors: currentDistributors.filter(code => code !== distributorCode)
+        };
+      }
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -161,16 +213,49 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Distributor</label>
-            <input
-              type="text"
-              name="distributor"
-              value={formData.distributor}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
-              placeholder="Enter distributor"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Distributors (Select multiple)</label>
+            {loadingDistributors ? (
+              <p className="text-sm text-gray-600">Loading distributors...</p>
+            ) : distributorError ? (
+              <p className="text-sm text-red-600">{distributorError}</p>
+            ) : (
+              <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
+                {distributors.length === 0 ? (
+                  <p className="text-sm text-gray-500">No distributors available</p>
+                ) : (
+                  distributors.map((distributor) => {
+                    const distributorCode = distributor.distributor_code || distributor.id || distributor.name;
+                    const distributorName = distributor.name || distributor.distributor_name || distributorCode;
+                    const isSelected = formData.distributors.includes(distributorCode);
+                    
+                    return (
+                      <div key={distributorCode} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`edit-distributor-${distributorCode}`}
+                          checked={isSelected}
+                          onChange={(e) => handleDistributorChange(distributorCode, e.target.checked)}
+                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                        />
+                        <label
+                          htmlFor={`edit-distributor-${distributorCode}`}
+                          className="text-sm text-gray-700 cursor-pointer flex-1"
+                        >
+                          {distributorName} ({distributorCode})
+                        </label>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+            {formData.distributors.length > 0 && (
+              <p className="text-xs text-gray-600 mt-1">
+                {formData.distributors.length} distributor(s) selected
+              </p>
+            )}
           </div>
+
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
@@ -227,7 +312,9 @@ export default function ManageEmployees() {
           designation: item.designation || "",
           range: item.range || { name: item.range_name || "" },
           agency: item.agency || { name: item.agency_name || "" },
-          distributor: item.distributor_code || "", // Fix: map distributor_code to distributor
+          // Handle new distributors array and legacy single distributor
+          distributors: item.distributors?.map(d => d.distributor) || [],
+          distributor: item.distributor_code || "", // Keep for backward compatibility
           birthday: item.birthday || "",
           join_date: item.join_date || "",
           createdAt: item.createdAt || item.created_at || item.date || item.dateAdded || new Date()
@@ -257,7 +344,9 @@ export default function ManageEmployees() {
         email: payload.email,
         emp_no: payload.empNo,
         designation: payload.designation,
-        distributor: payload.distributor,
+        // Handle both new distributors array and legacy single distributor
+        distributors: created.distributors || [],
+        distributor: payload.distributor, // Keep for backward compatibility
         // show populated names if BE returns them, otherwise show raw ids
         range: created.range || payload.range,
         agency: created.agency || payload.agency,
@@ -291,12 +380,12 @@ export default function ManageEmployees() {
         range: formData.range,
         birthday: formData.birthday || undefined,
         joinDate: formData.joinDate || undefined,
-        distributor: formData.distributor || undefined
+        distributor_ids: formData.distributors || [] // Send distributors array
       };
 
       await api.put(`/admin/users/${editingEmployee.id || editingEmployee._id}`, updateData);
 
-      // Update local state
+      // Update local state with new distributors
       setEmployees((list) =>
         list.map((emp) =>
           emp.id === editingEmployee.id || emp._id === editingEmployee._id
@@ -309,7 +398,14 @@ export default function ManageEmployees() {
                 range: formData.range ? { name: formData.range } : emp.range,
                 birthday: formData.birthday,
                 join_date: formData.joinDate,
-                distributor: formData.distributor
+                // Update distributors with new format
+                distributors: formData.distributors.map(code => ({
+                  distributor: {
+                    distributor_code: code,
+                    name: `Distributor ${code}`
+                  }
+                })),
+                distributor: formData.distributors.join(', ') // Keep for backward compatibility
               }
             : emp
         )
@@ -401,7 +497,12 @@ export default function ManageEmployees() {
                       <td className="py-2 px-4">{fmtDate(emp.joinDate || emp.join_date)}</td>
                       <td className="py-2 px-4">{showRange(emp.range)}</td>
                       <td className="py-2 px-4">{showAgency(emp.agency)}</td>
-                      <td className="py-2 px-4">{emp.distributor || "-"}</td>
+                      <td className="py-2 px-4">
+                        {emp.distributors && emp.distributors.length > 0
+                          ? emp.distributors.map(d => `${d.name} (${d.distributor_code})`).join(', ')
+                          : (emp.distributor || "-")
+                        }
+                      </td>
                       <td className="py-2 px-4">{fmtDate(emp.createdAt || emp.dateAdded || new Date())}</td>
                       <td className="py-2 px-4 text-center">
                         <div className="flex justify-center space-x-2">

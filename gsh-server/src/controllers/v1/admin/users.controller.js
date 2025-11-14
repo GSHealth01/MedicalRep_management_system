@@ -28,7 +28,12 @@ exports.list = async (req, res) => {
       where,
       include: {
         range: { select: { id: true, name: true } },
-        agency: { select: { id: true, name: true } }
+        agency: { select: { id: true, name: true } },
+        distributors: {
+          include: {
+            distributor: { select: { distributor_code: true, name: true } }
+          }
+        }
       },
       orderBy: { id: 'desc' },
       take: limit ? parseInt(limit) : undefined
@@ -66,7 +71,8 @@ exports.create = async (req, res) => {
       agency_id,
       range_id,
       team_id,
-      distributor_id
+      distributor_id, // For backward compatibility
+      distributor_ids // New field for multiple distributors
     } = req.body;
 
     // Map empNo to emp_no for consistency
@@ -122,9 +128,9 @@ exports.create = async (req, res) => {
     }
 
     console.log('Found/Created agency_id:', agencyId, 'range_id:', rangeId); // Debug log
-    console.log('Distributor to store:', distributor_id); // Debug log
+    console.log('Distributors to store:', distributor_ids || distributor_id); // Debug log
 
-    // Build user creation data with distributor text directly
+    // Build user creation data
     const userData = {
       name,
       email: normalizedEmail,
@@ -133,8 +139,7 @@ exports.create = async (req, res) => {
       emp_no: emp_no,
       join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,
       birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,
-      team_id: team_id && !isNaN(parseInt(team_id)) ? parseInt(team_id) : undefined,
-      distributor_code: distributor_id || undefined // Store the distributor text directly
+      team_id: team_id && !isNaN(parseInt(team_id)) ? parseInt(team_id) : undefined
     };
 
     console.log('User data to create:', userData); // Debug log
@@ -146,7 +151,11 @@ exports.create = async (req, res) => {
         range: { select: { id: true, name: true } },
         agency: { select: { id: true, name: true } },
         team: { select: { id: true, name: true } },
-        distributor: { select: { distributor_code: true, name: true } }
+        distributors: {
+          include: {
+            distributor: { select: { distributor_code: true, name: true } }
+          }
+        }
       }
     });
 
@@ -165,7 +174,29 @@ exports.create = async (req, res) => {
           range: { select: { id: true, name: true } },
           agency: { select: { id: true, name: true } },
           team: { select: { id: true, name: true } },
-          distributor: { select: { distributor_code: true, name: true } }
+          distributors: {
+            include: {
+              distributor: { select: { distributor_code: true, name: true } }
+            }
+          }
+        }
+      });
+
+      // Handle distributors after user is created
+      await handleUserDistributors(updatedUser.id, distributor_ids, distributor_id);
+      
+      // Get final user data with distributors
+      const finalUser = await prisma.user.findUnique({
+        where: { id: updatedUser.id },
+        include: {
+          range: { select: { id: true, name: true } },
+          agency: { select: { id: true, name: true } },
+          team: { select: { id: true, name: true } },
+          distributors: {
+            include: {
+              distributor: { select: { distributor_code: true, name: true } }
+            }
+          }
         }
       });
       
@@ -173,37 +204,55 @@ exports.create = async (req, res) => {
         res,
         "User created",
         {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          name: updatedUser.name,
-          emp_no: updatedUser.emp_no,
-          designation: updatedUser.designation,
-          join_date: updatedUser.join_date,
-          birthday: updatedUser.birthday,
-          range: updatedUser.range,
-          agency: updatedUser.agency,
-          team: updatedUser.team,
-          distributor: updatedUser.distributor
+          id: finalUser.id,
+          email: finalUser.email,
+          name: finalUser.name,
+          emp_no: finalUser.emp_no,
+          designation: finalUser.designation,
+          join_date: finalUser.join_date,
+          birthday: finalUser.birthday,
+          range: finalUser.range,
+          agency: finalUser.agency,
+          team: finalUser.team,
+          distributors: finalUser.distributors
         },
         201
       );
     }
 
+    // Handle distributors for the case where agency/range are not provided
+    await handleUserDistributors(user.id, distributor_ids, distributor_id);
+
+    // Get final user data with distributors
+    const finalUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        range: { select: { id: true, name: true } },
+        agency: { select: { id: true, name: true } },
+        team: { select: { id: true, name: true } },
+        distributors: {
+          include: {
+            distributor: { select: { distributor_code: true, name: true } }
+          }
+        }
+      }
+    });
+
     return ApiResponse.ok(
       res,
       "User created",
       {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        emp_no: user.emp_no,
-        designation: user.designation,
-        join_date: user.join_date,
-        birthday: user.birthday,
-        range: user.range,
-        agency: user.agency,
-        team: user.team,
-        distributor: user.distributor
+        id: finalUser.id,
+        email: finalUser.email,
+        name: finalUser.name,
+        emp_no: finalUser.emp_no,
+        designation: finalUser.designation,
+        join_date: finalUser.join_date,
+        birthday: finalUser.birthday,
+        range: finalUser.range,
+        agency: finalUser.agency,
+        team: finalUser.team,
+        distributors: finalUser.distributors
       },
       201
     );
@@ -240,7 +289,7 @@ exports.updateRole = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, empNo, designation, agency, range, distributor } = req.body;
+    const { name, empNo, designation, agency, range, distributor_ids, distributor } = req.body;
 
     const userId = parseInt(id);
 
@@ -283,9 +332,38 @@ exports.updateProfile = async (req, res) => {
       data: updateData,
       include: {
         range: { select: { id: true, name: true } },
-        agency: { select: { id: true, name: true } }
+        agency: { select: { id: true, name: true } },
+        distributors: {
+          include: {
+            distributor: { select: { distributor_code: true, name: true } }
+          }
+        }
       }
     });
+
+    // Handle distributors update if provided
+    if (distributor_ids !== undefined || distributor !== undefined) {
+      await handleUserDistributors(userId, distributor_ids, distributor);
+      
+      // Get updated user data with distributors
+      const finalUser = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          range: { select: { id: true, name: true } },
+          agency: { select: { id: true, name: true } },
+          distributors: {
+            include: {
+              distributor: { select: { distributor_code: true, name: true } }
+            }
+          }
+        }
+      });
+      
+      return ApiResponse.ok(res, "User updated", {
+        ...finalUser,
+        distributors: finalUser.distributors
+      });
+    }
 
     return ApiResponse.ok(res, "User updated", updatedUser);
   } catch (error) {
@@ -297,6 +375,13 @@ exports.updateProfile = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
+    
+    // First, delete all user-distributor relationships
+    await prisma.userDistributors.deleteMany({
+      where: { user_id: userId }
+    });
+    
+    // Then delete the user
     const deleted = await prisma.user.delete({
       where: { id: userId }
     });
@@ -346,3 +431,39 @@ exports.getCurrentUserProfile = async (req, res) => {
     return ApiResponse.error(res, "Failed to fetch user profile");
   }
 };
+
+// Helper function to handle user-distributors relationship
+async function handleUserDistributors(userId, distributor_ids, single_distributor_id) {
+  try {
+    // Clear existing distributor relationships
+    await prisma.userDistributors.deleteMany({
+      where: { user_id: userId }
+    });
+
+    // Determine which distributors to add
+    let distributorsToAdd = [];
+    if (distributor_ids && Array.isArray(distributor_ids) && distributor_ids.length > 0) {
+      distributorsToAdd = distributor_ids;
+    } else if (single_distributor_id) {
+      distributorsToAdd = [single_distributor_id];
+    }
+
+    // Add new distributor relationships
+    if (distributorsToAdd.length > 0) {
+      const distributorData = distributorsToAdd.map(distributorCode => ({
+        user_id: userId,
+        distributor_code: distributorCode
+      }));
+
+      await prisma.userDistributors.createMany({
+        data: distributorData,
+        skipDuplicates: true
+      });
+
+      console.log(`Added ${distributorsToAdd.length} distributor(s) to user ${userId}:`, distributorsToAdd);
+    }
+  } catch (error) {
+    console.error('Error handling user distributors:', error);
+    throw error;
+  }
+}

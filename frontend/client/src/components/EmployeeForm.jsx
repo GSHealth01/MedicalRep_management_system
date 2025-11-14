@@ -11,7 +11,7 @@ export default function EmployeeForm({ onSubmit }) {
     joinDate: "",
     agency: "",         // subSector _id
     range: "",          // sector _id
-    distributor: ""
+    distributors: []    // Array of selected distributor IDs
   });
 
   // Add distributors state
@@ -94,6 +94,25 @@ export default function EmployeeForm({ onSubmit }) {
     setFormData((s) => ({ ...s, [name]: value }));
   };
 
+  const handleDistributorChange = (distributorId) => {
+    setFormData((s) => {
+      const currentDistributors = s.distributors || [];
+      if (currentDistributors.includes(distributorId)) {
+        // Remove distributor if already selected
+        return {
+          ...s,
+          distributors: currentDistributors.filter(id => id !== distributorId)
+        };
+      } else {
+        // Add distributor if not selected
+        return {
+          ...s,
+          distributors: [...currentDistributors, distributorId]
+        };
+      }
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -116,7 +135,7 @@ export default function EmployeeForm({ onSubmit }) {
       birthday: formData.birthday || undefined,
       join_date: formData.joinDate || undefined,  // joinDate -> join_date
       team_id: undefined, // Optional, can be added later
-      distributor_id: formData.distributor || undefined, // Add distributor field
+      distributor_ids: formData.distributors || [], // Multiple distributors
     };
 
     onSubmit && onSubmit(prismaPayload, formData);
@@ -131,7 +150,7 @@ export default function EmployeeForm({ onSubmit }) {
       joinDate: "",
       agency: "",
       range: "",
-      distributor: ""
+      distributors: []
     });
   };
 
@@ -270,26 +289,49 @@ export default function EmployeeForm({ onSubmit }) {
         </select>
       </div>
 
-      {/* Distributor */}
+      {/* Distributors (Multiple Selection with Checkboxes) */}
       <div>
-        <label className="block text-gray-700 mb-1">Distributor</label>
-        <select
-          name="distributor"
-          value={formData.distributor}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
-          disabled={loadingDistributors || !!distributorError}
-        >
-          <option value="">
-            {loadingDistributors ? "Loading distributors..." : "Select distributor"}
-          </option>
-          {distributors.map((d) => (
-            <option key={d.distributor_code || d.id} value={d.name || d.distributor_name}>
-              {d.name || d.distributor_name} ({d.distributor_code || d.id})
-            </option>
-          ))}
-        </select>
-        {distributorError && <p className="text-sm text-red-600 mt-1">{distributorError}</p>}
+        <label className="block text-gray-700 mb-2">Distributors (Select multiple)</label>
+        {loadingDistributors ? (
+          <p className="text-sm text-gray-600">Loading distributors...</p>
+        ) : distributorError ? (
+          <p className="text-sm text-red-600">{distributorError}</p>
+        ) : (
+          <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
+            {distributors.length === 0 ? (
+              <p className="text-sm text-gray-500">No distributors available</p>
+            ) : (
+              distributors.map((distributor) => {
+                const distributorId = distributor.distributor_code || distributor.id || distributor.name;
+                const distributorName = distributor.name || distributor.distributor_name || distributorId;
+                const isSelected = formData.distributors.includes(distributorId);
+                
+                return (
+                  <div key={distributorId} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`distributor-${distributorId}`}
+                      checked={isSelected}
+                      onChange={() => handleDistributorChange(distributorId)}
+                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor={`distributor-${distributorId}`}
+                      className="text-sm text-gray-700 cursor-pointer flex-1"
+                    >
+                      {distributorName} ({distributorId})
+                    </label>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+        {formData.distributors.length > 0 && (
+          <p className="text-xs text-gray-600 mt-1">
+            {formData.distributors.length} distributor(s) selected
+          </p>
+        )}
       </div>
 
       {/* Submit */}
