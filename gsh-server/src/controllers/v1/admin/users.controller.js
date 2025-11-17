@@ -15,11 +15,23 @@ exports.list = async (req, res) => {
     const where = {};
     
     if (range) {
-      where.range_id = parseInt(range);
+      // Handle both numeric range_id and string range name
+      if (!isNaN(parseInt(range))) {
+        where.range_id = parseInt(range);
+      } else {
+        // Filter by range name (like "A" or "B")
+        where.range = { name: range };
+      }
     }
     
     if (agency) {
-      where.agency_id = parseInt(agency);
+      // Handle both numeric agency_id and string agency name
+      if (!isNaN(parseInt(agency))) {
+        where.agency_id = parseInt(agency);
+      } else {
+        // Filter by agency name
+        where.agency = { name: agency };
+      }
     }
 
     console.log('Filtering users with:', where); // Debug log

@@ -9,8 +9,8 @@ const doctors = [
   "Dr. Miller", "Dr. Wilson", "Dr. Moore", "Dr. Taylor", "Dr. Anderson"
 ];
 
-// Data structure now includes prices for calculation
-const productCategories = {
+// Base product categories
+const baseProductCategories = {
   "Dicardia": [
     { name: "10mg 100's", samplingPrice: 150, stockingPrice: 120, detailedPrice: 10 },
     { name: "20mg 100's", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 }
@@ -35,6 +35,79 @@ const productCategories = {
   ]
 };
 
+// Agency-specific temporary products
+const agencyProducts = {
+  "A": {
+    "Cilacar": [
+      { name: "Tab 10mg", samplingPrice: 150, stockingPrice: 120, detailedPrice: 10 },
+      { name: "Tab 20mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 },
+      { name: "Tab 5mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "Dicloran": [
+      { name: "Gel", samplingPrice: 75, stockingPrice: 60, detailedPrice: 0 },
+      { name: "SR-100mg", samplingPrice: 180, stockingPrice: 150, detailedPrice: 5 },
+      { name: "SR-75mg", samplingPrice: 120, stockingPrice: 95, detailedPrice: 5 },
+      { name: "Tab 50mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "DilcardiaSR": [
+      { name: "90mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 }
+    ],
+    "Maskacid": [
+      { name: "SRL Exp.", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
+    ],
+    "Ornigil": [
+      { name: "500mg Tab", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 }
+    ],
+    "Pedivit Forte": [
+      { name: "Forte", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
+    ],
+    "Unimelo": [
+      { name: "7.5mg Tab", samplingPrice: 220, stockingPrice: 200, detailedPrice: 15 }
+    ],
+    "Vasolip": [
+      { name: "10mg Tab.", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 },
+      { name: "20mg Tab.", samplingPrice: 210, stockingPrice: 190, detailedPrice: 10 }
+    ]
+  },
+  "B": {
+    "Product 1": [
+      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "Product 2": [
+      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "Product 3": [
+      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "Product 4": [
+      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "Product 5": [
+      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "Product 6": [
+      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ],
+    "Product 7": [
+      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+    ]
+  }
+};
+
+// Function to get product categories based on user agency
+const getProductCategories = (userAgency) => {
+  const categories = { ...baseProductCategories };
+
+  if (userAgency && agencyProducts[userAgency]) {
+    // Add agency-specific products
+    Object.keys(agencyProducts[userAgency]).forEach(category => {
+      categories[category] = agencyProducts[userAgency][category];
+    });
+  }
+
+  return categories;
+};
+
 const managers = ['Manager A', 'Manager B', 'Manager C'];
 
 // --- Helper Functions for Calculation & Summary (Defined outside) ---
@@ -42,7 +115,7 @@ const managers = ['Manager A', 'Manager B', 'Manager C'];
 /**
  * Calculates the total value for a single doctor's row.
  */
-const calculateDoctorTotal = (doctorRow) => {
+const calculateDoctorTotal = (doctorRow, productCategories) => {
   let total = 0;
   if (!doctorRow || !doctorRow.productData) return total;
 
@@ -54,9 +127,6 @@ const calculateDoctorTotal = (doctorRow) => {
       productsWithPrices.forEach((priceInfo, index) => {
         if (index < productStates.length) {
           const stateInfo = productStates[index];
-          if (stateInfo.sampling && stateInfo.samplingQty) {
-            total += (priceInfo.samplingPrice || 0) * (parseInt(stateInfo.samplingQty) || 0);
-          }
           if (stateInfo.stocking && stateInfo.stockingQty) {
             total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.stockingQty) || 0);
           }
@@ -73,13 +143,13 @@ const calculateDoctorTotal = (doctorRow) => {
 /**
  * Generates a structured summary of all selected items and managers for all doctors.
  */
-const generateSummaryData = (tableData) => {
+const generateSummaryData = (tableData, productCategories) => {
   const summary = [];
   tableData.forEach(doc => {
     const docSummary = {
       doctor: doc.doctor,
       items: [],
-      total: calculateDoctorTotal(doc),
+      total: calculateDoctorTotal(doc, productCategories),
       // NEW: Add selected managers if joint visit is checked
       managersSelected: (doc.jointVisit && doc.jointVisitManagers)
         ? Object.entries(doc.jointVisitManagers)
@@ -97,7 +167,7 @@ const generateSummaryData = (tableData) => {
 
                         if (productState.sampling && productState.samplingQty) {
                           const qty = parseInt(productState.samplingQty) || 0;
-                          const price = priceInfo.samplingPrice || 0;
+                          const price = 0; // No price calculation for sampling
                           docSummary.items.push({
                             name: `${category} - ${productState.name}`, type: "Sampling", qty: qty, unitPrice: price, lineTotal: qty * price
                           });
@@ -132,8 +202,8 @@ const generateSummaryData = (tableData) => {
 /**
  * Summary Table Component (Shows prices, totals, and managers for selected items)
  */
-const LiveSummaryTable = ({ tableData }) => {
-  const summaryData = generateSummaryData(tableData);
+const LiveSummaryTable = ({ tableData, productCategories }) => {
+  const summaryData = generateSummaryData(tableData, productCategories);
 
   if (summaryData.length === 0) {
     return (
@@ -202,9 +272,10 @@ const LiveSummaryTable = ({ tableData }) => {
 // --- Main Component ---
 export default function RepdetailsReport() {
   const { user } = useAuth();
-  const [step, setStep] = useState(1); 
+  const [step, setStep] = useState(1);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [productCategories, setProductCategories] = useState(baseProductCategories);
 
   // Step 1 State
   const [date, setDate] = useState("");
@@ -232,7 +303,7 @@ export default function RepdetailsReport() {
   const [otherBillImages, setOtherBillImages] = useState([]);
   const [expenses, setExpenses] = useState({ bata: false, nightOut: false, fuel: false });
   const [remarks, setRemarks] = useState("");
-  const [orderFormImage, setOrderFormImage] = useState(null);
+  const [orderFormImages, setOrderFormImages] = useState([]);
 
   // Fetch user profile data on component mount
   useEffect(() => {
@@ -288,6 +359,16 @@ export default function RepdetailsReport() {
     }
   }, [user]);
 
+  // Set product categories based on user agency
+  useEffect(() => {
+    if (userProfile && userProfile.agency) {
+      const agencyName = userProfile.agency.name || userProfile.agency;
+      const categories = getProductCategories(agencyName);
+      setProductCategories(categories);
+      console.log('DCR: Set product categories for agency:', agencyName, Object.keys(categories));
+    }
+  }, [userProfile]);
+
   // --- Step 1 Functions ---
   const toggleDoctor = (doc) => {
     setSelectedDoctors(prev =>
@@ -333,7 +414,7 @@ export default function RepdetailsReport() {
         setTableData(newTableData);
       }
     }
-  }, [step, selectedDoctors, tableData]);
+  }, [step, selectedDoctors, tableData, productCategories]);
 
   const updateCell = (docIdx, productIdx, field, value) => {
     setTableData(old => 
@@ -394,7 +475,7 @@ export default function RepdetailsReport() {
    * Calculates the grand total for Step 2 display.
    */
   const calculateLiveGrandTotal = () => {
-    const summary = generateSummaryData(tableData);
+    const summary = generateSummaryData(tableData, productCategories);
     return summary.reduce((acc, doc) => acc + doc.total, 0);
   };
 
@@ -436,7 +517,7 @@ export default function RepdetailsReport() {
       },
      
       remarks,
-      orderFormImage: orderFormImage ? orderFormImage.name : null 
+      orderFormImages: orderFormImages.map(f => f.name)
     };
     console.log("Submitting Data:", submissionData);
     alert("Submitted!"); 
@@ -596,7 +677,7 @@ export default function RepdetailsReport() {
               {/* Joint Visit */}
               <th style={{ ...stickyBase, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center text-xs">Joint Visit</th>
               {/* Dynamic Product Columns */}
-              {productCategories[selectedProductTab].map((product, i) => (
+              {productCategories[selectedProductTab]?.map((product, i) => (
                 <th key={i} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center min-w-[180px] text-xs">{product.name}</th>
               ))}
             </tr>
@@ -669,7 +750,7 @@ export default function RepdetailsReport() {
         Selected Items Summary
       </h3>
       <div className="p-4 border border-gray-200 rounded-lg">
-        <LiveSummaryTable tableData={tableData} />
+        <LiveSummaryTable tableData={tableData} productCategories={productCategories} />
       </div>
 
        {/* Grand Total Box */}
@@ -793,8 +874,9 @@ export default function RepdetailsReport() {
           <div className="flex items-center gap-4">
             <input
               type="file"
+              multiple
               accept="image/*"
-              onChange={(e) => setOrderFormImage(e.target.files[0])}
+              onChange={(e) => setOrderFormImages(prev => [...prev, ...Array.from(e.target.files)])}
               className="text-sm cursor-pointer border border-gray-300 rounded-md bg-gray-50 hover:bg-gray-100
                          file:mr-4 file:py-2 file:px-4
                          file:rounded-l-md file:border-0
@@ -803,10 +885,10 @@ export default function RepdetailsReport() {
                          hover:file:bg-blue-100"
             />
           </div>
-          {orderFormImage && (
-            <span className="text-sm text-gray-500 mt-2 block">
-              {orderFormImage.name}
-            </span>
+          {orderFormImages.length > 0 && (
+            <ul className="mt-2 text-xs">
+              {orderFormImages.map((f, i) => <li key={i}>{f.name}</li>)}
+            </ul>
           )}
         </div>
 

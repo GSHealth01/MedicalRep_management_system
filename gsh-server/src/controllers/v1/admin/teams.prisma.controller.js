@@ -15,26 +15,79 @@ exports.list = async (req, res) => {
 
     console.log('Fetching teams with orderBy:', orderBy); // Debug log
 
-    const [items, total] = await Promise.all([
-      prisma.team.findMany({
-        skip: Number(skip),
-        take: Number(limit),
-        orderBy,
-        include: {
-          range: {
-            include: {
-              agency: true
-            }
+    const teams = await prisma.team.findMany({
+      skip: Number(skip),
+      take: Number(limit),
+      orderBy,
+      include: {
+        range: {
+          include: {
+            agency: true
+          }
+        },
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            emp_no: true,
+            designation: true
           }
         }
-      }),
-      prisma.team.count()
-    ]);
+      }
+    });
 
-    console.log(`Found ${items.length} teams, total: ${total}`); // Debug log
+    console.log(`Found ${teams.length} teams`); // Debug log
+
+    // Group users by designation for display
+    const formattedTeams = teams.map(team => {
+      // Map designation codes to bucket keys
+      const designationToBucket = {
+        'OM': 'ops', 'OPERATIONS_MANAGER': 'ops', 'TERRITORY_MANAGER': 'ops',
+        'SE': 'sms', 'SENIOR_EXECUTIVE': 'sms', 'SENIOR_MANAGER': 'sms',
+        'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
+        'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
+        'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
+        'FC': 'fcs', 'FIELD_COORDINATOR': 'fcs',
+        'MR': 'mrs', 'MEDICAL_REP': 'mrs', 'MEDICAL_REPRESENTATIVE': 'mrs'
+      };
+
+      const groupedUsers = {
+        ops: [],
+        sms: [],
+        pms: [],
+        tms: [],
+        ses: [],
+        jes: [],
+        fcs: [],
+        mrs: []
+      };
+
+      team.users.forEach(user => {
+        const normalizedDesignation = String(user.designation || '').toUpperCase().trim();
+        const bucket = designationToBucket[normalizedDesignation];
+        if (bucket) {
+          groupedUsers[bucket].push(`${user.name} (${user.emp_no})`);
+        }
+      });
+
+      return {
+        ...team,
+        ops: groupedUsers.ops,
+        sms: groupedUsers.sms,
+        pms: groupedUsers.pms,
+        tms: groupedUsers.tms,
+        ses: groupedUsers.ses,
+        jes: groupedUsers.jes,
+        fcs: groupedUsers.fcs,
+        mrs: groupedUsers.mrs
+      };
+    });
+
+    const total = await prisma.team.count();
 
     return ApiResponse.ok(res, "Teams fetched", {
-      items,
+      items: formattedTeams,
       page: Number(page),
       limit: Number(limit),
       total,
@@ -50,12 +103,12 @@ exports.list = async (req, res) => {
  * POST /api/v1/admin/teams
  */
 exports.create = async (req, res) => {
-  try {
+  const transaction = await prisma.$transaction(async (tx) => {
     const {
       name,
       range_id,
       agency_id,
-      // Manager assignments (will be arrays of user names or IDs that we need to resolve)
+      // Employee IDs that will be assigned to the team
       ops = [],
       sms = [],
       pms = [],
@@ -72,8 +125,8 @@ exports.create = async (req, res) => {
 
     // Check if range and agency exist
     const [range, agency] = await Promise.all([
-      prisma.range.findUnique({ where: { id: parseInt(range_id) } }),
-      prisma.agency.findUnique({ where: { id: parseInt(agency_id) } })
+      tx.range.findUnique({ where: { id: parseInt(range_id) } }),
+      tx.agency.findUnique({ where: { id: parseInt(agency_id) } })
     ]);
 
     if (!range) {
@@ -83,40 +136,106 @@ exports.create = async (req, res) => {
       throw new AppError(404, "Agency not found");
     }
 
-    // Convert arrays to comma-separated strings for storage
-    const createData = {
-      name: name,
-      range_id: parseInt(range_id),
-      agency_id: parseInt(agency_id),
-      operations_manager: ops.length > 0 ? ops.join(', ') : null,
-      senior_manager: sms.length > 0 ? sms.join(', ') : null,
-      territory_managers: tms.length > 0 ? tms.join(', ') : null,
-      senior_executives: ses.length > 0 ? ses.join(', ') : null,
-      junior_executives: jes.length > 0 ? jes.join(', ') : null,
-      field_coordinators: fcs.length > 0 ? fcs.join(', ') : null
-    };
-
-    // Note: We don't have a field for pms (Product Managers) and mrs (Medical Reps) in schema
-    // You might want to add these or handle them differently
-
-    const team = await prisma.team.create({
-      data: createData
+    // Create the team first
+    const team = await tx.team.create({
+      data: {
+        name: name,
+        range_id: parseInt(range_id),
+        agency_id: parseInt(agency_id),
+      }
     });
 
-    return ApiResponse.ok(res, "Team created", {
-      id: team.id,
-      name: team.name,
-      managers: {
-        ops, sms, pms, tms, ses, jes, fcs, mrs
+    console.log(`Created team ${team.name} with ID: ${team.id}`);
+
+    // Collect all user IDs to assign to this team
+    const allUserIds = [...ops, ...sms, ...pms, ...tms, ...ses, ...jes, ...fcs, ...mrs];
+    
+    if (allUserIds.length > 0) {
+      // Update users to assign them to this team
+      console.log(`Assigning ${allUserIds.length} users to team ${team.id}:`, allUserIds);
+      
+      const updatedUsers = await tx.user.updateMany({
+        where: {
+          id: {
+            in: allUserIds.map(id => parseInt(id))
+          }
+        },
+        data: {
+          team_id: team.id
+        }
+      });
+
+      console.log(`Updated ${updatedUsers.count} users to team ${team.id}`);
+    }
+
+    // Get the team with assigned users to return proper data
+    const teamWithUsers = await tx.team.findUnique({
+      where: { id: team.id },
+      include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            emp_no: true,
+            designation: true
+          }
+        },
+        range: true,
+        agency: true
+      }
+    });
+
+    // Group users by their designations for better display
+    const groupedUsers = {
+      ops: [],
+      sms: [],
+      pms: [],
+      tms: [],
+      ses: [],
+      jes: [],
+      fcs: [],
+      mrs: []
+    };
+
+    // Map designation codes to bucket keys
+    const designationToBucket = {
+      'OM': 'ops', 'OPERATIONS_MANAGER': 'ops', 'TERRITORY_MANAGER': 'ops',
+      'SE': 'sms', 'SENIOR_EXECUTIVE': 'sms', 'SENIOR_MANAGER': 'sms',
+      'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
+      'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
+      'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
+      'FC': 'fcs', 'FIELD_COORDINATOR': 'fcs',
+      'MR': 'mrs', 'MEDICAL_REP': 'mrs', 'MEDICAL_REPRESENTATIVE': 'mrs'
+    };
+
+    teamWithUsers.users.forEach(user => {
+      const normalizedDesignation = String(user.designation || '').toUpperCase().trim();
+      const bucket = designationToBucket[normalizedDesignation];
+      if (bucket) {
+        groupedUsers[bucket].push(user);
+      }
+    });
+
+    return ApiResponse.ok(res, "Team created successfully", {
+      id: teamWithUsers.id,
+      name: teamWithUsers.name,
+      range: teamWithUsers.range,
+      agency: teamWithUsers.agency,
+      assignedUsers: {
+        ops: groupedUsers.ops,
+        sms: groupedUsers.sms,
+        pms: groupedUsers.pms,
+        tms: groupedUsers.tms,
+        ses: groupedUsers.ses,
+        jes: groupedUsers.jes,
+        fcs: groupedUsers.fcs,
+        mrs: groupedUsers.mrs
       }
     }, 201);
-  } catch (error) {
-    console.error('Error creating team:', error);
-    if (error instanceof AppError) {
-      return ApiResponse.error(res, error.message, error.statusCode);
-    }
-    return ApiResponse.serverError(res, "Failed to create team");
-  }
+  });
+
+  return transaction;
 };
 
 exports.getOne = async (req, res) => {

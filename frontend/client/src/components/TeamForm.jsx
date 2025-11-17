@@ -84,11 +84,11 @@ export default function TeamForm({ onSubmit }) {
   useEffect(() => {
     let mounted = true;
     
-    // Set hardcoded ranges
+    // Set hardcoded ranges with numeric IDs
     if (mounted) {
       setRanges([
-        { id: 'A', name: 'A' },
-        { id: 'B', name: 'B' }
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' }
       ]);
       setLoadingRanges(false);
     }

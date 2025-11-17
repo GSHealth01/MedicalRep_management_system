@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import TeamForm from "../components/TeamForm";
 import { api } from "../services/api";
+import { useNotification } from "../components/NotificationPopup";
 
 // Edit Team Modal Component
 function EditTeamModal({ team, onClose, onSave }) {
@@ -192,6 +193,7 @@ function EditTeamModal({ team, onClose, onSave }) {
 }
 
 export default function ManageTeams() {
+  const { showNotification, NotificationComponent } = useNotification();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -222,32 +224,65 @@ export default function ManageTeams() {
       const rangeId = rawForm.range;
       const teamPayload = {
         ...payload,
-        range_id: parseInt(rangeId)
+        range_id: parseInt(rangeId),
+        // Include selected employee IDs for each category
+        ops: rawForm.ops || [],
+        sms: rawForm.sms || [],
+        pms: rawForm.pms || [],
+        tms: rawForm.tms || [],
+        ses: rawForm.ses || [],
+        jes: rawForm.jes || [],
+        fcs: rawForm.fcs || [],
+        mrs: rawForm.mrs || []
       };
+      
+      console.log('Creating team with payload:', teamPayload); // Debug log
+      
       const res = await api.post("/admin/teams", teamPayload);
       const created = res?.data?.data || {};
 
-      // Prefer labels from the form for instant display
-      const L = rawForm.labels || {};
-      const row = {
-        _id: created.id || created._id || Math.random().toString(36).slice(2),
-        name: created.name || payload.name,
-        range_id: rangeId,
-        ses: L.ses || rawForm.ses,   // arrays of display strings
-        tms: L.tms || rawForm.tms,
-        pms: L.pms || rawForm.pms,
-        jes: L.jes || rawForm.jes,
-        fcs: L.fcs || rawForm.fcs,
-        mrs: L.mrs || rawForm.mrs,
-        // keep ops & sms too
-        ops: L.ops || rawForm.ops,
-        sms: L.sms || rawForm.sms,
-      };
+      console.log('Created team response:', created); // Debug log
 
-      setTeams((list) => [row, ...list]);
-      alert(`Team "${payload.name}" added ✅`);
+      // Use the assignedUsers data from the backend response
+      if (created.assignedUsers) {
+        const row = {
+          _id: created.id || Math.random().toString(36).slice(2),
+          name: created.name,
+          range_id: rangeId,
+          ops: created.assignedUsers.ops.map(u => `${u.name} (${u.emp_no})`),
+          sms: created.assignedUsers.sms.map(u => `${u.name} (${u.emp_no})`),
+          pms: created.assignedUsers.pms.map(u => `${u.name} (${u.emp_no})`),
+          tms: created.assignedUsers.tms.map(u => `${u.name} (${u.emp_no})`),
+          ses: created.assignedUsers.ses.map(u => `${u.name} (${u.emp_no})`),
+          jes: created.assignedUsers.jes.map(u => `${u.name} (${u.emp_no})`),
+          fcs: created.assignedUsers.fcs.map(u => `${u.name} (${u.emp_no})`),
+          mrs: created.assignedUsers.mrs.map(u => `${u.name} (${u.emp_no})`)
+        };
+        
+        setTeams((list) => [row, ...list]);
+        showNotification(`Team "${payload.name}" created successfully with ${rawForm.ops.length + rawForm.sms.length + rawForm.pms.length + rawForm.tms.length + rawForm.ses.length + rawForm.jes.length + rawForm.fcs.length + rawForm.mrs.length} employees assigned!`, 'success');
+      } else {
+        // Fallback for backward compatibility
+        const row = {
+          _id: created.id || Math.random().toString(36).slice(2),
+          name: created.name || payload.name,
+          range_id: rangeId,
+          ops: [],
+          sms: [],
+          pms: [],
+          tms: [],
+          ses: [],
+          jes: [],
+          fcs: [],
+          mrs: []
+        };
+        
+        setTeams((list) => [row, ...list]);
+        showNotification(`Team "${payload.name}" created successfully!`, 'success');
+      }
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to add team");
+      console.error('Error creating team:', e); // Debug log
+      showNotification(e?.response?.data?.message || "Failed to create team", 'error');
     }
   };
 
@@ -277,7 +312,6 @@ export default function ManageTeams() {
             ? {
                 ...team,
                 name: formData.name,
-                subSector: formData.subSector,
                 ops: formData.ops,
                 sms: formData.sms,
                 pms: formData.pms,
@@ -291,7 +325,7 @@ export default function ManageTeams() {
         )
       );
 
-      alert(`Team ${formData.name} updated successfully!`);
+      showNotification(`Team ${formData.name} updated successfully!`, 'success');
     } catch (e) {
       throw new Error(e?.response?.data?.message || "Failed to update team");
     }
@@ -309,9 +343,9 @@ export default function ManageTeams() {
         const deleteId = team.id || team._id;
         return teamId !== deleteId;
       }));
-      alert(`Team ${team.name} deleted successfully!`);
+      showNotification(`Team ${team.name} deleted successfully!`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to delete team");
+      showNotification(e?.response?.data?.message || "Failed to delete team", 'error');
     }
   };
 
@@ -405,6 +439,9 @@ export default function ManageTeams() {
         )}
       </div>
       )}
+      
+      {/* Notification Component */}
+      <NotificationComponent />
     </div>
   );
 }
