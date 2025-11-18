@@ -108,3 +108,35 @@ export function setAuthToken(token) {
     clearAuthTokens();
   }
 }
+
+// Forgot password functions (3-step flow)
+export async function forgotPasswordStep1(empNo) {
+  try {
+    const response = await axios.post(`${base}/auth/forgot-password/step1`, { empNo });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+}
+
+export async function forgotPasswordStep2(userId, answer) {
+  try {
+    const response = await axios.post(`${base}/auth/forgot-password/step2`, { userId, answer });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+}
+
+export async function forgotPasswordStep3(userId, newPassword, confirmPassword) {
+  try {
+    const response = await axios.post(`${base}/auth/forgot-password/step3`, {
+      userId,
+      newPassword,
+      confirmPassword
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+}

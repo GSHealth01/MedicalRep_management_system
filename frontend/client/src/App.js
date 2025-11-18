@@ -7,10 +7,14 @@ import {
 
 //Existing imports
 import LoginPage        from './Pages/LoginPage';
-import DcrReport        from './components/DCR_report';  
+import DcrReport        from './components/DCR_report';
 import RepDashboard     from './components/RepDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import ItineraryForm    from './components/ItineraryForm';
+
+//Forgot Password imports
+import ForgotPasswordStep1 from './Pages/ForgotPasswordStep1';
+import ForgotPasswordStep3 from './Pages/ForgotPasswordStep3';
 
 //Summary Components
 import StockingSummary    from './components/SummaryComponent/StockingSummary';
@@ -22,7 +26,6 @@ import ChemistCallSummary from './components/SummaryComponent/Chemist_Call_Summa
 
 import SummariesPage from './Pages/Summaries';
 
-//Protected Route import
 import ProtectedAdmin from './components/ProtectedRoute';
 
 //Admin import
@@ -41,9 +44,11 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/forgot-password/step1" element={<ForgotPasswordStep1 />} />
+        <Route path="/forgot-password/step3" element={<ForgotPasswordStep3 />} />
         <Route path="/rep-dashboard" element={<RepDashboard />} />
         <Route path="/itineraryForm" element={<ItineraryForm />} />
-        <Route path="/DCR_report"   element={<DcrReport />} /> 
+        <Route path="/DCR_report"   element={<DcrReport />} />
         <Route path="/manager-dashboard" element={<ManagerDashboard />} />
         <Route path="/summaries" element={<SummariesPage />} />
         <Route path="/summaries/stocking" element={<StockingSummary />} />

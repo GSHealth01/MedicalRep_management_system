@@ -10,10 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ------------------
-// Main Entities
-// ------------------
-
 // Top-level organization
 model agency {
   id           Int           @id @default(autoincrement())
@@ -120,6 +116,9 @@ designation      String?   // Designation: "Medical Rep", "Field Coordinator", "
 join_date        DateTime? // Join Date
 birthday         DateTime? // Birthday
 dateAdded        DateTime? @default(now()) // Date Added for table display
+// Security question for password reset
+security_question String?  // Security question text
+security_answer   String?  // Security answer (stored as hash)
 // 1:M -> 'user has one agency'
 agency_id        Int?
 agency           agency?   @relation(fields: [agency_id], references: [id])

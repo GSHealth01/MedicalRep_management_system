@@ -11,64 +11,40 @@ const doctors = [
 
 // Base product categories
 const baseProductCategories = {
-  "Dicardia": [
-    { name: "10mg 100's", samplingPrice: 150, stockingPrice: 120, detailedPrice: 10 },
-    { name: "20mg 100's", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 }
+  "Cilacar": [
+    { name: "Cilacar Tab 10mg", samplingPrice: 150, stockingPrice: 120, detailedPrice: 10 },
+    { name: "Cilacar Tab 20mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 },
+    { name: "Cilacar Tab 5mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
   ],
   "Dicloran": [
-    { name: "50mg 100's", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 },
-    { name: "SR 75 100's", samplingPrice: 120, stockingPrice: 95, detailedPrice: 5 },
-    { name: "100 100's", samplingPrice: 180, stockingPrice: 150, detailedPrice: 5 },
-    { name: "50g Gel", samplingPrice: 75, stockingPrice: 60, detailedPrice: 0 },
-    { name: "25g Gel", samplingPrice: 50, stockingPrice: 40, detailedPrice: 0 },
+    { name: "Dicloran Gel", samplingPrice: 75, stockingPrice: 60, detailedPrice: 0 },
+    { name: "Dicloran SR-100mg", samplingPrice: 180, stockingPrice: 150, detailedPrice: 5 },
+    { name: "Dicloran SR-75mg", samplingPrice: 120, stockingPrice: 95, detailedPrice: 5 },
+    { name: "Dicloran Tab 50mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
+  ],
+  "DilcardiaSR": [
+    { name: "DilcardiaSR 90mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 }
+  ],
+  "Maskacid": [
+    { name: "Maskacid SRL Exp.", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
+  ],
+  "Ornigil": [
+    { name: "Ornigil 500mg Tab", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 }
   ],
   "Pedivit Forte": [
-    { name: "Syrup 100ml", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 },
-    { name: "Drops 15ml", samplingPrice: 90, stockingPrice: 75, detailedPrice: 10 }
+    { name: "Pedivit Forte", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
   ],
   "Unimelo": [
-    { name: "10mg 100's", samplingPrice: 220, stockingPrice: 200, detailedPrice: 15 }
+    { name: "Unimelo 7.5mg Tab", samplingPrice: 220, stockingPrice: 200, detailedPrice: 15 }
   ],
-  "Vasslip": [
-    { name: "10mg 100's", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 },
-    { name: "20mg 100's", samplingPrice: 210, stockingPrice: 190, detailedPrice: 10 }
+  "Vasolip": [
+    { name: "Vasolip 10mg Tab.", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 },
+    { name: "Vasolip 20mg Tab.", samplingPrice: 210, stockingPrice: 190, detailedPrice: 10 }
   ]
 };
 
 // Agency-specific temporary products
 const agencyProducts = {
-  "A": {
-    "Cilacar": [
-      { name: "Tab 10mg", samplingPrice: 150, stockingPrice: 120, detailedPrice: 10 },
-      { name: "Tab 20mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 },
-      { name: "Tab 5mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "Dicloran": [
-      { name: "Gel", samplingPrice: 75, stockingPrice: 60, detailedPrice: 0 },
-      { name: "SR-100mg", samplingPrice: 180, stockingPrice: 150, detailedPrice: 5 },
-      { name: "SR-75mg", samplingPrice: 120, stockingPrice: 95, detailedPrice: 5 },
-      { name: "Tab 50mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "DilcardiaSR": [
-      { name: "90mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 }
-    ],
-    "Maskacid": [
-      { name: "SRL Exp.", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
-    ],
-    "Ornigil": [
-      { name: "500mg Tab", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 }
-    ],
-    "Pedivit Forte": [
-      { name: "Forte", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
-    ],
-    "Unimelo": [
-      { name: "7.5mg Tab", samplingPrice: 220, stockingPrice: 200, detailedPrice: 15 }
-    ],
-    "Vasolip": [
-      { name: "10mg Tab.", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 },
-      { name: "20mg Tab.", samplingPrice: 210, stockingPrice: 190, detailedPrice: 10 }
-    ]
-  },
   "B": {
     "Product 1": [
       { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
@@ -110,11 +86,8 @@ const getProductCategories = (userAgency) => {
 
 const managers = ['Manager A', 'Manager B', 'Manager C'];
 
-// --- Helper Functions for Calculation & Summary (Defined outside) ---
 
-/**
- * Calculates the total value for a single doctor's row.
- */
+
 const calculateDoctorTotal = (doctorRow, productCategories) => {
   let total = 0;
   if (!doctorRow || !doctorRow.productData) return total;
@@ -140,9 +113,6 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
   return total;
 };
 
-/**
- * Generates a structured summary of all selected items and managers for all doctors.
- */
 const generateSummaryData = (tableData, productCategories) => {
   const summary = [];
   tableData.forEach(doc => {
@@ -290,7 +260,7 @@ export default function RepdetailsReport() {
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
 
   // Step 2 State
-  const [selectedProductTab, setSelectedProductTab] = useState("Dicloran");
+  const [selectedProductTab, setSelectedProductTab] = useState("Cilacar");
   const [tableData, setTableData] = useState([]);
 
   // Step 3 State (Combined)
@@ -313,7 +283,7 @@ export default function RepdetailsReport() {
         const profile = response.data.user;
         setUserProfile(profile);
         
-        console.log('DCR: Fetched user profile:', profile); // Debug log
+        console.log('DCR: Fetched user profile:', profile); 
         
         // Auto-populate form fields with user profile data
         if (profile) {
@@ -387,9 +357,7 @@ export default function RepdetailsReport() {
 
   const step1Valid =
     date && selectedDoctors.length > 0;
-    // Only date and doctors are now required (editable fields)
-    // Range, Agency, Rep Name, Emp No, Distributor, Area, Town are auto-populated and readonly
-
+    
   // --- Step 2 Functions ---
   useEffect(() => {
     if (step === 2) {

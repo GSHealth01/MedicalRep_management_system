@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import logo from '../assets/gsh.logo.png';
-import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -36,7 +36,7 @@ export default function LoginPage() {
         navigate('/rep-dashboard', { replace: true });
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Login failed.';
+      const msg = err?.response?.data?.msg || err?.response?.data?.message || err?.message || 'Login failed.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -91,6 +91,16 @@ export default function LoginPage() {
         <button type="submit" disabled={loading}>
           {loading ? 'Signing in...' : 'Login'}
         </button>
+
+        <div className="text-center mt-4">
+          <button
+            type="button"
+            onClick={() => navigate('/forgot-password/step1')}
+            className="text-sm text-blue-600 hover:text-blue-800 underline focus:outline-none"
+          >
+            Forgot Password?
+          </button>
+        </div>
       </form>
     </div>
   );

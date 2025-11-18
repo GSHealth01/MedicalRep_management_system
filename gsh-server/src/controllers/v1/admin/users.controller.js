@@ -84,7 +84,9 @@ exports.create = async (req, res) => {
       range_id,
       team_id,
       distributor_id, // For backward compatibility
-      distributor_ids // New field for multiple distributors
+      distributor_ids, // New field for multiple distributors
+      security_question,
+      security_answer
     } = req.body;
 
     // Map empNo to emp_no for consistency
@@ -110,6 +112,12 @@ exports.create = async (req, res) => {
     if (empNoExists) throw new AppError(409, "Employee number already exists");
 
     const passwordHash = await bcrypt.hash(password, 12);
+
+    // Hash security answer if provided
+    let securityAnswerHash = null;
+    if (security_answer) {
+      securityAnswerHash = await bcrypt.hash(security_answer, 10);
+    }
 
     // Find or create agency and range by name since frontend sends string names
     let agencyId, rangeId;
@@ -151,7 +159,9 @@ exports.create = async (req, res) => {
       emp_no: emp_no,
       join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,
       birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,
-      team_id: team_id && !isNaN(parseInt(team_id)) ? parseInt(team_id) : undefined
+      team_id: team_id && !isNaN(parseInt(team_id)) ? parseInt(team_id) : undefined,
+      security_question: security_question || "What is your favorite color?",
+      security_answer: securityAnswerHash || await bcrypt.hash("blue", 10)
     };
 
     console.log('User data to create:', userData); // Debug log

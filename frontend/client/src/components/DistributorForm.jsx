@@ -9,7 +9,7 @@ export default function DistributorForm({ onSubmit }) {
     area: "",
     town: "",
     route: "",
-    sector: "", // Range (Sector)
+    sector: "", 
     date: "",
   });
 
@@ -94,8 +94,6 @@ export default function DistributorForm({ onSubmit }) {
       }
     })();
 
-    // Load areas (removed - using text input instead)
-
     return () => {
       mounted = false;
     };
@@ -124,21 +122,19 @@ export default function DistributorForm({ onSubmit }) {
 
     // Normalize payload for BE
     const payload = {
-      distributor_code: formData.distributorCode.trim(), // BE expects "distributor_code"
-      name: formData.distributorName.trim(), // BE expects "name"
-      coverage_town: formData.town.trim(), // BE expects "coverage_town"
+      distributor_code: formData.distributorCode.trim(), 
+      name: formData.distributorName.trim(),
+      coverage_town: formData.town.trim(), 
       route: formData.route,
-      range_id: parseInt(formData.sector), // Range (Sector) field maps to range_id
-      agency_id: parseInt(formData.range), // range field maps to agency_id
-      area: formData.area.trim(), // area is a text field
+      range_id: parseInt(formData.sector), 
+      agency_id: parseInt(formData.range), 
+      area: formData.area.trim(), 
     };
 
     console.log('Submitting distributor payload:', payload);
     console.log('Raw form data:', formData);
 
-    if (onSubmit) onSubmit(payload, formData); // pass both normalized & raw
-
-    // reset form
+    if (onSubmit) onSubmit(payload, formData); 
   setFormData({
     range: "",
     distributorName: "",

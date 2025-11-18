@@ -3,6 +3,7 @@ const { prisma } = require('../../../lib/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { config } = require('../../config/env');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -58,12 +59,12 @@ router.post('/signin', async (req, res) => {
   });
 
   if (!user) {
-    return res.status(400).json({ msg: 'Invalid credentials' });
+    return res.status(400).json({ msg: 'Invalid email or password. Please check your credentials and try again.' });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    return res.status(400).json({ msg: 'Invalid credentials' });
+    return res.status(400).json({ msg: 'Invalid email or password. Please check your credentials and try again.' });
   }
 
   // Check if user has required fields for non-admin users
@@ -110,6 +111,125 @@ router.post('/refresh', async (req, res) => {
     });
   } catch (error) {
     return res.status(401).json({ msg: 'Invalid refresh token' });
+  }
+});
+
+// Step 1: Check if staff number exists and return security question
+router.post('/forgot-password/step1', async (req, res) => {
+  const { empNo } = req.body;
+
+  if (!empNo) {
+    return res.status(400).json({ msg: 'Staff Number is required' });
+  }
+
+  try {
+    // Find user by employee number
+    const user = await prisma.user.findUnique({
+      where: { emp_no: empNo }
+    });
+
+    if (!user) {
+      return res.status(404).json({ msg: 'Staff Number not found' });
+    }
+
+    if (!user.security_question) {
+      return res.status(400).json({ msg: 'No security question set for this staff member. Please contact administrator.' });
+    }
+
+    res.status(200).json({
+      msg: 'Staff Number found',
+      securityQuestion: user.security_question,
+      userId: user.id
+    });
+
+  } catch (error) {
+    console.error('Forgot password step 1 error:', error);
+    return res.status(500).json({ msg: 'Internal server error' });
+  }
+});
+
+// Step 2: Verify security answer
+router.post('/forgot-password/step2', async (req, res) => {
+  const { userId, answer } = req.body;
+
+  if (!userId || !answer) {
+    return res.status(400).json({ msg: 'User ID and answer are required' });
+  }
+
+  try {
+    // Find user by ID
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) }
+    });
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    if (!user.security_answer) {
+      return res.status(400).json({ msg: 'No security answer set for this user' });
+    }
+
+    // Verify the answer
+    const isAnswerCorrect = await bcrypt.compare(answer, user.security_answer);
+
+    if (!isAnswerCorrect) {
+      return res.status(400).json({ msg: 'The answer you provided does not match our records. Please try again or contact your administrator.' });
+    }
+
+    res.status(200).json({
+      msg: 'Answer verified successfully',
+      userId: user.id
+    });
+
+  } catch (error) {
+    console.error('Forgot password step 2 error:', error);
+    return res.status(500).json({ msg: 'Internal server error' });
+  }
+});
+
+// Step 3: Reset password
+router.post('/forgot-password/step3', async (req, res) => {
+  const { userId, newPassword, confirmPassword } = req.body;
+
+  if (!userId || !newPassword || !confirmPassword) {
+    return res.status(400).json({ msg: 'All fields are required' });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ msg: 'Passwords do not match' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ msg: 'Password must be at least 6 characters long' });
+  }
+
+  try {
+    // Find user by ID
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) }
+    });
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
+
+    res.status(200).json({
+      msg: 'Password reset successful. You can now log in with your new password.'
+    });
+
+  } catch (error) {
+    console.error('Forgot password step 3 error:', error);
+    return res.status(500).json({ msg: 'Internal server error' });
   }
 });
 

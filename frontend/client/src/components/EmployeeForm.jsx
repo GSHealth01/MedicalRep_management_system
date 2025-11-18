@@ -11,7 +11,9 @@ export default function EmployeeForm({ onSubmit }) {
     joinDate: "",
     agency: "",         // subSector _id
     range: "",          // sector _id
-    distributors: []    // Array of selected distributor IDs
+    distributors: [],   // Array of selected distributor IDs
+    security_question: "What is your favorite color?", // Default security question
+    security_answer: "" // Security answer
   });
 
   // Add distributors state
@@ -70,7 +72,8 @@ export default function EmployeeForm({ onSubmit }) {
       !!formData.empNo &&
       !!formData.designation &&
       !!formData.range &&
-      !!formData.agency
+      !!formData.agency &&
+      !!formData.security_answer
     );
   }, [formData]);
 
@@ -130,12 +133,16 @@ export default function EmployeeForm({ onSubmit }) {
       designation: formData.designation,
       agency_id: formData.agency,           // Convert to agency_id (string is fine for now)
       range_id: formData.range,             // Convert to range_id (string is fine for now)
-      
+
       // Dates with correct field names
       birthday: formData.birthday || undefined,
       join_date: formData.joinDate || undefined,  // joinDate -> join_date
       team_id: undefined, // Optional, can be added later
       distributor_ids: formData.distributors || [], // Multiple distributors
+
+      // Security question fields
+      security_question: formData.security_question,
+      security_answer: formData.security_answer
     };
 
     onSubmit && onSubmit(prismaPayload, formData);
@@ -150,7 +157,9 @@ export default function EmployeeForm({ onSubmit }) {
       joinDate: "",
       agency: "",
       range: "",
-      distributors: []
+      distributors: [],
+      security_question: "What is your favorite color?",
+      security_answer: ""
     });
   };
 
@@ -184,6 +193,39 @@ export default function EmployeeForm({ onSubmit }) {
           minLength={7}
         />
         <p className="text-xs text-gray-500 mt-1">Min 7 chars. You can enforce complexity server-side.</p>
+      </div>
+
+      {/* Security Question */}
+      <div>
+        <label className="block text-gray-700 mb-1">Security Question</label>
+        <select
+          name="security_question"
+          value={formData.security_question}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          required
+        >
+          <option value="What is your favorite color?">What is your favorite color?</option>
+          <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+          <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+          <option value="What city were you born in?">What city were you born in?</option>
+          <option value="What is your favorite movie?">What is your favorite movie?</option>
+        </select>
+      </div>
+
+      {/* Security Answer */}
+      <div>
+        <label className="block text-gray-700 mb-1">Security Answer</label>
+        <input
+          type="text"
+          name="security_answer"
+          value={formData.security_answer}
+          onChange={handleChange}
+          placeholder="Enter answer to security question"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">This will be used for password recovery.</p>
       </div>
 
       {/* Employee No */}

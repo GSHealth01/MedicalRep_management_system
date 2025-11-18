@@ -9,11 +9,16 @@ async function ensureAdmin() {
   if (hasAdmin) {
     console.log("Admin found. Resetting admin password to ensure correct hash...");
     const passwordHash = await bcrypt.hash("admin123@", 12);
+    const securityAnswerHash = await bcrypt.hash("admin123", 10);
     await prisma.user.update({
       where: { email: "admin@gsh.com" },
-      data: { password: passwordHash }
+      data: {
+        password: passwordHash,
+        security_question: "What is your favorite color?",
+        security_answer: securityAnswerHash
+      }
     });
-    console.log("Admin password reset successfully.");
+    console.log("Admin password and security question reset successfully.");
     return;
   }
 
