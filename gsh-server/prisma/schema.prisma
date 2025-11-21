@@ -14,7 +14,7 @@ datasource db {
 model agency {
   id           Int           @id @default(autoincrement())
   name         String        @unique
-  dateAdded    DateTime?     @default(now()) 
+  dateAdded    DateTime?     @default(now())
   // 1:M -> 'agency has many ranges'
   ranges       range[]
   // 1:M -> 'agency has many users'
@@ -102,24 +102,22 @@ model distributor {
   // M:N -> 'distributor has many users'
   users            UserDistributors[]
 
-  @@unique([area_id]) // Make area_id unique for one-to-one relation
+  @@unique([area_id])
 }
 
-// Central 'user' model, replacing rep, manager, and auth user
 model user {
-  id                Int                @id @default(autoincrement())
-  email             String             @unique // Username (Email)
-  password          String // Password - Stored as a hash
-  name              String?
-  emp_no            String             @unique // Employee No
-  designation       String? // Designation: "Medical Rep", "Field Coordinator", "Junior Executive", "Senior Executive", "Territory Manager", "Product Manager", "Admin"
-  join_date         DateTime? // Join Date
-  birthday          DateTime? // Birthday
-  dateAdded         DateTime?          @default(now()) // Date Added for table display
-  // Security question for password reset
-  security_question String? // Security question text
-  security_answer   String? // Security answer (stored as hash)
-  // 1:M -> 'user has one agency'
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  name        String?
+  emp_no      String    @unique
+  designation String?
+  join_date   DateTime?
+  birthday    DateTime?
+  dateAdded   DateTime? @default(now())
+
+  security_question String?
+  security_answer   String?
   agency_id         Int?
   agency            agency?            @relation(fields: [agency_id], references: [id])
   // 1:M -> 'user has one range'
@@ -154,7 +152,7 @@ model doctor {
   prescriptions  DoctorPrescriptions[]
 }
 
-// Product model with new fields
+
 model product {
   id                      Int                   @id @default(autoincrement())
   name                    String
@@ -163,8 +161,8 @@ model product {
   route_of_administration String?
   pack_size               String?
   strength                String?
-  dateAdded               DateTime?             @default(now()) // Date Added for table display
-  // M:N -> 'product has many distributors'
+  dateAdded               DateTime?             @default(now()) 
+ 
   distributors            DistributorProducts[]
   // M:N -> 'product prescribed by many doctors'
   doctors                 DoctorPrescriptions[]
@@ -236,30 +234,27 @@ model TeamProducts {
   @@id([team_id, product_id])
 }
 
-// Itinerary model for monthly planning
 model itinerary {
-  id          Int              @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   repName     String
   distributor String
-  month       String // Format: "2024-11"
-  status      String?          @default("pending") // "pending", "submitted", "approved"
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  // 1:M -> 'itinerary belongs to one user'
+  month       String
+  status      String?  @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   user_id     Int
-  user        user             @relation(fields: [user_id], references: [id])
-  // 1:M -> 'itinerary has many entries'
-  entries     itineraryEntry[]
+  user        user     @relation(fields: [user_id], references: [id])
+
+  entries itineraryEntry[]
 
   @@map("itineraries")
 }
 
-// Itinerary entry for daily planning
 model itineraryEntry {
   id           Int       @id @default(autoincrement())
-  date         String // Format: "2024-11-01"
-  dayNo        Int // Day number in month (1-31)
-  area         String? // Area name
+  date         String
+  dayNo        Int
+  area         String?
   doctorCalls  Int?      @default(0)
   chemistCalls Int?      @default(0)
   mileage      Float?    @default(0.0)

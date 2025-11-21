@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 
@@ -9,7 +10,6 @@ const doctors = [
   "Dr. Miller", "Dr. Wilson", "Dr. Moore", "Dr. Taylor", "Dr. Anderson"
 ];
 
-// Base product categories
 const baseProductCategories = {
   "Cilacar": [
     { name: "Cilacar Tab 10mg", samplingPrice: 150, stockingPrice: 120, detailedPrice: 10 },
@@ -120,7 +120,6 @@ const generateSummaryData = (tableData, productCategories) => {
       doctor: doc.doctor,
       items: [],
       total: calculateDoctorTotal(doc, productCategories),
-      // NEW: Add selected managers if joint visit is checked
       managersSelected: (doc.jointVisit && doc.jointVisitManagers)
         ? Object.entries(doc.jointVisitManagers)
             .filter(([key, value]) => value === true)
@@ -242,6 +241,7 @@ const LiveSummaryTable = ({ tableData, productCategories }) => {
 // --- Main Component ---
 export default function RepdetailsReport() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);

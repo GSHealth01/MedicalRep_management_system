@@ -4,25 +4,23 @@ const {
   createItinerary,
   getItineraries,
   getItinerary,
+  getItinerarySummary,
   updateItinerary,
   deleteItinerary,
-  // generatePDF, // Commented out for now
+  generatePDF,
   generateExcel
 } = require('../../controllers/v1/itinerary.controller');
 const { requireAuth } = require('../../middlewares/auth');
 
-// All itinerary routes require authentication
 router.use(requireAuth);
 
-// CRUD routes
 router.post('/', createItinerary);
 router.get('/', getItineraries);
 router.get('/:id', getItinerary);
+router.get('/:id/summary', getItinerarySummary);
 router.put('/:id', updateItinerary);
 router.delete('/:id', deleteItinerary);
-
-// Download routes
-// router.get('/:id/pdf', generatePDF); // Commented out for now
+router.get('/:id/pdf', generatePDF);
 router.get('/:id/excel', generateExcel);
 
 module.exports = router;

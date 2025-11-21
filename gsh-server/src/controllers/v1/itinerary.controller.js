@@ -20,11 +20,11 @@ const createItinerary = asyncHandler(async (req, res) => {
       entries: {
         create: itinerary.map(entry => ({
           date: entry.date,
-          dayNo: entry.dayNo,
+          dayNo: parseInt(entry.dayNo) || 0,
           area: entry.area || null,
-          doctorCalls: entry.doctorCalls || 0,
-          chemistCalls: entry.chemistCalls || 0,
-          mileage: entry.mileage || 0,
+          doctorCalls: parseInt(entry.doctorCalls) || 0,
+          chemistCalls: parseInt(entry.chemistCalls) || 0,
+          mileage: parseFloat(entry.mileage) || 0,
           nightOutArea: entry.nightOutArea || null
         }))
       }
@@ -129,11 +129,11 @@ const updateItinerary = asyncHandler(async (req, res) => {
       entries: {
         create: itinerary.map(entry => ({
           date: entry.date,
-          dayNo: entry.dayNo,
+          dayNo: parseInt(entry.dayNo) || 0,
           area: entry.area || null,
-          doctorCalls: entry.doctorCalls || 0,
-          chemistCalls: entry.chemistCalls || 0,
-          mileage: entry.mileage || 0,
+          doctorCalls: parseInt(entry.doctorCalls) || 0,
+          chemistCalls: parseInt(entry.chemistCalls) || 0,
+          mileage: parseFloat(entry.mileage) || 0,
           nightOutArea: entry.nightOutArea || null
         }))
       }
@@ -176,11 +176,98 @@ const deleteItinerary = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, null, 'Itinerary deleted successfully'));
 });
 
-// Generate PDF - Commented out for now
-// const generatePDF = asyncHandler(async (req, res) => {
-//   // PDF generation logic will be added later
-//   res.status(501).json(new ApiResponse(501, null, 'PDF generation not implemented yet'));
-// });
+// Generate PDF
+const generatePDF = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  const itinerary = await prisma.itinerary.findFirst({
+    where: {
+      id: parseInt(id),
+      user_id: userId
+    },
+    include: {
+      entries: {
+        orderBy: { dayNo: 'asc' }
+      },
+      user: {
+        select: {
+          name: true,
+          emp_no: true,
+          email: true
+        }
+      }
+    }
+  });
+
+  if (!itinerary) {
+    throw new AppError(404, 'Itinerary not found');
+  }
+
+  const html = generateItineraryHTML(itinerary);
+
+  const pdf = require('html-pdf');
+  pdf.create(html, { format: 'A4' }).toBuffer((err, buffer) => {
+    if (err) {
+      console.error('PDF generation error:', err);
+      return res.status(500).json(new ApiResponse(500, null, 'PDF generation failed'));
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=itinerary-${itinerary.month}-${itinerary.user.emp_no}.pdf`);
+    res.send(buffer);
+  });
+});
+
+// Get Itinerary Summary
+const getItinerarySummary = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  const itinerary = await prisma.itinerary.findFirst({
+    where: {
+      id: parseInt(id),
+      user_id: userId
+    },
+    include: {
+      entries: {
+        orderBy: { dayNo: 'asc' }
+      },
+      user: {
+        select: {
+          name: true,
+          emp_no: true,
+          email: true
+        }
+      }
+    }
+  });
+
+  if (!itinerary) {
+    throw new AppError(404, 'Itinerary not found');
+  }
+
+  // Calculate summary
+  const summary = {
+    totalDays: itinerary.entries.length,
+    totalDoctorCalls: itinerary.entries.reduce((sum, entry) => sum + (entry.doctorCalls || 0), 0),
+    totalChemistCalls: itinerary.entries.reduce((sum, entry) => sum + (entry.chemistCalls || 0), 0),
+    totalMileage: itinerary.entries.reduce((sum, entry) => sum + (entry.mileage || 0), 0),
+    areas: [...new Set(itinerary.entries.map(entry => entry.area).filter(area => area))],
+    nightOutAreas: [...new Set(itinerary.entries.map(entry => entry.nightOutArea).filter(area => area))],
+    itinerary: {
+      id: itinerary.id,
+      repName: itinerary.repName,
+      distributor: itinerary.distributor,
+      month: itinerary.month,
+      status: itinerary.status,
+      createdAt: itinerary.createdAt,
+      user: itinerary.user
+    }
+  };
+
+  res.status(200).json(new ApiResponse(200, summary, 'Itinerary summary fetched successfully'));
+});
 
 // Generate Excel
 const generateExcel = asyncHandler(async (req, res) => {
@@ -340,8 +427,9 @@ module.exports = {
   createItinerary,
   getItineraries,
   getItinerary,
+  getItinerarySummary,
   updateItinerary,
   deleteItinerary,
-  // generatePDF, // Commented out for now
+  generatePDF,
   generateExcel
 };

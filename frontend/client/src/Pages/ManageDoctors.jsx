@@ -140,6 +140,76 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
   );
 }
 
+// View Doctor Modal Component
+function ViewDoctorModal({ doctor, onClose }) {
+  if (!doctor) return null;
+
+  const sectorName =
+    typeof doctor.range === "object"
+      ? (doctor.range?.name || doctor.range?.code || doctor.range?._id || "")
+      : doctor.range?.name || "";
+  const agencyName =
+    typeof doctor.range === "object" && doctor.range?.agency
+      ? (doctor.range.agency?.name || doctor.range.agency?.code || "")
+      : "";
+  const displayDate = doctor.dateAdded
+    ? new Date(doctor.dateAdded).toISOString().slice(0, 10)
+    : doctor.date
+    ? new Date(doctor.date).toISOString().slice(0, 10)
+    : "";
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold mb-4">View Doctor Details</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.name || doctor.doctorName}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Agency</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{agencyName}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Range (Sector)</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{sectorName}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.contactNumber}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.email || "-"}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.specialty || doctor.speciality || "-"}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Categorization</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.categorization || "-"}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
+            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{displayDate}</p>
+          </div>
+        </div>
+        <div className="flex justify-end space-x-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ManageDoctors() {
   const { showNotification, NotificationComponent } = useNotification();
   const { showConfirm, ConfirmDialogComponent } = useConfirm();
@@ -147,6 +217,7 @@ export default function ManageDoctors() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [editingDoctor, setEditingDoctor] = useState(null);
+  const [viewingDoctor, setViewingDoctor] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
   // Load existing doctors
@@ -253,6 +324,21 @@ export default function ManageDoctors() {
     }
   };
 
+  const handleViewDoctor = (doctor) => {
+    setViewingDoctor(doctor);
+  };
+
+  const handleDownloadDoctor = (doctor) => {
+    const data = `Name: ${doctor.name}\nContact: ${doctor.contactNumber}\nEmail: ${doctor.email}\nSpecialty: ${doctor.specialty}\nCategorization: ${doctor.categorization}\nDate Added: ${doctor.dateAdded}`;
+    const blob = new Blob([data], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doctor.name}_details.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -271,6 +357,14 @@ export default function ManageDoctors() {
           doctor={editingDoctor}
           onClose={() => setEditingDoctor(null)}
           onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* View Doctor Modal */}
+      {viewingDoctor && (
+        <ViewDoctorModal
+          doctor={viewingDoctor}
+          onClose={() => setViewingDoctor(null)}
         />
       )}
 
@@ -335,6 +429,20 @@ export default function ManageDoctors() {
                       <td className="py-2 px-4">{displayDate}</td>
                       <td className="py-2 px-4 text-center">
                         <div className="flex justify-center space-x-2">
+                          <button
+                            onClick={() => handleViewDoctor(doc)}
+                            className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
+                            title="View Doctor"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleDownloadDoctor(doc)}
+                            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 text-sm transition-colors"
+                            title="Download Doctor"
+                          >
+                            Download
+                          </button>
                           <button
                             onClick={() => handleEditDoctor(doc)}
                             className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"

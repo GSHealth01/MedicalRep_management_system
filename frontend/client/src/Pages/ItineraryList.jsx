@@ -13,7 +13,9 @@ export default function ItineraryList() {
 
   const fetchItineraries = async () => {
     try {
+      console.log('Fetching itineraries...');
       const response = await api.get('/itineraries');
+      console.log('Fetch response:', response);
       setItineraries(response.data.data || []);
     } catch (error) {
       console.error('Error fetching itineraries:', error);
@@ -33,6 +35,18 @@ export default function ItineraryList() {
     // Download itinerary as Excel (default format)
     const url = `http://localhost:5000/api/v1/itineraries/${itinerary.id}/excel`;
     window.open(url, '_blank');
+  };
+
+  const handleDelete = async (itinerary) => {
+    if (!window.confirm(`Are you sure you want to delete the itinerary for ${itinerary.month}?`)) return;
+    try {
+      await api.delete(`/itineraries/${itinerary.id}`);
+      alert('Itinerary deleted successfully');
+      fetchItineraries(); // Refresh the list
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert('Failed to delete itinerary');
+    }
   };
 
   const formatDate = (dateString) => {
@@ -146,6 +160,13 @@ export default function ItineraryList() {
                             title="Download Itinerary"
                           >
                             Download
+                          </button>
+                          <button
+                            onClick={() => handleDelete(itinerary)}
+                            className="text-red-600 hover:text-red-900 px-3 py-1 rounded text-sm font-medium border border-red-600 hover:bg-red-50"
+                            title="Delete Itinerary"
+                          >
+                            Delete
                           </button>
                         </div>
                       </td>

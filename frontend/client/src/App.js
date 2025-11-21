@@ -27,7 +27,7 @@ import ChemistCallSummary from './components/SummaryComponent/Chemist_Call_Summa
 
 import SummariesPage from './Pages/Summaries';
 
-import ProtectedAdmin from './components/ProtectedRoute';
+import ProtectedAdmin, { ProtectedUser } from './components/ProtectedRoute';
 
 //Admin import
 import AdminLayout        from './layouts/AdminLayout';
@@ -48,8 +48,8 @@ export default function App() {
         <Route path="/forgot-password/step1" element={<ForgotPasswordStep1 />} />
         <Route path="/forgot-password/step3" element={<ForgotPasswordStep3 />} />
         <Route path="/rep-dashboard" element={<RepDashboard />} />
-        <Route path="/itineraries" element={<ItineraryList />} />
-        <Route path="/itineraryForm" element={<ItineraryForm />} />
+        <Route path="/itineraries" element={<ProtectedUser><ItineraryList /></ProtectedUser>} />
+        <Route path="/itineraryForm/:id?/:mode?" element={<ProtectedUser><ItineraryForm /></ProtectedUser>} />
         <Route path="/DCR_report"   element={<DcrReport />} />
         <Route path="/manager-dashboard" element={<ManagerDashboard />} />
         <Route path="/summaries" element={<SummariesPage />} />

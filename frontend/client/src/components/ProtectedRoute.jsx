@@ -14,3 +14,16 @@ export default function ProtectedAdmin({ children }) {
   // If a child element is provided (e.g. <AdminLayout/>), render it; otherwise use <Outlet/>
   return children ?? <Outlet />;
 }
+
+export function ProtectedUser({ children }) {
+  const { ready, accessToken } = useAuth();
+
+  if (!ready) return null; // or a small spinner
+
+  if (!accessToken) {
+    return <Navigate to="/" replace />;
+  }
+
+  // If a child element is provided, render it; otherwise use <Outlet/>
+  return children ?? <Outlet />;
+}

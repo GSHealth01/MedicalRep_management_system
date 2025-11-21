@@ -1,14 +1,19 @@
 // src/components/ItineraryForm.js
 import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { distributors } from "../data/distributors";
 import { api } from "../services/api";
 
 export default function ItineraryForm() {
+  const navigate = useNavigate();
+  const { id, mode } = useParams();
+  const isViewMode = mode === 'view';
   const [repName, setRepName] = useState("");
   const [distributor, setDistributor] = useState("");
   const [month, setMonth] = useState("2025-04");
   const [itinerary, setItinerary] = useState([]);
   const [daysInMonth, setDaysInMonth] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   // build rows whenever month changes
   useEffect(() => {
@@ -29,6 +34,38 @@ export default function ItineraryForm() {
     setItinerary(rows);
   }, [month]);
 
+  // Load data if viewing
+  useEffect(() => {
+    if (isViewMode && id) {
+      loadItinerary();
+    }
+  }, [isViewMode, id]);
+
+  const loadItinerary = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/itineraries/${id}`);
+      const data = response.data.data;
+      setRepName(data.repName);
+      setDistributor(data.distributor);
+      setMonth(data.month);
+      setItinerary(data.entries.map(entry => ({
+        date: entry.date,
+        dayNo: entry.dayNo,
+        area: entry.area || "",
+        doctorCalls: entry.doctorCalls || "",
+        chemistCalls: entry.chemistCalls || "",
+        mileage: entry.mileage || "",
+        nightOutArea: entry.nightOutArea || "",
+      })));
+    } catch (error) {
+      console.error("Load failed:", error);
+      alert("Failed to load itinerary");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateRow = (idx, field, value) => {
     setItinerary((rows) => {
       const copy = [...rows];
@@ -40,11 +77,15 @@ export default function ItineraryForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = { repName, distributor, month, itinerary };
+    console.log("Submitting itinerary:", payload);
     try {
-      await api.post("/itineraries", payload);
+      const response = await api.post("/itineraries", payload);
+      console.log("Save response:", response);
       alert("Itinerary saved!");
-    } catch {
-      alert("Save failed");
+      navigate('/itineraries'); // Navigate to list after save
+    } catch (error) {
+      console.error("Save failed:", error);
+      alert(`Save failed: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -59,7 +100,7 @@ export default function ItineraryForm() {
       >
         {/* Header */}
         <h2 className="text-2xl font-semibold text-center py-4 border-b bg-gray-50">
-          Monthly Itinerary Planner
+          {isViewMode ? 'View Itinerary' : 'Monthly Itinerary Planner'}
         </h2>
 
         {/* Top fields */}
@@ -71,7 +112,8 @@ export default function ItineraryForm() {
               value={repName}
               onChange={(e) => setRepName(e.target.value)}
               required
-              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200"
+              disabled={isViewMode}
+              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-100"
             />
           </label>
 
@@ -81,7 +123,8 @@ export default function ItineraryForm() {
               value={distributor}
               onChange={(e) => setDistributor(e.target.value)}
               required
-              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200"
+              disabled={isViewMode}
+              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-100"
             >
               <option value="">– select –</option>
               {distributors.map((d) => (
@@ -100,7 +143,8 @@ export default function ItineraryForm() {
               onChange={(e) => setMonth(e.target.value)}
               min="2025-01"
               required
-              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200"
+              disabled={isViewMode}
+              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-100"
             />
           </label>
         </div>
@@ -130,7 +174,8 @@ export default function ItineraryForm() {
                       max={maxDate}
                       onChange={(e) => updateRow(i, "date", e.target.value)}
                       required
-                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                      disabled={isViewMode}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
                     />
                   </td>
                   <td className="px-2 py-1 border text-center">{row.dayNo}</td>
@@ -192,12 +237,22 @@ export default function ItineraryForm() {
 
         {/* Footer */}
         <div className="px-6 py-4 border-t flex justify-center bg-gray-50">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-200"
-          >
-            Save Itinerary
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={() => navigate('/itineraries')}
+              className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring focus:ring-gray-200"
+            >
+              Back
+            </button>
+            {!isViewMode && (
+              <button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-200"
+              >
+                Save Itinerary
+              </button>
+            )}
+          </div>
         </div>
       </form>
     </div>
