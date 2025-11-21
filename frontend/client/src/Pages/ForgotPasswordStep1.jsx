@@ -5,11 +5,11 @@ import { forgotPasswordStep1, forgotPasswordStep2 } from '../services/api';
 export default function ForgotPasswordStep1() {
   const navigate = useNavigate();
   const [empNo, setEmpNo] = useState('');
-  const [answer, setAnswer] = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verifyingAnswer, setVerifyingAnswer] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1 = enter empNo, 2 = enter answer
+  const [step, setStep] = useState(1); // 1 = enter empNo, 2 = enter code
   const [userData, setUserData] = useState(null);
 
   const handleEmpNoSubmit = async (e) => {
@@ -26,30 +26,29 @@ export default function ForgotPasswordStep1() {
       const response = await forgotPasswordStep1(empNo.trim());
       setUserData({
         userId: response.userId,
-        securityQuestion: response.securityQuestion,
         empNo: empNo.trim()
       });
       setStep(2);
     } catch (err) {
-      const errorMsg = err?.msg || err?.message || 'Failed to verify staff number. Please try again.';
+      const errorMsg = err?.msg || err?.message || 'Failed to verify employee number. Please try again.';
       setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAnswerSubmit = async (e) => {
+  const handleCodeSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!answer.trim()) {
-      setError('Please enter your answer.');
+    if (!code.trim()) {
+      setError('Please enter the 4-digit code.');
       return;
     }
 
-    setVerifyingAnswer(true);
+    setVerifyingCode(true);
     try {
-      const response = await forgotPasswordStep2(userData.userId, answer.trim());
+      const response = await forgotPasswordStep2(userData.userId, code.trim());
       // Navigate to step 3 with the userId
       navigate('/forgot-password/step3', {
         state: {
@@ -58,10 +57,10 @@ export default function ForgotPasswordStep1() {
         }
       });
     } catch (err) {
-      const errorMsg = err?.msg || err?.message || 'Incorrect answer. Please try again.';
+      const errorMsg = err?.msg || err?.message || 'Invalid code. Please try again.';
       setError(errorMsg);
     } finally {
-      setVerifyingAnswer(false);
+      setVerifyingCode(false);
     }
   };
 
@@ -71,7 +70,7 @@ export default function ForgotPasswordStep1() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Reset your password</h1>
           <p className="text-gray-600">
-            {step === 1 ? 'Enter your Staff Number to continue' : 'Answer your security question'}
+            {step === 1 ? 'Enter your Employee Number to continue' : 'Enter the 4-digit code sent to your email'}
           </p>
         </div>
 
@@ -103,41 +102,34 @@ export default function ForgotPasswordStep1() {
               disabled={loading}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              {loading ? 'Checking...' : 'Get Question'}
+              {loading ? 'Sending...' : 'Send Code'}
             </button>
           </form>
         ) : (
-          <form onSubmit={handleAnswerSubmit} className="space-y-6">
+          <form onSubmit={handleCodeSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Security Question
-              </label>
-              <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-800">
-                {userData?.securityQuestion}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="answer" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Answer
+              <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
+                4-Digit Code
               </label>
               <input
-                id="answer"
+                id="code"
                 type="text"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Enter your answer"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Enter the 4-digit code"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                maxLength={4}
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">Check your email for the 4-digit code.</p>
             </div>
 
             <button
               type="submit"
-              disabled={verifyingAnswer}
+              disabled={verifyingCode}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              {verifyingAnswer ? 'Verifying...' : 'Verify Answer'}
+              {verifyingCode ? 'Verifying...' : 'Verify Code'}
             </button>
           </form>
         )}

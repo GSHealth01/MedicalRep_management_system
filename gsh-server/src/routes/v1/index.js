@@ -7,6 +7,7 @@ router.use("/ranges", require("./range.routes"));
 router.use("/areas", require("./area.routes"));
 router.use("/teams", require("./team.routes"));
 router.use("/doctors", require("./doctor.routes"));
+router.use("/itineraries", require("./itinerary.routes"));
 // router.use("/products", require("./product.routes"));
 // router.use("/distributors", require("./distributor.routes"));
 router.use("/users", require("./user.routes"));

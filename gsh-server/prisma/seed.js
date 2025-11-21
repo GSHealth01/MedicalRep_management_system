@@ -66,6 +66,7 @@ async function main() {
     where: { area_id: area.id }, // `area_id` is unique, so we use it
     update: {},
     create: {
+      distributor_code: 'DIS001',
       name: 'Main Distributor',
       agency_id: agency.id,
       area_id: area.id,
@@ -75,7 +76,7 @@ async function main() {
   console.log('Created distributor:', distributor.name);
 
   // --- 2. Now Create the Admin User ---
-  const adminEmail = 'admin@yourcompany.com';
+  const adminEmail = 'admin@gsh.com';
   const existingAdmin = await prisma.user.findUnique({
     where: { email: adminEmail },
   });

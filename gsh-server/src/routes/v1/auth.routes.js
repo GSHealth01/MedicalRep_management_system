@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { config } = require('../../config/env');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const router = express.Router();
 
@@ -114,12 +115,13 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-// Step 1: Check if staff number exists and return security question
+// Step 1: Check if staff number exists and send reset code to email
 router.post('/forgot-password/step1', async (req, res) => {
   const { empNo } = req.body;
+  console.log('Forgot password step1 called with empNo:', empNo);
 
   if (!empNo) {
-    return res.status(400).json({ msg: 'Staff Number is required' });
+    return res.status(400).json({ msg: 'Employee Number is required' });
   }
 
   try {
@@ -129,16 +131,47 @@ router.post('/forgot-password/step1', async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ msg: 'Staff Number not found' });
+      return res.status(404).json({ msg: 'Employee Number not found' });
     }
 
-    if (!user.security_question) {
-      return res.status(400).json({ msg: 'No security question set for this staff member. Please contact administrator.' });
+    // Generate 4-digit reset code
+    const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Create email transporter
+    const transporter = nodemailer.createTransport({
+      host: config.EMAIL_HOST,
+      port: config.EMAIL_PORT,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: config.EMAIL_USER,
+        pass: config.EMAIL_PASS,
+      },
+    });
+
+    // Send email
+    try {
+      await transporter.sendMail({
+        from: config.EMAIL_USER,
+        to: user.email,
+        subject: 'Password Reset Code',
+        text: `Your password reset code is: ${resetCode}`,
+        html: `<p>Your password reset code is: <strong>${resetCode}</strong></p>`,
+      });
+      console.log(`Reset code sent to ${user.email}: ${resetCode}`);
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError);
+      return res.status(500).json({ msg: 'Failed to send reset code. Please try again.' });
     }
+
+    // Store reset code temporarily (in production, use proper storage)
+    // For now, we'll store it in the user record temporarily
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { security_answer: resetCode } 
+    });
 
     res.status(200).json({
-      msg: 'Staff Number found',
-      securityQuestion: user.security_question,
+      msg: 'Reset code sent to your email',
       userId: user.id
     });
 
@@ -148,12 +181,12 @@ router.post('/forgot-password/step1', async (req, res) => {
   }
 });
 
-// Step 2: Verify security answer
+// Step 2: Verify reset code
 router.post('/forgot-password/step2', async (req, res) => {
-  const { userId, answer } = req.body;
+  const { userId, code } = req.body;
 
-  if (!userId || !answer) {
-    return res.status(400).json({ msg: 'User ID and answer are required' });
+  if (!userId || !code) {
+    return res.status(400).json({ msg: 'User ID and reset code are required' });
   }
 
   try {
@@ -167,18 +200,22 @@ router.post('/forgot-password/step2', async (req, res) => {
     }
 
     if (!user.security_answer) {
-      return res.status(400).json({ msg: 'No security answer set for this user' });
+      return res.status(400).json({ msg: 'No reset code found. Please request a new one.' });
     }
 
-    // Verify the answer
-    const isAnswerCorrect = await bcrypt.compare(answer, user.security_answer);
-
-    if (!isAnswerCorrect) {
-      return res.status(400).json({ msg: 'The answer you provided does not match our records. Please try again or contact your administrator.' });
+    // Verify the code (stored unhashed for simplicity)
+    if (code !== user.security_answer) {
+      return res.status(400).json({ msg: 'Invalid reset code. Please check and try again.' });
     }
+
+    // Clear the reset code after verification
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { security_answer: null }
+    });
 
     res.status(200).json({
-      msg: 'Answer verified successfully',
+      msg: 'Reset code verified successfully',
       userId: user.id
     });
 

@@ -11,6 +11,7 @@ import DcrReport        from './components/DCR_report';
 import RepDashboard     from './components/RepDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import ItineraryForm    from './components/ItineraryForm';
+import ItineraryList    from './Pages/ItineraryList';
 
 //Forgot Password imports
 import ForgotPasswordStep1 from './Pages/ForgotPasswordStep1';
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/forgot-password/step1" element={<ForgotPasswordStep1 />} />
         <Route path="/forgot-password/step3" element={<ForgotPasswordStep3 />} />
         <Route path="/rep-dashboard" element={<RepDashboard />} />
+        <Route path="/itineraries" element={<ItineraryList />} />
         <Route path="/itineraryForm" element={<ItineraryForm />} />
         <Route path="/DCR_report"   element={<DcrReport />} />
         <Route path="/manager-dashboard" element={<ManagerDashboard />} />

@@ -119,9 +119,9 @@ export async function forgotPasswordStep1(empNo) {
   }
 }
 
-export async function forgotPasswordStep2(userId, answer) {
+export async function forgotPasswordStep2(userId, code) {
   try {
-    const response = await axios.post(`${base}/auth/forgot-password/step2`, { userId, answer });
+    const response = await axios.post(`${base}/auth/forgot-password/step2`, { userId, code });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;

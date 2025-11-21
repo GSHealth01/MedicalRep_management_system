@@ -9,22 +9,21 @@ async function ensureAdmin() {
   if (hasAdmin) {
     console.log("Admin found. Resetting admin password to ensure correct hash...");
     const passwordHash = await bcrypt.hash("admin123@", 12);
-    const securityAnswerHash = await bcrypt.hash("admin123", 10);
     await prisma.user.update({
-      where: { email: "admin@gsh.com" },
+      where: { id: hasAdmin.id },
       data: {
+        email: "admin@gsh.com",
         password: passwordHash,
-        security_question: "What is your favorite color?",
-        security_answer: securityAnswerHash
+        security_question: null,
+        security_answer: null
       }
     });
-    console.log("Admin password and security question reset successfully.");
+    console.log("Admin password reset successfully.");
     return;
   }
-
-  // Check if admin email already exists and delete it if it does
+  
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: process.env.ADMIN_EMAIL || "admin@gsh.com" }
+    where: { email: process.env.ADMIN_EMAIL || "admin@yourcompany.com" }
   });
 
   if (existingAdmin) {
