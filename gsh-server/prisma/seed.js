@@ -75,34 +75,7 @@ async function main() {
   });
   console.log('Created distributor:', distributor.name);
 
-  // --- 2. Now Create the Admin User ---
-  const adminEmail = 'admin@gsh.com';
-  const existingAdmin = await prisma.user.findUnique({
-    where: { email: adminEmail },
-  });
-
-  if (existingAdmin) {
-    console.log('Admin user already exists. Skipping...');
-  } else {
-    const salt = await bcrypt.genSalt(10);
-    // !! SET YOUR ADMIN PASSWORD HERE !!
-    const hashedPassword = await bcrypt.hash('adminpassword123', salt);
-
-    const adminUser = await prisma.user.create({
-      data: {
-        email: adminEmail,
-        password: hashedPassword,
-        name: 'Admin',
-        emp_no: 'A-001', // This must be unique
-        designation: 'ADMIN',
-        agency_id: agency.id,
-        range_id: range.id,
-        team_id: team.id,
-        distributor_id: distributor.id,
-      },
-    });
-    console.log('Admin user created successfully:', adminUser);
-  }
+  // Admin user is now seeded via src/seeds/adminSeed.js on app startup
 
   console.log('Seeding complete! 🚀');
 }

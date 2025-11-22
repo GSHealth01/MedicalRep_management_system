@@ -1,6 +1,6 @@
 const { config } = require("./config/env");
 const { prisma } = require("../lib/prisma");
-const { ensureAdmin } = require("./seed/ensureAdmin");
+const { seedAdminUser } = require("./seeds/adminSeed");
 const app = require("./app");
 
 (async () => {
@@ -8,7 +8,7 @@ const app = require("./app");
   await prisma.$connect();
   console.log("Connected to PostgreSQL database via Prisma");
 
-  await ensureAdmin();
+  await seedAdminUser();
 
   app.listen(config.PORT, () => {
     console.log(`API listening on :${config.PORT}`);
