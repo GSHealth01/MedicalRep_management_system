@@ -397,12 +397,25 @@ exports.updateProfile = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    
+
+    // Delete all related records in junction tables and itineraries
+    await prisma.userWorkAreas.deleteMany({
+      where: { user_id: userId }
+    });
+
+    await prisma.userDoctors.deleteMany({
+      where: { user_id: userId }
+    });
+
+    await prisma.itinerary.deleteMany({
+      where: { user_id: userId }
+    });
+
     // First, delete all user-distributor relationships
     await prisma.userDistributors.deleteMany({
       where: { user_id: userId }
     });
-    
+
     // Then delete the user
     const deleted = await prisma.user.delete({
       where: { id: userId }
@@ -439,7 +452,11 @@ exports.getCurrentUserProfile = async (req, res) => {
         range: { select: { id: true, name: true } },
         agency: { select: { id: true, name: true } },
         team: { select: { id: true, name: true } },
-        distributor: { select: { id: true, name: true } }
+        distributors: {
+          include: {
+            distributor: { select: { distributor_code: true, name: true } }
+          }
+        }
       }
     });
 

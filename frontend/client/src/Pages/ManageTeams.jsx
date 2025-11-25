@@ -3,30 +3,35 @@ import TeamForm from "../components/TeamForm";
 import { api } from "../services/api";
 import { useNotification } from "../components/NotificationPopup";
 
-// Edit Team Modal Component
+// =====================
+// Edit Team Modal
+// =====================
 function EditTeamModal({ team, onClose, onSave }) {
   const [formData, setFormData] = useState({
-    name: team?.name || '',
-    range: team?.range_id || '',
-    ops: team?.ops || [],
-    sms: team?.sms || [],
-    pms: team?.pms || [],
-    tms: team?.tms || [],
-    ses: team?.ses || [],
-    jes: team?.jes || [],
-    fcs: team?.fcs || [],
-    mrs: team?.mrs || []
+    // FRONTEND FIELDS FOR TEAM:
+    // - Team Name
+    // - Range
+    name: team?.name || "",
+    range: team?.range?.name || "",
   });
   const [loading, setLoading] = useState(false);
+  const [ranges, setRanges] = useState([]);
+
+  useEffect(() => {
+    const fetchRanges = async () => {
+      try {
+        const res = await api.get("/ranges");
+        setRanges(res?.data?.data || []);
+      } catch (e) {
+        console.error("Failed to fetch ranges", e);
+      }
+    };
+    fetchRanges();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleArrayChange = (field, value) => {
-    const array = value.split(',').map(item => item.trim()).filter(item => item);
-    setFormData(prev => ({ ...prev, [field]: array }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -35,8 +40,8 @@ function EditTeamModal({ team, onClose, onSave }) {
     try {
       await onSave(formData);
       onClose();
-    } catch (error) {
-      // Error handled in parent
+    } catch {
+      // error handled in parent
     } finally {
       setLoading(false);
     }
@@ -47,8 +52,11 @@ function EditTeamModal({ team, onClose, onSave }) {
       <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Edit Team</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Team Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Team Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Team Name *
+            </label>
             <input
               type="text"
               name="name"
@@ -58,8 +66,12 @@ function EditTeamModal({ team, onClose, onSave }) {
               required
             />
           </div>
+
+          {/* Range */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Range</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Range
+            </label>
             <select
               name="range"
               value={formData.range}
@@ -67,107 +79,12 @@ function EditTeamModal({ team, onClose, onSave }) {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select Range</option>
-              <option value="1">Range 1</option>
-              <option value="2">Range 2</option>
-              <option value="3">Range 3</option>
-              <option value="4">Range 4</option>
+              {ranges.map((range) => (
+                <option key={range.id} value={range.name}>
+                  {range.name}
+                </option>
+              ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Operations (comma-separated)</label>
-            <input
-              type="text"
-              name="ops"
-              value={formData.ops.join(', ')}
-              onChange={(e) => handleArrayChange('ops', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="OP1, OP2, OP3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senior Managers (comma-separated)</label>
-            <input
-              type="text"
-              name="sms"
-              value={formData.sms.join(', ')}
-              onChange={(e) => handleArrayChange('sms', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="SM1, SM2, SM3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product Managers (comma-separated)</label>
-            <input
-              type="text"
-              name="pms"
-              value={formData.pms.join(', ')}
-              onChange={(e) => handleArrayChange('pms', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="PM1, PM2, PM3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Territory Managers (comma-separated)</label>
-            <input
-              type="text"
-              name="tms"
-              value={formData.tms.join(', ')}
-              onChange={(e) => handleArrayChange('tms', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="TM1, TM2, TM3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senior Executives (comma-separated)</label>
-            <input
-              type="text"
-              name="ses"
-              value={formData.ses.join(', ')}
-              onChange={(e) => handleArrayChange('ses', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="SE1, SE2, SE3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Junior Executives (comma-separated)</label>
-            <input
-              type="text"
-              name="jes"
-              value={formData.jes.join(', ')}
-              onChange={(e) => handleArrayChange('jes', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="JE1, JE2, JE3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Field Coordinators (comma-separated)</label>
-            <input
-              type="text"
-              name="fcs"
-              value={formData.fcs.join(', ')}
-              onChange={(e) => handleArrayChange('fcs', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="FC1, FC2, FC3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Medical Representatives (comma-separated)</label>
-            <input
-              type="text"
-              name="mrs"
-              value={formData.mrs.join(', ')}
-              onChange={(e) => handleArrayChange('mrs', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="MR1, MR2, MR3"
-            />
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
@@ -183,7 +100,7 @@ function EditTeamModal({ team, onClose, onSave }) {
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>
@@ -192,6 +109,163 @@ function EditTeamModal({ team, onClose, onSave }) {
   );
 }
 
+// =====================
+// User / Member Management Modal
+// =====================
+function UserManagementModal({
+  team,
+  users,
+  availableUsers,
+  onClose,
+  onAssign,
+  onUpdateStatus,
+  onUpdateRole,
+  onRemove,
+}) {
+  // FRONTEND FIELDS FOR MEMBER (ASSIGN USER TO TEAM):
+  // - user (selectedUser)
+  // - type (assignRole) -> NORMAL / LEADER
+  // - status (assignStatus) -> ACTIVE / INACTIVE
+  const [selectedUser, setSelectedUser] = useState("");
+  const [assignStatus, setAssignStatus] = useState("ACTIVE"); // default
+  const [assignRole, setAssignRole] = useState("NORMAL"); // default
+
+  const handleAssign = () => {
+    if (!selectedUser) return;
+    // team_id is implied from "team" being managed
+    onAssign(parseInt(selectedUser, 10), assignStatus, assignRole);
+    // reset form
+    setSelectedUser("");
+    setAssignStatus("ACTIVE");
+    setAssignRole("NORMAL");
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold mb-4">Manage Users - {team.name}</h2>
+
+        {/* Assign User Section */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2">Assign User to Team</h3>
+          <div className="flex flex-col md:flex-row gap-2 md:items-center">
+            {/* User select */}
+            <select
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a user</option>
+              {availableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.emp_no})
+                </option>
+              ))}
+            </select>
+
+            {/* Member Type (type) select */}
+            <select
+              value={assignRole}
+              onChange={(e) => setAssignRole(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="NORMAL">Normal</option>
+              <option value="LEADER">Leader</option>
+            </select>
+
+            {/* Status select */}
+            <select
+              value={assignStatus}
+              onChange={(e) => setAssignStatus(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+
+            {/* Assign button */}
+            <button
+              onClick={handleAssign}
+              disabled={!selectedUser}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              Assign
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Note: Only one <strong>Leader</strong> is allowed per team. When
+            assigning a new leader, the previous leader will be changed to
+            Normal.
+          </p>
+        </div>
+
+        {/* Users List */}
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2">Team Users</h3>
+          {users.length === 0 ? (
+            <p className="text-gray-500">No users assigned to this team</p>
+          ) : (
+            <div className="space-y-2">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <span className="font-medium">{user.name}</span> (
+                    {user.emp_no})
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Member Type (type) */}
+                    <select
+                      value={user.role} // or user.type if backend returns 'type'
+                      onChange={(e) => onUpdateRole(user.id, e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="NORMAL">Normal</option>
+                      <option value="LEADER">Leader</option>
+                    </select>
+
+                    {/* Status */}
+                    <select
+                      value={user.status}
+                      onChange={(e) => onUpdateStatus(user.id, e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+
+                    {/* Remove */}
+                    <button
+                      onClick={() => onRemove(user.id)}
+                      className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================
+// Main ManageTeams Page
+// =====================
 export default function ManageTeams() {
   const { showNotification, NotificationComponent } = useNotification();
   const [teams, setTeams] = useState([]);
@@ -199,165 +273,234 @@ export default function ManageTeams() {
   const [err, setErr] = useState("");
   const [editingTeam, setEditingTeam] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [managingTeam, setManagingTeam] = useState(null);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [teamUsers, setTeamUsers] = useState([]);
 
+  // Load teams on mount
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
       setErr("");
       try {
-        const res = await api.get("/admin/teams", { params: { limit: 200 } });
+        const res = await api.get("/teams");
         const payload = res?.data?.data ?? res?.data ?? {};
-        const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+        const items = payload?.teams || [];
         if (mounted) setTeams(items);
       } catch (e) {
-        // optional
+        console.error("Failed to load teams", e);
+        if (mounted) setErr("Failed to load teams");
       } finally {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const handleAddTeam = async (payload, rawForm) => {
+  // Create Team (TeamForm should send { name, range_id } or similar)
+  const handleAddTeam = async (payload) => {
     try {
-      const rangeId = rawForm.range;
-      const teamPayload = {
-        ...payload,
-        range_id: parseInt(rangeId),
-        // Include selected employee IDs for each category
-        ops: rawForm.ops || [],
-        sms: rawForm.sms || [],
-        pms: rawForm.pms || [],
-        tms: rawForm.tms || [],
-        ses: rawForm.ses || [],
-        jes: rawForm.jes || [],
-        fcs: rawForm.fcs || [],
-        mrs: rawForm.mrs || []
-      };
-      
-      console.log('Creating team with payload:', teamPayload); // Debug log
-      
-      const res = await api.post("/admin/teams", teamPayload);
+      const res = await api.post("/teams", payload);
       const created = res?.data?.data || {};
 
-      console.log('Created team response:', created); // Debug log
+      const row = {
+        id: created.id,
+        name: created.name,
+        range: created.range,
+        _count: { users: 0 },
+      };
 
-      // Use the assignedUsers data from the backend response
-      if (created.assignedUsers) {
-        const row = {
-          _id: created.id || Math.random().toString(36).slice(2),
-          name: created.name,
-          range_id: rangeId,
-          ops: created.assignedUsers.ops.map(u => `${u.name} (${u.emp_no})`),
-          sms: created.assignedUsers.sms.map(u => `${u.name} (${u.emp_no})`),
-          pms: created.assignedUsers.pms.map(u => `${u.name} (${u.emp_no})`),
-          tms: created.assignedUsers.tms.map(u => `${u.name} (${u.emp_no})`),
-          ses: created.assignedUsers.ses.map(u => `${u.name} (${u.emp_no})`),
-          jes: created.assignedUsers.jes.map(u => `${u.name} (${u.emp_no})`),
-          fcs: created.assignedUsers.fcs.map(u => `${u.name} (${u.emp_no})`),
-          mrs: created.assignedUsers.mrs.map(u => `${u.name} (${u.emp_no})`)
-        };
-        
-        setTeams((list) => [row, ...list]);
-        showNotification(`Team "${payload.name}" created successfully with ${rawForm.ops.length + rawForm.sms.length + rawForm.pms.length + rawForm.tms.length + rawForm.ses.length + rawForm.jes.length + rawForm.fcs.length + rawForm.mrs.length} employees assigned!`, 'success');
-      } else {
-        // Fallback for backward compatibility
-        const row = {
-          _id: created.id || Math.random().toString(36).slice(2),
-          name: created.name || payload.name,
-          range_id: rangeId,
-          ops: [],
-          sms: [],
-          pms: [],
-          tms: [],
-          ses: [],
-          jes: [],
-          fcs: [],
-          mrs: []
-        };
-        
-        setTeams((list) => [row, ...list]);
-        showNotification(`Team "${payload.name}" created successfully!`, 'success');
-      }
+      setTeams((list) => [row, ...list]);
+      showNotification(
+        `Team "${payload.name}" created successfully!`,
+        "success"
+      );
     } catch (e) {
-      console.error('Error creating team:', e); // Debug log
-      showNotification(e?.response?.data?.message || "Failed to create team", 'error');
+      console.error("Error creating team:", e);
+      showNotification(
+        e?.response?.data?.message || "Failed to create team",
+        "error"
+      );
     }
   };
 
+  // Edit
   const handleEditTeam = (team) => {
     setEditingTeam(team);
   };
 
   const handleSaveEdit = async (formData) => {
     try {
-      const updateData = {};
-      if (formData.name.trim()) updateData.name = formData.name.trim();
-      if (formData.subSector) updateData.subSector = formData.subSector;
-      if (formData.ops && formData.ops.length > 0) updateData.ops = formData.ops;
-      if (formData.sms && formData.sms.length > 0) updateData.sms = formData.sms;
-      if (formData.pms && formData.pms.length > 0) updateData.pms = formData.pms;
-      if (formData.tms && formData.tms.length > 0) updateData.tms = formData.tms;
-      if (formData.ses && formData.ses.length > 0) updateData.ses = formData.ses;
-      if (formData.jes && formData.jes.length > 0) updateData.jes = formData.jes;
-      if (formData.fcs && formData.fcs.length > 0) updateData.fcs = formData.fcs;
-      if (formData.mrs && formData.mrs.length > 0) updateData.mrs = formData.mrs;
+      const updateData = { name: formData.name };
+      if (formData.range) {
+        const rangesRes = await api.get("/ranges");
+        const ranges = rangesRes?.data?.data || [];
+        const range = ranges.find((r) => r.name === formData.range);
+        if (range) updateData.range_id = range.id;
+      }
 
-      await api.put(`/admin/teams/${editingTeam.id || editingTeam._id}`, updateData);
+      await api.put(`/teams/${editingTeam.id}`, updateData);
 
       setTeams((list) =>
         list.map((team) =>
-          team.id === editingTeam.id || team._id === editingTeam._id
+          team.id === editingTeam.id
             ? {
                 ...team,
                 name: formData.name,
-                ops: formData.ops,
-                sms: formData.sms,
-                pms: formData.pms,
-                tms: formData.tms,
-                ses: formData.ses,
-                jes: formData.jes,
-                fcs: formData.fcs,
-                mrs: formData.mrs
+                range: formData.range ? { name: formData.range } : team.range,
               }
             : team
         )
       );
 
-      showNotification(`Team ${formData.name} updated successfully!`, 'success');
+      showNotification(
+        `Team ${formData.name} updated successfully!`,
+        "success"
+      );
     } catch (e) {
-      throw new Error(e?.response?.data?.message || "Failed to update team");
+      throw new Error(
+        e?.response?.data?.message || "Failed to update team"
+      );
     }
   };
 
+  // Delete
   const handleDeleteTeam = async (team) => {
     if (!window.confirm(`Are you sure you want to delete team ${team.name}?`)) {
       return;
     }
 
     try {
-      await api.delete(`/admin/teams/${team.id || team._id}`);
-      setTeams((list) => list.filter((t) => {
-        const teamId = t.id || t._id;
-        const deleteId = team.id || team._id;
-        return teamId !== deleteId;
-      }));
-      showNotification(`Team ${team.name} deleted successfully!`, 'success');
+      await api.delete(`/teams/${team.id}`);
+      setTeams((list) => list.filter((t) => t.id !== team.id));
+      showNotification(`Team ${team.name} deleted successfully!`, "success");
     } catch (e) {
-      showNotification(e?.response?.data?.message || "Failed to delete team", 'error');
+      showNotification(
+        e?.response?.data?.message || "Failed to delete team",
+        "error"
+      );
+    }
+  };
+
+  // Manage Users (open modal)
+  const handleManageUsers = async (team) => {
+    setManagingTeam(team);
+    try {
+      const teamRes = await api.get(`/teams/${team.id}`);
+      const teamData = teamRes?.data?.data || {};
+      setTeamUsers(teamData.users || []);
+
+      const usersRes = await api.get("/admin/users", { params: { limit: 500 } });
+      const users = usersRes?.data?.data?.items || [];
+      const available = users.filter((u) => !u.team_id);
+      setAvailableUsers(available);
+    } catch (e) {
+      console.error("Failed to load team users", e);
+      showNotification("Failed to load team users", "error");
+    }
+  };
+
+  // Assign User with status + type
+  const handleAssignUser = async (userId, status, role) => {
+    try {
+      await api.post(`/teams/${managingTeam.id}/assign-user`, {
+        userId,
+        status,
+        role, // backend can treat this as 'type'
+      });
+
+      const teamRes = await api.get(`/teams/${managingTeam.id}`);
+      const teamData = teamRes?.data?.data || {};
+      setTeamUsers(teamData.users || []);
+
+      setAvailableUsers((prev) => prev.filter((u) => u.id !== userId));
+      showNotification("User assigned to team", "success");
+    } catch (e) {
+      console.error("Failed to assign user", e);
+      showNotification(
+        e?.response?.data?.message || "Failed to assign user",
+        "error"
+      );
+    }
+  };
+
+  // Update Status
+  const handleUpdateStatus = async (userId, status) => {
+    try {
+      await api.patch(`/teams/${managingTeam.id}/user/${userId}/status`, {
+        status,
+      });
+      setTeamUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, status } : u))
+      );
+      showNotification("User status updated", "success");
+    } catch (e) {
+      console.error("Failed to update status", e);
+      showNotification(
+        e?.response?.data?.message || "Failed to update status",
+        "error"
+      );
+    }
+  };
+
+  // Update Member Type (role/type)
+  const handleUpdateRole = async (userId, role) => {
+    try {
+      await api.patch(`/teams/${managingTeam.id}/user/${userId}/role`, {
+        role,
+      });
+      setTeamUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role } : u))
+      );
+      showNotification("User type updated", "success");
+    } catch (e) {
+      console.error("Failed to update type", e);
+      showNotification(
+        e?.response?.data?.message || "Failed to update type",
+        "error"
+      );
+    }
+  };
+
+  // Remove User from team
+  const handleRemoveUser = async (userId) => {
+    if (!window.confirm("Remove user from team?")) return;
+
+    try {
+      await api.delete(`/teams/${managingTeam.id}/user/${userId}`);
+
+      const removedUser = teamUsers.find((u) => u.id === userId);
+      setTeamUsers((prev) => prev.filter((u) => u.id !== userId));
+      if (removedUser) {
+        setAvailableUsers((prev) => [
+          ...prev,
+          { ...removedUser, team_id: null },
+        ]);
+      }
+
+      showNotification("User removed from team", "success");
+    } catch (e) {
+      console.error("Failed to remove user", e);
+      showNotification(
+        e?.response?.data?.message || "Failed to remove user",
+        "error"
+      );
     }
   };
 
   return (
     <div>
+      {/* Header + Add Button */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Manage Teams</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => setShowForm((prev) => !prev)}
           className="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-md hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 shadow-lg"
         >
-          {showForm ? 'Hide Form' : 'Add Team'}
+          {showForm ? "Hide Form" : "Add Team"}
         </button>
       </div>
 
@@ -370,77 +513,98 @@ export default function ManageTeams() {
         />
       )}
 
-      {/* Add Team Form - Display after list */}
+      {/* User Management Modal */}
+      {managingTeam && (
+        <UserManagementModal
+          team={managingTeam}
+          users={teamUsers}
+          availableUsers={availableUsers}
+          onClose={() => setManagingTeam(null)}
+          onAssign={handleAssignUser}
+          onUpdateStatus={handleUpdateStatus}
+          onUpdateRole={handleUpdateRole}
+          onRemove={handleRemoveUser}
+        />
+      )}
+
+      {/* Add Team Form */}
       {showForm && <TeamForm onSubmit={handleAddTeam} />}
 
-      {/* Team List - Display only when form is hidden */}
+      {/* Team List (only when form hidden) */}
       {!showForm && (
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Team List</h2>
-        {err && <div className="text-red-600 mb-3">{err}</div>}
-        {loading ? (
-          <div className="text-gray-600">Loading…</div>
-        ) : (
-          <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
-            <thead className="bg-gradient-to-r from-red-600 to-red-700 text-white">
-              <tr>
-                <th className="py-2 px-4 text-center">Team Name</th>
-                <th className="py-2 px-4 text-center">Ops</th>
-                <th className="py-2 px-4 text-center">SM</th>
-                <th className="py-2 px-4 text-center">PM</th>
-                <th className="py-2 px-4 text-center">TM</th>
-                <th className="py-2 px-4 text-center">SE</th>
-                <th className="py-2 px-4 text-center">JE</th>
-                <th className="py-2 px-4 text-center">FC</th>
-                <th className="py-2 px-4 text-center">MR</th>
-                <th className="py-2 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teams.length === 0 ? (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">Team List</h2>
+          {err && <div className="text-red-600 mb-3">{err}</div>}
+          {loading ? (
+            <div className="text-gray-600">Loading…</div>
+          ) : (
+            <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
+              <thead className="bg-gradient-to-r from-red-600 to-red-700 text-white">
                 <tr>
-                  <td colSpan="10" className="text-center py-4 text-gray-500">No teams created yet</td>
+                  <th className="py-2 px-4 text-center">Team Name</th>
+                  <th className="py-2 px-4 text-center">Range</th>
+                  <th className="py-2 px-4 text-center">Users</th>
+                  <th className="py-2 px-4 text-center">Actions</th>
                 </tr>
-              ) : (
-                teams.map((team) => (
-                  <tr key={team._id || team.id} className="border-b hover:bg-gray-50 text-center">
-                    <td className="py-2 px-4">{team.name || team.teamName}</td>
-                    <td className="py-2 px-4">{team.ops?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4">{team.sms?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4">{team.pms?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4">{team.tms?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4">{team.ses?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4">{team.jes?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4">{team.fcs?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4">{team.mrs?.join(", ") || "-"}</td>
-                    <td className="py-2 px-4 text-center">
-                      <div className="flex justify-center space-x-2">
-                        <button
-                          onClick={() => handleEditTeam(team)}
-                          className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
-                          title="Edit Team"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTeam(team)}
-                          className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
-                          title="Delete Team"
-                        >
-                          Delete
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {teams.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan="4"
+                      className="text-center py-4 text-gray-500"
+                    >
+                      No teams created yet
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+                ) : (
+                  teams.map((team) => (
+                    <tr
+                      key={team.id}
+                      className="border-b hover:bg-gray-50 text-center"
+                    >
+                      <td className="py-2 px-4">{team.name}</td>
+                      <td className="py-2 px-4">
+                        {team.range?.name || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team._count?.users || 0}
+                      </td>
+                      <td className="py-2 px-4 text-center">
+                        <div className="flex justify-center space-x-2">
+                          <button
+                            onClick={() => handleManageUsers(team)}
+                            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 text-sm transition-colors"
+                            title="Manage Users"
+                          >
+                            Manage Users
+                          </button>
+                          <button
+                            onClick={() => handleEditTeam(team)}
+                            className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
+                            title="Edit Team"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTeam(team)}
+                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                            title="Delete Team"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
       )}
-      
-      {/* Notification Component */}
+
+      {/* Notifications */}
       <NotificationComponent />
     </div>
   );

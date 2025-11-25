@@ -1,0 +1,354 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { api } from '../services/api';
+
+export default function ItineraryForm() {
+  const navigate = useNavigate();
+  const { id, mode } = useParams(); // id for edit, mode for 'view'
+  const isViewMode = mode === 'view';
+  const isEditMode = !!id && !isViewMode;
+
+  const [formData, setFormData] = useState({
+    repName: '',
+    distributor: '',
+    month: '',
+    itinerary: []
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isEditMode || isViewMode) {
+      fetchItinerary();
+    } else {
+      // For new itinerary, set defaults from user profile
+      fetchUserDefaults();
+    }
+  }, [id, mode]);
+
+  const fetchUserDefaults = async () => {
+    try {
+      const response = await api.get('/users/profile');
+      const user = response.data.user;
+      setFormData(prev => ({
+        ...prev,
+        repName: user.name || '',
+        distributor: user.distributors?.[0]?.name || user.distributors?.[0]?.distributor_code || ''
+      }));
+    } catch (error) {
+      console.error('Error fetching user defaults:', error);
+    }
+  };
+
+  const fetchItinerary = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/itineraries/${id}`);
+      const itinerary = response.data.data;
+      setFormData({
+        repName: itinerary.repName,
+        distributor: itinerary.distributor,
+        month: itinerary.month,
+        itinerary: itinerary.entries
+      });
+    } catch (error) {
+      console.error('Error fetching itinerary:', error);
+      alert('Failed to load itinerary');
+      navigate('/itineraryList');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEntryChange = (index, field, value) => {
+    const updatedItinerary = [...formData.itinerary];
+    updatedItinerary[index] = { ...updatedItinerary[index], [field]: value };
+    setFormData(prev => ({ ...prev, itinerary: updatedItinerary }));
+  };
+
+  const addEntry = () => {
+    setFormData(prev => ({
+      ...prev,
+      itinerary: [...prev.itinerary, {
+        date: '',
+        dayNo: prev.itinerary.length + 1,
+        area: '',
+        doctorCalls: 0,
+        chemistCalls: 0,
+        mileage: 0,
+        nightOutArea: ''
+      }]
+    }));
+  };
+
+  const removeEntry = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      itinerary: prev.itinerary.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isViewMode) return;
+
+    try {
+      setSaving(true);
+      const payload = { ...formData };
+
+      if (isEditMode) {
+        await api.put(`/itineraries/${id}`, payload);
+        alert('Itinerary updated successfully');
+      } else {
+        await api.post('/itineraries', payload);
+        alert('Itinerary created successfully');
+      }
+
+      navigate('/itineraryList');
+    } catch (error) {
+      console.error('Error saving itinerary:', error);
+      alert('Failed to save itinerary');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const generateMonthDays = () => {
+    if (!formData.month) return;
+
+    const [year, month] = formData.month.split('-');
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const entries = [];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = `${formData.month}-${day.toString().padStart(2, '0')}`;
+      entries.push({
+        date,
+        dayNo: day,
+        area: '',
+        doctorCalls: 0,
+        chemistCalls: 0,
+        mileage: 0,
+        nightOutArea: ''
+      });
+    }
+
+    setFormData(prev => ({ ...prev, itinerary: entries }));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <span className="ml-3 text-gray-600">Loading itinerary...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">
+            {isViewMode ? 'View Itinerary' : isEditMode ? 'Edit Itinerary' : 'Create Itinerary'}
+          </h1>
+          <button
+            onClick={() => navigate('/itineraryList')}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            Back to List
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rep Name *</label>
+              <input
+                type="text"
+                name="repName"
+                value={formData.repName}
+                onChange={handleInputChange}
+                disabled={isViewMode}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Distributor *</label>
+              <input
+                type="text"
+                name="distributor"
+                value={formData.distributor}
+                onChange={handleInputChange}
+                disabled={isViewMode}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Month *</label>
+              <input
+                type="month"
+                name="month"
+                value={formData.month}
+                onChange={handleInputChange}
+                disabled={isViewMode}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Generate Days Button */}
+          {!isViewMode && (
+            <div className="flex justify-between items-center">
+              <button
+                type="button"
+                onClick={generateMonthDays}
+                disabled={!formData.month}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              >
+                Generate Days for Month
+              </button>
+              <button
+                type="button"
+                onClick={addEntry}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Add Entry
+              </button>
+            </div>
+          )}
+
+          {/* Itinerary Entries */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Day No</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Area</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Doctor Calls</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Chemist Calls</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mileage</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Night Out Area</th>
+                  {!isViewMode && <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {formData.itinerary.map((entry, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-2">
+                      <input
+                        type="date"
+                        value={entry.date}
+                        onChange={(e) => handleEntryChange(index, 'date', e.target.value)}
+                        disabled={isViewMode}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        value={entry.dayNo}
+                        onChange={(e) => handleEntryChange(index, 'dayNo', parseInt(e.target.value))}
+                        disabled={isViewMode}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="text"
+                        value={entry.area}
+                        onChange={(e) => handleEntryChange(index, 'area', e.target.value)}
+                        disabled={isViewMode}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        value={entry.doctorCalls}
+                        onChange={(e) => handleEntryChange(index, 'doctorCalls', parseInt(e.target.value))}
+                        disabled={isViewMode}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        value={entry.chemistCalls}
+                        onChange={(e) => handleEntryChange(index, 'chemistCalls', parseInt(e.target.value))}
+                        disabled={isViewMode}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={entry.mileage}
+                        onChange={(e) => handleEntryChange(index, 'mileage', parseFloat(e.target.value))}
+                        disabled={isViewMode}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="text"
+                        value={entry.nightOutArea}
+                        onChange={(e) => handleEntryChange(index, 'nightOutArea', e.target.value)}
+                        disabled={isViewMode}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    {!isViewMode && (
+                      <td className="px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => removeEntry(index)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {!isViewMode && (
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => navigate('/itineraryList')}
+                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : isEditMode ? 'Update Itinerary' : 'Create Itinerary'}
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
