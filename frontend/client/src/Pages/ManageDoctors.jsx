@@ -252,7 +252,8 @@ export default function ManageDoctors() {
         specialty: payload.specialty,
         categorization: payload.categorization,
         dateAdded: payload.dateAdded,
-        range: created.range || { id: payload.range_id, name: 'Unknown' }, // BE returns populated range
+        range: created.range || { id: payload.range_id, name: 'Unknown' }, 
+        
       };
       setDoctors((list) => [newRow, ...list]);
       showNotification(`Doctor ${payload.name} added successfully!`, 'success');

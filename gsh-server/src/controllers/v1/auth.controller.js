@@ -1,31 +1,39 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const User = require("../../models/User");
+const { prisma } = require('../../../lib/prisma');
 const RefreshToken = require("../../models/RefreshToken");
 const { signAccessToken, signRefreshToken, verifyRefresh } = require("../../utils/jwt");
 const ApiResponse = require("../../utils/ApiResponse");
 const AppError = require("../../utils/AppError");
 
 const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
-const pickUser = (u) => ({ id: u._id.toString(), email: u.email, role: u.role, name: u.name });
+const pickUser = (u) => ({ id: u.id, email: u.email, designation: u.designation, name: u.name, emp_no: u.emp_no });
 
 exports.signup = async (req, res) => {
-  const { name, email, password, role, empNo, designation, agency, range, distributor } = req.body;
+  const { name, email, password, empNo, designation } = req.body;
 
-  const exists = await User.findOne({ email });
+  const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) throw new AppError(409, "Email already registered");
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await User.create({ name, email, passwordHash, role, empNo, designation, agency, range, distributor });
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: passwordHash,
+      emp_no: empNo,
+      designation
+    }
+  });
 
-  const payload = { sub: user._id.toString(), email: user.email, role: user.role };
+  const payload = { sub: user.id.toString(), email: user.email, designation: user.designation };
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
 
   const rHash = hashToken(refreshToken);
   const { exp } = JSON.parse(Buffer.from(refreshToken.split(".")[1], "base64").toString());
   await RefreshToken.findOneAndUpdate(
-    { userId: user._id.toString() },
+    { userId: user.id.toString() },
     { tokenHash: rHash, expiresAt: new Date(exp * 1000) },
     { upsert: true, new: true }
   );
@@ -35,20 +43,20 @@ exports.signup = async (req, res) => {
 
 exports.signin = async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email });
+  const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new AppError(401, "Invalid credentials");
 
-  const ok = await bcrypt.compare(password, user.passwordHash);
+  const ok = await bcrypt.compare(password, user.password);
   if (!ok) throw new AppError(401, "Invalid credentials");
 
-  const payload = { sub: user._id.toString(), email: user.email, role: user.role };
+  const payload = { sub: user.id.toString(), email: user.email, designation: user.designation };
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
 
   const rHash = hashToken(refreshToken);
   const { exp } = JSON.parse(Buffer.from(refreshToken.split(".")[1], "base64").toString());
   await RefreshToken.findOneAndUpdate(
-    { userId: user._id.toString() },
+    { userId: user.id.toString() },
     { tokenHash: rHash, expiresAt: new Date(exp * 1000) },
     { upsert: true, new: true }
   );
@@ -73,7 +81,7 @@ exports.refresh = async (req, res) => {
   const same = record.tokenHash === hashToken(refreshToken);
   if (!same || record.expiresAt < new Date()) throw new AppError(401, "Refresh token expired or rotated");
 
-  const newPayload = { sub: payload.sub, email: payload.email, role: payload.role };
+  const newPayload = { sub: payload.sub, email: payload.email, designation: payload.designation };
   const accessToken = signAccessToken(newPayload);
   const newRefreshToken = signRefreshToken(newPayload);
 
@@ -86,7 +94,7 @@ exports.refresh = async (req, res) => {
   return ApiResponse.ok(res, "Tokens refreshed", {
     accessToken,
     refreshToken: newRefreshToken,
-    user: { id: payload.sub, email: payload.email, role: payload.role }
+    user: { id: payload.sub, email: payload.email, designation: payload.designation }
   });
 };
 

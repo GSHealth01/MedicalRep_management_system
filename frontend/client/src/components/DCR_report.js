@@ -258,6 +258,9 @@ export default function RepdetailsReport() {
   const [town, setTown] = useState("");
   const [selectedDoctors, setSelectedDoctors] = useState([]);
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
+  const [itineraryMessage, setItineraryMessage] = useState("");
+  const [areaDisabled, setAreaDisabled] = useState(false);
+  const [townDisabled, setTownDisabled] = useState(false);
 
   // Step 2 State
   const [selectedProductTab, setSelectedProductTab] = useState("Cilacar");
@@ -338,6 +341,44 @@ export default function RepdetailsReport() {
       console.log('DCR: Set product categories for agency:', agencyName, Object.keys(categories));
     }
   }, [userProfile]);
+
+  // Fetch itinerary for selected date
+  useEffect(() => {
+    const fetchItineraryForDate = async () => {
+      if (!date) {
+        setItineraryMessage("");
+        setAreaDisabled(false);
+        setTownDisabled(false);
+        return;
+      }
+
+      try {
+        const response = await api.get('/itineraries/by-date', { params: { date } });
+        const data = response.data.data;
+
+        if (data.found === false) {
+          setItineraryMessage("No itinerary scheduled for this date. Please check your itinerary.");
+          setArea("");
+          setTown("");
+          setAreaDisabled(false);
+          setTownDisabled(false);
+        } else {
+          setArea(data.area || "");
+          setTown(data.town || "");
+          setAreaDisabled(true);
+          setTownDisabled(true);
+          setItineraryMessage("");
+        }
+      } catch (error) {
+        console.error('Error fetching itinerary for date:', error);
+        setItineraryMessage("Error loading itinerary data.");
+        setAreaDisabled(false);
+        setTownDisabled(false);
+      }
+    };
+
+    fetchItineraryForDate();
+  }, [date]);
 
   // --- Step 1 Functions ---
   const toggleDoctor = (doc) => {
@@ -526,6 +567,9 @@ export default function RepdetailsReport() {
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Date</label>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        {itineraryMessage && (
+          <p className="mt-2 text-sm text-orange-600">{itineraryMessage}</p>
+        )}
       </div>
       {/* Range */}
       <div className="mb-6">
@@ -556,11 +600,23 @@ export default function RepdetailsReport() {
       <div className="flex gap-6 mb-6">
         <div className="flex-1">
           <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Area</label>
-          <input type="text" value={area} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
+          <input
+            type="text"
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            disabled={areaDisabled}
+            className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${areaDisabled ? 'bg-gray-100' : 'bg-blue-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+          />
         </div>
         <div className="flex-1">
           <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Town</label>
-          <input type="text" value={town} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
+          <input
+            type="text"
+            value={town}
+            onChange={(e) => setTown(e.target.value)}
+            disabled={townDisabled}
+            className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${townDisabled ? 'bg-gray-100' : 'bg-blue-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+          />
         </div>
       </div>
       {/* Doctor dropdown */}

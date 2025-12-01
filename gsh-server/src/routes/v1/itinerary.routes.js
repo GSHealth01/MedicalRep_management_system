@@ -8,7 +8,8 @@ const {
   updateItinerary,
   deleteItinerary,
   generatePDF,
-  generateExcel
+  generateExcel,
+  getItineraryByDate
 } = require('../../controllers/v1/itinerary.controller');
 const { requireAuth } = require('../../middlewares/auth');
 
@@ -16,6 +17,7 @@ router.use(requireAuth);
 
 router.post('/', createItinerary);
 router.get('/', getItineraries);
+router.get('/by-date', getItineraryByDate);
 router.get('/:id', getItinerary);
 router.get('/:id/summary', getItinerarySummary);
 router.put('/:id', updateItinerary);

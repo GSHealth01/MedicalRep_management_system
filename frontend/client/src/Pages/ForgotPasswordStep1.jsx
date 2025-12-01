@@ -9,7 +9,7 @@ export default function ForgotPasswordStep1() {
   const [loading, setLoading] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1 = enter empNo, 2 = enter code
+  const [step, setStep] = useState(1); 
   const [userData, setUserData] = useState(null);
 
   const handleEmpNoSubmit = async (e) => {

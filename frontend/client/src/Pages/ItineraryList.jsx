@@ -31,6 +31,11 @@ export default function ItineraryList() {
     navigate(`/itineraryForm/${itinerary.id}/view`);
   };
 
+  const handleEdit = (itinerary) => {
+    // Navigate to edit itinerary with ID
+    navigate(`/itineraryForm/${itinerary.id}/edit`);
+  };
+
   const handleDownload = (itinerary) => {
     // Download itinerary as Excel (default format)
     const url = `http://localhost:5000/api/v1/itineraries/${itinerary.id}/excel`;
@@ -99,13 +104,10 @@ export default function ItineraryList() {
                     Month
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rep Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Distributor
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -141,9 +143,6 @@ export default function ItineraryList() {
                         {itinerary.month ? new Date(itinerary.month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {itinerary.repName || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {itinerary.distributor || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -153,6 +152,12 @@ export default function ItineraryList() {
                             className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded text-sm font-medium border border-blue-600 hover:bg-blue-50"
                           >
                             View
+                          </button>
+                          <button
+                            onClick={() => handleEdit(itinerary)}
+                            className="text-orange-600 hover:text-orange-900 px-3 py-1 rounded text-sm font-medium border border-orange-600 hover:bg-orange-50"
+                          >
+                            Edit
                           </button>
                           <button
                             onClick={() => handleDownload(itinerary)}

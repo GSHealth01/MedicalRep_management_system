@@ -109,9 +109,7 @@ function EditTeamModal({ team, onClose, onSave }) {
   );
 }
 
-// =====================
-// User / Member Management Modal
-// =====================
+
 function UserManagementModal({
   team,
   users,
@@ -122,19 +120,15 @@ function UserManagementModal({
   onUpdateRole,
   onRemove,
 }) {
-  // FRONTEND FIELDS FOR MEMBER (ASSIGN USER TO TEAM):
-  // - user (selectedUser)
-  // - type (assignRole) -> NORMAL / LEADER
-  // - status (assignStatus) -> ACTIVE / INACTIVE
+
   const [selectedUser, setSelectedUser] = useState("");
-  const [assignStatus, setAssignStatus] = useState("ACTIVE"); // default
-  const [assignRole, setAssignRole] = useState("NORMAL"); // default
+  const [assignStatus, setAssignStatus] = useState("ACTIVE"); 
+  const [assignRole, setAssignRole] = useState("NORMAL"); 
 
   const handleAssign = () => {
     if (!selectedUser) return;
-    // team_id is implied from "team" being managed
+    
     onAssign(parseInt(selectedUser, 10), assignStatus, assignRole);
-    // reset form
     setSelectedUser("");
     setAssignStatus("ACTIVE");
     setAssignRole("NORMAL");
@@ -169,7 +163,7 @@ function UserManagementModal({
               onChange={(e) => setAssignRole(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm"
             >
-              <option value="NORMAL">Normal</option>
+              <option value="NORMAL">Member</option>
               <option value="LEADER">Leader</option>
             </select>
 
@@ -195,7 +189,7 @@ function UserManagementModal({
           <p className="mt-1 text-xs text-gray-500">
             Note: Only one <strong>Leader</strong> is allowed per team. When
             assigning a new leader, the previous leader will be changed to
-            Normal.
+            Member.
           </p>
         </div>
 
@@ -222,7 +216,7 @@ function UserManagementModal({
                       onChange={(e) => onUpdateRole(user.id, e.target.value)}
                       className="px-2 py-1 border border-gray-300 rounded text-sm"
                     >
-                      <option value="NORMAL">Normal</option>
+                      <option value="NORMAL">Memebr</option>
                       <option value="LEADER">Leader</option>
                     </select>
 

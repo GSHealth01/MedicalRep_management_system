@@ -262,6 +262,7 @@ model itinerary {
   repName     String
   month       String
   distributor String    // kept as plain text (you requested)
+  town        String?   // Town field
   status      String?   @default("pending")
 
   createdAt   DateTime @default(now())
@@ -284,6 +285,7 @@ model itineraryEntry {
   date         String
   dayNo        Int
   area         String?
+  town         String?
   doctorCalls  Int?      @default(0)
   chemistCalls Int?      @default(0)
   mileage      Float?    @default(0.0)

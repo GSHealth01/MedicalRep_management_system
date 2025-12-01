@@ -7,7 +7,7 @@ const ExcelJS = require('exceljs');
 
 // Create Itinerary
 const createItinerary = asyncHandler(async (req, res) => {
-  const { repName, distributor, month, itinerary } = req.body;
+  const { repName, distributor, town, month, itinerary } = req.body;
   const userId = req.user.id;
 
   // Create itinerary with entries
@@ -15,6 +15,7 @@ const createItinerary = asyncHandler(async (req, res) => {
     data: {
       repName,
       distributor,
+      town,
       month,
       user_id: userId,
       entries: {
@@ -22,6 +23,7 @@ const createItinerary = asyncHandler(async (req, res) => {
           date: entry.date,
           dayNo: parseInt(entry.dayNo) || 0,
           area: entry.area || null,
+          town: entry.town || null,
           doctorCalls: parseInt(entry.doctorCalls) || 0,
           chemistCalls: parseInt(entry.chemistCalls) || 0,
           mileage: parseFloat(entry.mileage) || 0,
@@ -100,7 +102,7 @@ const getItinerary = asyncHandler(async (req, res) => {
 // Update Itinerary
 const updateItinerary = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { repName, distributor, month, itinerary } = req.body;
+  const { repName, distributor, town, month, itinerary } = req.body;
   const userId = req.user.id;
 
   // Check if itinerary exists and belongs to user
@@ -125,12 +127,14 @@ const updateItinerary = asyncHandler(async (req, res) => {
     data: {
       repName,
       distributor,
+      town,
       month,
       entries: {
         create: itinerary.map(entry => ({
           date: entry.date,
           dayNo: parseInt(entry.dayNo) || 0,
           area: entry.area || null,
+          town: entry.town || null,
           doctorCalls: parseInt(entry.doctorCalls) || 0,
           chemistCalls: parseInt(entry.chemistCalls) || 0,
           mileage: parseFloat(entry.mileage) || 0,
@@ -259,6 +263,7 @@ const getItinerarySummary = asyncHandler(async (req, res) => {
       id: itinerary.id,
       repName: itinerary.repName,
       distributor: itinerary.distributor,
+      town: itinerary.town,
       month: itinerary.month,
       status: itinerary.status,
       createdAt: itinerary.createdAt,
@@ -267,6 +272,39 @@ const getItinerarySummary = asyncHandler(async (req, res) => {
   };
 
   res.status(200).json(new ApiResponse(200, summary, 'Itinerary summary fetched successfully'));
+});
+
+// Get Itinerary Entry by Date for DCR
+const getItineraryByDate = asyncHandler(async (req, res) => {
+  const { date } = req.query;
+  const userId = req.user.id;
+
+  if (!date) {
+    return res.status(400).json(new ApiResponse(400, null, 'Date is required'));
+  }
+
+  // Find itinerary entry for this user and date
+  const entry = await prisma.itineraryEntry.findFirst({
+    where: {
+      itinerary: {
+        user_id: userId
+      },
+      date: date
+    },
+    include: {
+      itinerary: true
+    }
+  });
+
+  if (!entry) {
+    return res.status(200).json(new ApiResponse(200, { found: false }, 'No itinerary found for this date'));
+  }
+
+  res.status(200).json(new ApiResponse(200, {
+    area: entry.area,
+    town: entry.town,
+    itineraryEntryId: entry.id
+  }, 'Itinerary entry found'));
 });
 
 // Generate Excel
@@ -306,12 +344,13 @@ const generateExcel = asyncHandler(async (req, res) => {
   worksheet.addRow(['Rep Name:', itinerary.repName]);
   worksheet.addRow(['Employee No:', itinerary.user.emp_no]);
   worksheet.addRow(['Distributor:', itinerary.distributor]);
+  worksheet.addRow(['Town:', itinerary.town || 'N/A']);
   worksheet.addRow(['Month:', itinerary.month]);
   worksheet.addRow(['Generated On:', new Date().toLocaleDateString()]);
   worksheet.addRow(['']);
 
   // Add table headers
-  worksheet.addRow(['Date', 'Day No', 'Area', 'Doctor Calls', 'Chemist Calls', 'Mileage (km)', 'Night Out Area']);
+  worksheet.addRow(['Date', 'Day No', 'Area', 'Town', 'Doctor Calls', 'Chemist Calls', 'Mileage (km)', 'Night Out Area']);
 
   // Style headers
   const headerRow = worksheet.getRow(8);
@@ -328,6 +367,7 @@ const generateExcel = asyncHandler(async (req, res) => {
       entry.date,
       entry.dayNo,
       entry.area || '',
+      entry.town ||'',
       entry.doctorCalls || 0,
       entry.chemistCalls || 0,
       entry.mileage || 0,
@@ -383,6 +423,7 @@ function generateItineraryHTML(itinerary) {
           <tr><td>Rep Name:</td><td>${itinerary.repName}</td></tr>
           <tr><td>Employee No:</td><td>${itinerary.user.emp_no}</td></tr>
           <tr><td>Distributor:</td><td>${itinerary.distributor}</td></tr>
+          <tr><td>Town:</td><td>${itinerary.town || 'N/A'}</td></tr>
           <tr><td>Status:</td><td>${itinerary.status}</td></tr>
           <tr><td>Generated On:</td><td>${new Date().toLocaleDateString()}</td></tr>
         </table>
@@ -394,6 +435,7 @@ function generateItineraryHTML(itinerary) {
             <th>Date</th>
             <th>Day No</th>
             <th>Area</th>
+            <th>Town</th>
             <th>Doctor Calls</th>
             <th>Chemist Calls</th>
             <th>Mileage (km)</th>
@@ -406,6 +448,7 @@ function generateItineraryHTML(itinerary) {
               <td>${entry.date}</td>
               <td>${entry.dayNo}</td>
               <td>${entry.area || ''}</td>
+              <td>${entry.town || ''}</td>
               <td>${entry.doctorCalls || 0}</td>
               <td>${entry.chemistCalls || 0}</td>
               <td>${entry.mileage || 0}</td>
@@ -431,5 +474,6 @@ module.exports = {
   updateItinerary,
   deleteItinerary,
   generatePDF,
-  generateExcel
+  generateExcel,
+  getItineraryByDate
 };
