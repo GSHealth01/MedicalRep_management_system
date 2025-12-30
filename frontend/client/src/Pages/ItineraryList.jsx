@@ -36,22 +36,98 @@ export default function ItineraryList() {
     navigate(`/itineraryForm/${itinerary.id}/edit`);
   };
 
-  const handleDownload = (itinerary) => {
-    // Download itinerary as Excel (default format)
-    const url = `http://localhost:5001/api/v1/itineraries/${itinerary.id}/excel`;
-    window.open(url, '_blank');
+  const handleDownload = async (itinerary) => {
+    try {
+      // Use the authenticated API service to download the file
+      const response = await api.get(`/itineraries/${itinerary.id}/excel`, {
+        responseType: 'blob' // Important: tell axios to handle binary data
+      });
+      
+      // Create a download link for the Excel file
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `itinerary-${itinerary.month}-${itinerary.user?.emp_no || 'export'}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Download failed. Please try again or contact support.');
+    }
   };
 
   const handleDelete = async (itinerary) => {
     if (!window.confirm(`Are you sure you want to delete the itinerary for ${itinerary.month}?`)) return;
     try {
       await api.delete(`/itineraries/${itinerary.id}`);
-      alert('Itinerary deleted successfully');
+      showSuccessToast('Itinerary deleted successfully');
       fetchItineraries(); // Refresh the list
     } catch (error) {
       console.error('Delete failed:', error);
-      alert('Failed to delete itinerary');
+      showErrorToast('Failed to delete itinerary');
     }
+  };
+
+  // Simple toast notification functions
+  const showSuccessToast = (message) => {
+    showToast(message, 'success');
+  };
+
+  const showErrorToast = (message) => {
+    showToast(message, 'error');
+  };
+
+  const showToast = (message, type) => {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    
+    // Add styles
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.padding = '12px 20px';
+    toast.style.borderRadius = '8px';
+    toast.style.color = 'white';
+    toast.style.fontWeight = '500';
+    toast.style.fontSize = '14px';
+    toast.style.zIndex = '9999';
+    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    toast.style.transition = 'all 0.3s ease';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    
+    // Set background color based on type
+    if (type === 'success') {
+      toast.style.backgroundColor = '#10b981';
+    } else {
+      toast.style.backgroundColor = '#ef4444';
+    }
+    
+    document.body.appendChild(toast);
+    
+    // Trigger animation
+    setTimeout(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }, 3000);
   };
 
   const formatDate = (dateString) => {
@@ -132,11 +208,11 @@ export default function ItineraryList() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          itinerary.status === 'submitted'
+                          itinerary.status === 'completed'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {itinerary.status || 'pending'}
+                          {itinerary.status === 'completed' ? 'Completed' : 'Pending'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

@@ -7,8 +7,13 @@ const ExcelJS = require('exceljs');
 
 // Create Itinerary
 const createItinerary = asyncHandler(async (req, res) => {
-  const { repName, distributor, town, month, itinerary } = req.body;
+  const { repName, distributor, town, month, itinerary, status } = req.body;
   const userId = req.user.id;
+  
+  // Validate required fields
+  if (!repName || !distributor || !month || !itinerary || !Array.isArray(itinerary)) {
+    throw new AppError(400, 'Missing required fields: repName, distributor, month, and itinerary are required');
+  }
 
   // Check if itinerary already exists for this user and month
   const existingItinerary = await prisma.itinerary.findFirst({
@@ -22,6 +27,21 @@ const createItinerary = asyncHandler(async (req, res) => {
     throw new AppError(409, 'An itinerary already exists for this month. Please edit the existing itinerary or delete it first.');
   }
 
+  // Validate itinerary entries
+  if (!itinerary || !Array.isArray(itinerary) || itinerary.length === 0) {
+    throw new AppError(400, 'Itinerary entries are required and must be a non-empty array');
+  }
+  
+  // Validate each entry
+  const validEntries = itinerary.filter(entry =>
+    entry.date && entry.area && entry.town &&
+    entry.doctorCalls !== undefined && entry.chemistCalls !== undefined && entry.mileage !== undefined
+  );
+  
+  if (validEntries.length === 0) {
+    throw new AppError(400, 'At least one valid itinerary entry is required with date, area, town, doctorCalls, chemistCalls, and mileage');
+  }
+  
   // Create itinerary with entries
   const newItinerary = await prisma.itinerary.create({
     data: {
@@ -29,6 +49,7 @@ const createItinerary = asyncHandler(async (req, res) => {
       distributor,
       town,
       month,
+      status: status || "pending",
       user_id: userId,
       entries: {
         create: itinerary.map(entry => ({
@@ -114,7 +135,7 @@ const getItinerary = asyncHandler(async (req, res) => {
 // Update Itinerary
 const updateItinerary = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { repName, distributor, town, month, itinerary } = req.body;
+  const { repName, distributor, town, month, itinerary, status } = req.body;
   const userId = req.user.id;
 
   // Check if itinerary exists and belongs to user
@@ -129,6 +150,21 @@ const updateItinerary = asyncHandler(async (req, res) => {
     throw new AppError(404, 'Itinerary not found');
   }
 
+  // Validate itinerary entries
+  if (!itinerary || !Array.isArray(itinerary) || itinerary.length === 0) {
+    throw new AppError(400, 'Itinerary entries are required and must be a non-empty array');
+  }
+  
+  // Validate each entry
+  const validEntries = itinerary.filter(entry =>
+    entry.date && entry.area && entry.town &&
+    entry.doctorCalls !== undefined && entry.chemistCalls !== undefined && entry.mileage !== undefined
+  );
+  
+  if (validEntries.length === 0) {
+    throw new AppError(400, 'At least one valid itinerary entry is required with date, area, town, doctorCalls, chemistCalls, and mileage');
+  }
+  
   // Delete existing entries and create new ones
   await prisma.itineraryEntry.deleteMany({
     where: { itinerary_id: parseInt(id) }
@@ -141,6 +177,7 @@ const updateItinerary = asyncHandler(async (req, res) => {
       distributor,
       town,
       month,
+      status: status || "pending",
       entries: {
         create: itinerary.map(entry => ({
           date: entry.date,

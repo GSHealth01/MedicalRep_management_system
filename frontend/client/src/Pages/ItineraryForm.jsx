@@ -11,6 +11,7 @@ export default function ItineraryForm() {
   const [formData, setFormData] = useState({
     repName: '',
     distributor: '',
+    town: '',
     month: '',
     itinerary: []
   });
@@ -69,17 +70,26 @@ export default function ItineraryForm() {
       const response = await api.get(`/itineraries/${id}`);
       const itinerary = response.data.data;
    
-      console.log('Full API Response:', response); 
+      console.log('Full API Response:', response);
       console.log('Itinerary data:', itinerary);
       console.log('Town field value:', itinerary.town);
       console.log('All itinerary fields:', Object.keys(itinerary));
+      console.log('Itinerary entries:', itinerary.entries);
+      console.log('First entry:', itinerary.entries?.[0]);
       
-      setFormData({
+      // Debug: Check if the data structure is what we expect
+      const formDataToSet = {
         repName: itinerary.repName,
         distributor: itinerary.distributor,
+        town: itinerary.town || '',
         month: itinerary.month,
-        itinerary: itinerary.entries
-      });
+        itinerary: itinerary.entries || []
+      };
+      
+      console.log('Form data to set:', formDataToSet);
+      console.log('Itinerary entries structure:', itinerary.entries);
+      
+      setFormData(formDataToSet);
       
       // Check if editing is allowed for this month
       if (isEditMode) {
@@ -113,6 +123,7 @@ export default function ItineraryForm() {
         date: '',
         dayNo: prev.itinerary.length + 1,
         area: '',
+        town: '',
         doctorCalls: 0,
         chemistCalls: 0,
         mileage: 0,
@@ -167,6 +178,7 @@ export default function ItineraryForm() {
         date,
         dayNo: day,
         area: '',
+        town: '',
         doctorCalls: 0,
         chemistCalls: 0,
         mileage: 0,
@@ -203,7 +215,7 @@ export default function ItineraryForm() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 space-y-6">
           {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {!isViewMode && (
               <>
                 <div>
@@ -229,6 +241,18 @@ export default function ItineraryForm() {
                     disabled={isViewMode || editingDisabled}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Town</label>
+                  <input
+                    type="text"
+                    name="town"
+                    value={formData.town}
+                    onChange={handleInputChange}
+                    disabled={isViewMode || editingDisabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                   />
                 </div>
 
@@ -296,6 +320,7 @@ export default function ItineraryForm() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Day No</th>
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Area</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Town</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Doctor Calls</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Chemist Calls</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mileage</th>
@@ -329,6 +354,15 @@ export default function ItineraryForm() {
                         type="text"
                         value={entry.area}
                         onChange={(e) => handleEntryChange(index, 'area', e.target.value)}
+                        disabled={isViewMode || editingDisabled}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="text"
+                        value={entry.town}
+                        onChange={(e) => handleEntryChange(index, 'town', e.target.value)}
                         disabled={isViewMode || editingDisabled}
                         className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
                       />
