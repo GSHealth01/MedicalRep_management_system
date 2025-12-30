@@ -1,6 +1,6 @@
 const config = {
   DATABASE_URL: "postgresql://postgres:admin1@localhost:5432/med_rep_db?schema=public",
-  PORT: process.env.PORT || 5000,
+  PORT: process.env.PORT || 5001,
   JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret_here",
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || "your_jwt_access_secret_here",
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || "your_jwt_refresh_secret_here",

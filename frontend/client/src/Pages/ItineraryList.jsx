@@ -38,7 +38,7 @@ export default function ItineraryList() {
 
   const handleDownload = (itinerary) => {
     // Download itinerary as Excel (default format)
-    const url = `http://localhost:5000/api/v1/itineraries/${itinerary.id}/excel`;
+    const url = `http://localhost:5001/api/v1/itineraries/${itinerary.id}/excel`;
     window.open(url, '_blank');
   };
 

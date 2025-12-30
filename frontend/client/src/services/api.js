@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const base = "http://localhost:5000/api/v1";
+const base = "http://localhost:5001/api/v1";
 
 let accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 let refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;

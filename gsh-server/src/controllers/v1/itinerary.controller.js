@@ -10,6 +10,18 @@ const createItinerary = asyncHandler(async (req, res) => {
   const { repName, distributor, town, month, itinerary } = req.body;
   const userId = req.user.id;
 
+  // Check if itinerary already exists for this user and month
+  const existingItinerary = await prisma.itinerary.findFirst({
+    where: {
+      user_id: userId,
+      month: month
+    }
+  });
+
+  if (existingItinerary) {
+    throw new AppError(409, 'An itinerary already exists for this month. Please edit the existing itinerary or delete it first.');
+  }
+
   // Create itinerary with entries
   const newItinerary = await prisma.itinerary.create({
     data: {

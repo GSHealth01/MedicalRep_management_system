@@ -9,13 +9,22 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
     name: employee?.name || '',
     email: employee?.email || '',
     empNo: employee?.emp_no || employee?.empNo || '',
-    designation: employee?.designation || '',
+    designation: employee?.designation ? employee.designation.toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : '',
     range: employee?.range?.name || employee?.range || '',
     agency: employee?.agency?.name || employee?.agency || '',
     distributor: employee?.distributor || '',
-    distributors: employee?.distributors?.map(d => d.distributor?.distributor_code || d.distributor?.name) || [], // Extract distributor codes
+    distributors: employee?.distributors?.map(d => d.distributor_code || d.distributor?.distributor_code || d.distributor?.name) || [], // Extract distributor codes
     birthday: employee?.birthday ? new Date(employee.birthday).toISOString().slice(0, 10) : '',
     joinDate: employee?.join_date || employee?.joinDate ? new Date(employee.join_date || employee.joinDate).toISOString().slice(0, 10) : ''
+  });
+  
+  // Debug log to see the employee data structure
+  console.log('Employee data for edit:', employee);
+  console.log('Extracted distributors:', employee?.distributors?.map(d => d.distributor_code || d.distributor?.distributor_code || d.distributor?.name));
+  console.log('Designation comparison:', {
+    backendValue: employee?.designation,
+    formValue: formData.designation,
+    matches: employee?.designation === formData.designation
   });
   const [loading, setLoading] = useState(false);
   const [distributors, setDistributors] = useState([]);
@@ -226,6 +235,14 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
                   distributors.map((distributor) => {
                     const distributorCode = distributor.distributor_code || distributor.id || distributor.name;
                     const distributorName = distributor.name || distributor.distributor_name || distributorCode;
+                    
+                    // Debug log to see the comparison
+                    console.log('Distributor comparison:', {
+                      distributorCode,
+                      formDataDistributors: formData.distributors,
+                      isSelected: formData.distributors.includes(distributorCode)
+                    });
+                    
                     const isSelected = formData.distributors.includes(distributorCode);
                     
                     return (
@@ -241,7 +258,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
                           htmlFor={`edit-distributor-${distributorCode}`}
                           className="text-sm text-gray-700 cursor-pointer flex-1"
                         >
-                          {distributorName} ({distributorCode})
+                          {distributorName} ({distributorCode}) {isSelected ? '✓' : ''}
                         </label>
                       </div>
                     );
@@ -375,7 +392,7 @@ export default function ManageEmployees() {
       const updateData = {
         name: formData.name,
         empNo: formData.empNo,
-        designation: formData.designation,
+        designation: formData.designation ? formData.designation.toUpperCase() : undefined,
         agency: formData.agency,
         range: formData.range,
         birthday: formData.birthday || undefined,

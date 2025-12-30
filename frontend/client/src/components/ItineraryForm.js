@@ -1,13 +1,15 @@
 // src/components/ItineraryForm.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { distributors } from "../data/distributors";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function ItineraryForm() {
   const navigate = useNavigate();
   const { id, mode } = useParams();
   const isViewMode = mode === 'view';
+  const isEditMode = mode === 'edit';
+  const { user } = useAuth();
   const [repName, setRepName] = useState("");
   const [distributor, setDistributor] = useState("");
   const [town, setTown] = useState("");
@@ -15,6 +17,7 @@ export default function ItineraryForm() {
   const [itinerary, setItinerary] = useState([]);
   const [daysInMonth, setDaysInMonth] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [userDistributors, setUserDistributors] = useState([]);
 
   // build rows whenever month changes
   useEffect(() => {
@@ -36,14 +39,44 @@ export default function ItineraryForm() {
     setItinerary(rows);
   }, [month]);
 
-  // Load data if viewing
-  useEffect(() => {
-    if (isViewMode && id) {
-      loadItinerary();
+  const fetchUserDistributors = async () => {
+    try {
+      const response = await api.get("/users/profile");
+      console.log("Full API response:", response);
+      console.log("Response data:", response.data);
+      // The backend returns data directly in response.data, not response.data.data
+      const userData = response.data.user || response.data;
+      console.log("User profile data:", userData);
+      console.log("Distributors array:", userData.distributors);
+      console.log("Distributors array length:", userData.distributors?.length);
+      setUserDistributors(userData.distributors || []);
+      // Set the first distributor as default if available
+      if (userData.distributors && userData.distributors.length > 0) {
+        const firstDistributor = userData.distributors[0];
+        console.log("First distributor object:", firstDistributor);
+        console.log("First distributor type:", typeof firstDistributor);
+        console.log("First distributor keys:", Object.keys(firstDistributor));
+        console.log("Distributor name:", firstDistributor.name);
+        const distributorName = firstDistributor.name;
+        setDistributor(distributorName);
+        console.log("Setting distributor:", distributorName);
+      } else {
+        console.log("No distributors found in user data");
+      }
+    } catch (error) {
+      console.error("Failed to fetch user distributors:", error);
     }
-  }, [isViewMode, id]);
+  };
 
-  const loadItinerary = async () => {
+  // Load user distributors when component mounts
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserDistributors();
+    }
+  }, [user?.id]);
+
+  const loadItinerary = useCallback(async () => {
+    if (!id) return;
     setLoading(true);
     try {
       const response = await api.get(`/itineraries/${id}`);
@@ -70,7 +103,14 @@ export default function ItineraryForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  // Load data if viewing or editing
+  useEffect(() => {
+    if ((isViewMode || isEditMode) && id) {
+      loadItinerary();
+    }
+  }, [isViewMode, isEditMode, id, loadItinerary]);
 
   const updateRow = (idx, field, value) => {
     setItinerary((rows) => {
@@ -82,18 +122,37 @@ export default function ItineraryForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { repName, distributor, town, month, itinerary };
+    const payload = {
+      repName: user?.name || repName,
+      distributor,
+      town,
+      month,
+      itinerary
+    };
     console.log("Submitting itinerary:", payload);
     try {
-      const response = await api.post("/itineraries", payload);
+      let response;
+      if (id && (isEditMode || (!isViewMode && !isEditMode))) {
+        // Editing existing itinerary (either explicit edit mode or create mode with ID)
+        response = await api.put(`/itineraries/${id}`, payload);
+        alert("Itinerary updated successfully!");
+      } else {
+        // Creating new itinerary
+        response = await api.post("/itineraries", payload);
+        alert("Itinerary saved!");
+      }
       console.log("Save response:", response);
-      alert("Itinerary saved!");
       navigate("/itineraries");
     } catch (error) {
       console.error("Save failed:", error);
-      alert(
-        `Save failed: ${error.response?.data?.message || error.message}`
-      );
+      let errorMessage = error.response?.data?.message || error.message;
+      
+      // Provide user-friendly message for duplicate itinerary error
+      if (error.response?.status === 409) {
+        errorMessage = "An itinerary already exists for this month. Please edit the existing itinerary or delete it first.";
+      }
+      
+      alert(`Save failed: ${errorMessage}`);
     }
   };
 
@@ -124,32 +183,36 @@ export default function ItineraryForm() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-6 py-4 border-b">
           <label className="flex flex-col text-sm font-medium">
             Rep Name
-            <input
-              type="text"
-              value={repName}
-              onChange={(e) => setRepName(e.target.value)}
-              required
-              disabled={isViewMode}
-              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-100"
-            />
+            <div
+              className="mt-1 px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
+              style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
+            >
+              {user?.name || 'Not logged in'}
+            </div>
           </label>
 
           <label className="flex flex-col text-sm font-medium">
             Distributor
-            <select
-              value={distributor}
-              onChange={(e) => setDistributor(e.target.value)}
-              required
-              disabled={isViewMode}
-              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-100"
+            <div
+              className="mt-1 px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
+              style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
             >
-              <option value="">– select –</option>
-              {distributors.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              {userDistributors.length > 0
+                ? userDistributors.map((d, index) => {
+                    console.log(`Distributor ${index}:`, d);
+                    console.log(`Distributor ${index} name:`, d.name);
+                    console.log(`Distributor ${index} type:`, typeof d);
+                    console.log(`Distributor ${index} keys:`, Object.keys(d));
+                    return d.name || 'Unknown Distributor';
+                  }).join(', ')
+                : (() => {
+                    console.log('No distributors in userDistributors array');
+                    console.log('userDistributors:', userDistributors);
+                    console.log('userDistributors length:', userDistributors.length);
+                    return 'No distributors assigned';
+                  })()
+              }
+            </div>
           </label>
 
           <label className="flex flex-col text-sm font-medium">
@@ -221,7 +284,8 @@ export default function ItineraryForm() {
                       onChange={(e) =>
                         updateRow(i, "area", e.target.value)
                       }
-                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                      disabled={isViewMode}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
                     />
                   </td>
 
@@ -233,7 +297,8 @@ export default function ItineraryForm() {
                       onChange={(e) =>
                         updateRow(i, "town", e.target.value)
                       }
-                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                      disabled={isViewMode}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
                     />
                   </td>
 
@@ -245,7 +310,8 @@ export default function ItineraryForm() {
                       onChange={(e) =>
                         updateRow(i, "doctorCalls", e.target.value)
                       }
-                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                      disabled={isViewMode}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
                     />
                   </td>
 
@@ -257,7 +323,8 @@ export default function ItineraryForm() {
                       onChange={(e) =>
                         updateRow(i, "chemistCalls", e.target.value)
                       }
-                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                      disabled={isViewMode}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
                     />
                   </td>
 
@@ -269,7 +336,8 @@ export default function ItineraryForm() {
                       onChange={(e) =>
                         updateRow(i, "mileage", e.target.value)
                       }
-                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                      disabled={isViewMode}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
                     />
                   </td>
 
@@ -281,7 +349,8 @@ export default function ItineraryForm() {
                       onChange={(e) =>
                         updateRow(i, "nightOutArea", e.target.value)
                       }
-                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+                      disabled={isViewMode}
+                      className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
                     />
                   </td>
                 </tr>
@@ -294,6 +363,7 @@ export default function ItineraryForm() {
         <div className="px-6 py-4 border-t flex justify-center bg-gray-50">
           <div className="flex gap-4">
             <button
+              type="button"
               onClick={() => navigate("/itineraries")}
               className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring focus:ring-gray-200"
             >
