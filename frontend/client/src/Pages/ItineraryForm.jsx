@@ -76,6 +76,8 @@ export default function ItineraryForm() {
       console.log('All itinerary fields:', Object.keys(itinerary));
       console.log('Itinerary entries:', itinerary.entries);
       console.log('First entry:', itinerary.entries?.[0]);
+      console.log('Itinerary entries length:', itinerary.entries?.length);
+      console.log('Itinerary entries type:', typeof itinerary.entries);
       
       // Debug: Check if the data structure is what we expect
       const formDataToSet = {

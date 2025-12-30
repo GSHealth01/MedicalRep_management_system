@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useConfirm } from '../components/ConfirmDialog';
 
 export default function ItineraryList() {
   const navigate = useNavigate();
   const [itineraries, setItineraries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showConfirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => {
     fetchItineraries();
@@ -62,7 +64,16 @@ export default function ItineraryList() {
   };
 
   const handleDelete = async (itinerary) => {
-    if (!window.confirm(`Are you sure you want to delete the itinerary for ${itinerary.month}?`)) return;
+    const confirmed = await showConfirm({
+      title: "Delete Itinerary",
+      message: `Are you sure you want to delete the itinerary for ${itinerary.month}? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+    
+    if (!confirmed) return;
+    
     try {
       await api.delete(`/itineraries/${itinerary.id}`);
       showSuccessToast('Itinerary deleted successfully');
@@ -153,15 +164,26 @@ export default function ItineraryList() {
         {/* Header with Add Button */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Itinerary Management</h1>
-          <button
-            onClick={() => navigate('/itineraryForm')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Itinerary
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate('/rep-dashboard')}
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              Back to Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/itineraryForm')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Itinerary
+            </button>
+          </div>
         </div>
 
         {/* Table */}
@@ -259,6 +281,7 @@ export default function ItineraryList() {
           </div>
         </div>
       </div>
+      <ConfirmDialogComponent />
     </div>
   );
 }

@@ -18,7 +18,6 @@ export default function ItineraryForm() {
   const [itinerary, setItinerary] = useState([]);
   const [daysInMonth, setDaysInMonth] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [userDistributors, setUserDistributors] = useState([]);
   const [status, setStatus] = useState("pending");
 
   // Build rows whenever month changes (only for new forms)
@@ -42,37 +41,40 @@ export default function ItineraryForm() {
     setItinerary(rows);
   }, [month, isEditMode, isViewMode]);
 
-  const fetchUserDistributors = async () => {
+  const fetchUserDistributors = useCallback(async () => {
     try {
       const response = await api.get("/users/profile");
       const userData = response.data.user || response.data;
-      setUserDistributors(userData.distributors || []);
       
       // Set the first distributor as default if available
       if (userData.distributors && userData.distributors.length > 0) {
         const firstDistributor = userData.distributors[0];
         let distributorName = '';
+        let distributorTown = '';
         
         if (firstDistributor.distributor && firstDistributor.distributor.name) {
           distributorName = firstDistributor.distributor.name;
+          distributorTown = firstDistributor.distributor.coverage_town || '';
         } else if (firstDistributor.name) {
           distributorName = firstDistributor.name;
+          distributorTown = firstDistributor.coverage_town || '';
         }
         
         if (distributorName && !isEditMode && !isViewMode) {
           setDistributor(distributorName);
+          setTown(distributorTown);
         }
       }
     } catch (error) {
       console.error("Failed to fetch user distributors:", error);
     }
-  };
+  }, [isEditMode, isViewMode]);
 
   useEffect(() => {
     if (user?.id && !isEditMode && !isViewMode) {
       fetchUserDistributors();
     }
-  }, [user?.id, isEditMode, isViewMode]);
+  }, [user?.id, isEditMode, isViewMode, fetchUserDistributors]);
 
   const loadItinerary = useCallback(async () => {
     if (!id) return;
