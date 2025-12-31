@@ -339,13 +339,12 @@ export default function ItineraryForm() {
 
           <label className="flex flex-col text-sm font-medium">
             Town
-            <input
-              type="text"
-              value={town}
-              onChange={(e) => setTown(e.target.value)}
-              disabled={isViewMode}
-              className="mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-100"
-            />
+            <div
+              className="mt-1 px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
+              style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
+            >
+              {town || 'No town assigned'}
+            </div>
           </label>
 
           <label className="flex flex-col text-sm font-medium">
