@@ -120,9 +120,31 @@ exports.update = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    // Only save fields that are not null/undefined/empty
+    const productData = {};
+    
+    if (updateData.name && updateData.name.trim()) {
+      productData.name = updateData.name.trim();
+    }
+    if (updateData.therapeutic_category && updateData.therapeutic_category.trim()) {
+      productData.therapeutic_category = updateData.therapeutic_category.trim();
+    }
+    if (updateData.generic_name && updateData.generic_name.trim()) {
+      productData.generic_name = updateData.generic_name.trim();
+    }
+    if (updateData.route_of_administration && updateData.route_of_administration.trim()) {
+      productData.route_of_administration = updateData.route_of_administration.trim();
+    }
+    if (updateData.pack_size && updateData.pack_size.trim()) {
+      productData.pack_size = updateData.pack_size.trim();
+    }
+    if (updateData.strength && updateData.strength.trim()) {
+      productData.strength = updateData.strength.trim();
+    }
+
     const product = await prisma.product.update({
       where: { id: parseInt(id) },
-      data: updateData
+      data: productData
     });
 
     return ApiResponse.ok(res, "Product updated", product);

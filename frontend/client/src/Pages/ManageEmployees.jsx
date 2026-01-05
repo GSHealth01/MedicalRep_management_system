@@ -381,7 +381,22 @@ export default function ManageEmployees() {
 
   const fmtDate = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "-");
   const showRange = (r) => (typeof r === "object" ? (r?.name || r?.code || r?._id || "") : (r || ""));
-  const showAgency = (a) => (typeof a === "object" ? (a?.name || a?.code || a?._id || "") : (a || ""));
+  const showAgency = (a) => {
+    // If agency is an object with name property, show the name
+    if (typeof a === "object" && a?.name) {
+      return a.name;
+    }
+    // If agency is an object with _id property, show the _id
+    if (typeof a === "object" && a?._id) {
+      return a._id;
+    }
+    // If agency is a string/number, show it as is
+    if (typeof a === "string" || typeof a === "number") {
+      return a;
+    }
+    // Default fallback
+    return "";
+  };
 
   const handleEditEmployee = (employee) => {
     setEditingEmployee(employee);

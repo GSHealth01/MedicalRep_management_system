@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import ProductForm from "../components/ProductForm";
 import { api } from "../services/api";
 import { useNotification } from "../components/NotificationPopup";
@@ -12,12 +12,66 @@ function EditProductModal({ product, onClose, onSave }) {
     generic_name: product?.generic_name || '',
     route_of_administration: product?.route_of_administration || '',
     pack_size: product?.pack_size || '',
-    strength: product?.strength || ''
+    strength: product?.strength || '',
+    range: product?.range || '',
+    agency: product?.agency || ''
   });
+  
+  // Add agencies state
+  const [agencies, setAgencies] = useState([]);
+  const [loadingAgencies, setLoadingAgencies] = useState(true);
+  const [agencyError, setAgencyError] = useState("");
+  
+  // Load agencies from API
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingAgencies(true);
+      setAgencyError("");
+      try {
+        const res = await api.get("/agencies");
+        const payload = res?.data?.agencies || [];
+        if (mounted) setAgencies(payload);
+      } catch (err) {
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load agencies");
+      } finally {
+        if (mounted) setLoadingAgencies(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Hardcoded ranges
+  const ranges = useMemo(() => [
+    { id: 'A', name: 'A' },
+    { id: 'B', name: 'B' }
+  ], []);
+
+  const [filteredAgencies, setFilteredAgencies] = useState([]);
+
+  // when range changes, filter agencies based on the selected range
+  useEffect(() => {
+    if (!formData.range) {
+      setFilteredAgencies([]);
+      return;
+    }
+    // Filter agencies based on the selected range
+    const filtered = agencies.filter(agency => {
+      // Check if agency name starts with the selected range (A or B)
+      return agency.name && agency.name.startsWith(formData.range);
+    });
+    setFilteredAgencies(filtered);
+  }, [formData.range, agencies]);
+
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // clear dependent agency when range changes
+    if (name === "range") {
+      setFormData((s) => ({ ...s, range: value, agency: "" }));
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -102,6 +156,58 @@ function EditProductModal({ product, onClose, onSave }) {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
+
+          {/* Range (Sector) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Range (Sector)</label>
+            <select
+              name="range"
+              value={formData.range}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <option value="">Select range</option>
+              {ranges.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Agency (Sub-sector) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Agency (Sub-sector)</label>
+            <select
+              name="agency"
+              value={formData.agency}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              disabled={!formData.range || loadingAgencies}
+            >
+              <option value="">
+                {!formData.range
+                  ? "Select range first"
+                  : loadingAgencies
+                  ? "Loading agencies..."
+                  : agencyError
+                  ? "Error loading agencies"
+                  : "Select agency"}
+              </option>
+              {filteredAgencies.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            {agencyError && (
+              <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+            )}
+            {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.range && (
+              <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
+            )}
+          </div>
+
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
@@ -164,7 +270,9 @@ export default function ManageProducts() {
         generic_name: created.generic_name,
         route_of_administration: created.route_of_administration,
         pack_size: created.pack_size,
-        strength: created.strength
+        strength: created.strength,
+        range: created.range || rawForm.range,
+        agency: created.agency || rawForm.agency
       };
       setProducts((list) => [newRow, ...list]);
       showNotification(`Product ${payload.name} added successfully!`, 'success');
@@ -186,6 +294,8 @@ export default function ManageProducts() {
       if (formData.route_of_administration.trim()) updateData.route_of_administration = formData.route_of_administration.trim();
       if (formData.pack_size.trim()) updateData.pack_size = formData.pack_size.trim();
       if (formData.strength.trim()) updateData.strength = formData.strength.trim();
+      if (formData.range.trim()) updateData.range = formData.range.trim();
+      if (formData.agency.trim()) updateData.agency = formData.agency.trim();
 
       await api.put(`/admin/products/${editingProduct.id}`, updateData);
 
@@ -199,7 +309,9 @@ export default function ManageProducts() {
                 generic_name: formData.generic_name,
                 route_of_administration: formData.route_of_administration,
                 pack_size: formData.pack_size,
-                strength: formData.strength
+                strength: formData.strength,
+                range: formData.range,
+                agency: formData.agency
               }
             : prod
         )
@@ -273,13 +385,15 @@ export default function ManageProducts() {
                   <th className="py-2 px-4 text-center">Route of Administration</th>
                   <th className="py-2 px-4 text-center">Pack Size</th>
                   <th className="py-2 px-4 text-center">Strength</th>
+                  <th className="py-2 px-4 text-center">Range</th>
+                  <th className="py-2 px-4 text-center">Agency</th>
                   <th className="py-2 px-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4 text-gray-500">No products added yet</td>
+                    <td colSpan="9" className="text-center py-4 text-gray-500">No products added yet</td>
                   </tr>
                 ) : (
                   products.map((prod) => (
@@ -290,6 +404,8 @@ export default function ManageProducts() {
                       <td className="py-2 px-4">{prod.route_of_administration || "-"}</td>
                       <td className="py-2 px-4">{prod.pack_size || "-"}</td>
                       <td className="py-2 px-4">{prod.strength || "-"}</td>
+                      <td className="py-2 px-4">{prod.range || "-"}</td>
+                      <td className="py-2 px-4">{prod.agency || "-"}</td>
                       <td className="py-2 px-4">
                         <div className="flex justify-center space-x-2">
                           <button

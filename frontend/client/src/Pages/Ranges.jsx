@@ -8,17 +8,34 @@ export default function Ranges() {
   const [message, setMessage] = useState('');
 
   // Hardcoded agencies list
-  const agencies = [
+  const hardcodedAgencies = [
     { id: 'A1', name: 'A1' },
     { id: 'A2', name: 'A2' },
     { id: 'A3', name: 'A3' },
+    { id: 'A4', name: 'A4' },
+    { id: 'A5', name: 'A5' },
     { id: 'B1', name: 'B1' },
     { id: 'B2', name: 'B2' },
     { id: 'B3', name: 'B3' },
     { id: 'B4', name: 'B4' },
     { id: 'B5', name: 'B5' },
-    { id: 'B6', name: 'B6' }
+    { id: 'B6', name: 'B6' },
+    { id: 'B7', name: 'B7' },
+    { id: 'B8', name: 'B8' },
+    { id: 'B9', name: 'B9' },
+    { id: 'B10', name: 'B10' }
   ];
+
+  // Get filtered agencies based on selected range
+  const getFilteredAgencies = (rangeName) => {
+    if (!rangeName) return [];
+    if (rangeName === 'A') {
+      return hardcodedAgencies.filter(a => a.name.startsWith('A'));
+    } else if (rangeName === 'B') {
+      return hardcodedAgencies.filter(a => a.name.startsWith('B'));
+    }
+    return [];
+  };
 
   const [form, setForm] = useState({
     name: '',
@@ -60,6 +77,24 @@ export default function Ranges() {
       return;
     }
 
+    // Check if agency is already assigned to another range
+    const selectedAgency = hardcodedAgencies.find(a => a.id === form.agency_id);
+    console.log('Duplicate check:', {
+      selectedAgency,
+      formAgencyId: form.agency_id,
+      ranges: ranges.map(r => ({ name: r.name, agency: r.agency }))
+    });
+    
+    const existingAssignment = ranges.find(r =>
+      r.agency && r.agency.id === form.agency_id
+    );
+    console.log('Existing assignment found:', existingAssignment);
+    
+    if (existingAssignment) {
+      setMessage(`Agency ${selectedAgency?.name} is already assigned to Range ${existingAssignment.name}. Please choose a different agency.`);
+      return;
+    }
+
     try {
       setSubmitting(true);
       await api.post('/ranges', form);
@@ -91,6 +126,7 @@ export default function Ranges() {
       setMessage(errorMsg);
     }
   };
+
 
   if (loading) {
     return <div className="p-6">Loading ranges...</div>;
@@ -146,7 +182,7 @@ export default function Ranges() {
                 required
               >
                 <option value="">Select an Agency</option>
-                {agencies.map(agency => (
+                {getFilteredAgencies(form.name).map(agency => (
                   <option key={agency.id} value={agency.id}>
                     {agency.name}
                   </option>
@@ -194,7 +230,7 @@ export default function Ranges() {
                         <div className="text-sm text-gray-500">Agency: {range.agency?.name || 'N/A'}</div>
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-700">
-                        Users: {range._count?.users || 0} | Teams: {range._count?.teams || 0}
+                        Agency: {range.agency?.name || "None"} | Users: {range._count?.users || 0} | Teams: {range._count?.teams || 0}
                       </td>
                       <td className="py-4 px-6">
                         <button

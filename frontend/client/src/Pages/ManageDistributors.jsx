@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import DistributorForm from "../components/DistributorForm";
 import { api } from "../services/api";
 import { useNotification } from "../components/NotificationPopup";
@@ -14,6 +14,53 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
     route: '',
     agency: ''
   });
+  
+  // Add agencies state
+  const [agencies, setAgencies] = useState([]);
+  const [loadingAgencies, setLoadingAgencies] = useState(true);
+  const [agencyError, setAgencyError] = useState("");
+
+  // Load agencies from API
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingAgencies(true);
+      setAgencyError("");
+      try {
+        const res = await api.get("/agencies");
+        const payload = res?.data?.agencies || [];
+        if (mounted) setAgencies(payload);
+      } catch (err) {
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load agencies");
+      } finally {
+        if (mounted) setLoadingAgencies(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Hardcoded ranges
+  const ranges = useMemo(() => [
+    { id: 'A', name: 'A' },
+    { id: 'B', name: 'B' }
+  ], []);
+
+  const [filteredAgencies, setFilteredAgencies] = useState([]);
+
+  // when range changes, filter agencies based on the selected range
+  useEffect(() => {
+    if (!formData.sector) {
+      setFilteredAgencies([]);
+      return;
+    }
+    // Filter agencies based on the selected range
+    const filtered = agencies.filter(agency => {
+      // Check if agency name starts with the selected range (A or B)
+      return agency.name && agency.name.startsWith(formData.sector);
+    });
+    setFilteredAgencies(filtered);
+  }, [formData.sector, agencies]);
+
   const [loading, setLoading] = useState(false);
 
   // Update form data when distributor changes
@@ -120,17 +167,11 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
             >
               <option value="">Select Agency</option>
-              <option value="A1">A1</option>
-              <option value="A2">A2</option>
-              <option value="A3">A3</option>
-              <option value="A4">A4</option>
-              <option value="B1">B1</option>
-              <option value="B2">B2</option>
-              <option value="B3">B3</option>
-              <option value="B4">B4</option>
-              <option value="B5">B5</option>
-              <option value="B6">B6</option>
-              <option value="B7">B7</option>
+              {agencies.map((a) => (
+                <option key={a.id} value={a.name}>
+                  {a.name}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex justify-end space-x-3 pt-4">

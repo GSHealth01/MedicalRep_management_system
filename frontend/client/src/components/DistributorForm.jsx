@@ -9,95 +9,54 @@ export default function DistributorForm({ onSubmit }) {
     area: "",
     town: "",
     route: "",
-    sector: "", 
+    sector: "",
     date: "",
   });
 
   const [agencies, setAgencies] = useState([]);
-  const [ranges, setRanges] = useState([]);
   const [loadingAgencies, setLoadingAgencies] = useState(true);
-  const [loadingRanges, setLoadingRanges] = useState(true);
   const [agencyError, setAgencyError] = useState("");
-  const [rangeError, setRangeError] = useState("");
-  const [areaError, setAreaError] = useState("");
 
+  // Load agencies from API
   useEffect(() => {
     let mounted = true;
-
-    // Helper function to normalize API responses
-    const normalizeItems = (res) => {
-      const data = res?.data;
-      
-      // If response has agencies key
-      if (data?.agencies && Array.isArray(data.agencies)) {
-        return data.agencies;
-      }
-      
-      // If response has ranges key
-      if (data?.ranges && Array.isArray(data.ranges)) {
-        return data.ranges;
-      }
-      
-      // If response has data.items structure
-      if (data?.data?.items && Array.isArray(data.data.items)) {
-        return data.data.items;
-      }
-      
-      // If response has items directly
-      if (data?.items && Array.isArray(data.items)) {
-        return data.items;
-      }
-      
-      // If response is an array directly
-      if (Array.isArray(data)) {
-        return data;
-      }
-      
-      return [];
-    };
-
-    // Load agencies
     (async () => {
       setLoadingAgencies(true);
       setAgencyError("");
       try {
-        const res = await api.get("/agencies", {
-          params: { limit: 200 },
-        });
-        const items = normalizeItems(res);
-        if (mounted) setAgencies(items);
+        const res = await api.get("/agencies");
+        const payload = res?.data?.agencies || [];
+        if (mounted) setAgencies(payload);
       } catch (err) {
-        if (mounted)
-          setAgencyError(
-            err?.response?.data?.message || "Failed to load agencies"
-          );
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load agencies");
       } finally {
         if (mounted) setLoadingAgencies(false);
       }
     })();
-
-    // Load ranges
-    (async () => {
-      setLoadingRanges(true);
-      setRangeError("");
-      try {
-        const res = await api.get("/ranges");
-        const items = normalizeItems(res);
-        if (mounted) setRanges(items);
-      } catch (err) {
-        if (mounted)
-          setRangeError(
-            err?.response?.data?.message || "Failed to load ranges"
-          );
-      } finally {
-        if (mounted) setLoadingRanges(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
+
+  // Hardcoded ranges (same as other forms)
+  const ranges = useMemo(() => [
+    { id: 'A', name: 'A' },
+    { id: 'B', name: 'B' }
+  ], []);
+
+  const [filteredAgencies, setFilteredAgencies] = useState([]);
+
+  // when range changes, filter agencies based on the selected range
+  useEffect(() => {
+    if (!formData.sector) {
+      setFilteredAgencies([]);
+      return;
+    }
+    // Filter agencies based on the selected range
+    const filtered = agencies.filter(agency => {
+      // Check if agency name starts with the selected range (A or B)
+      return agency.name && agency.name.startsWith(formData.sector);
+    });
+    setFilteredAgencies(filtered);
+  }, [formData.sector, agencies]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -152,31 +111,6 @@ export default function DistributorForm({ onSubmit }) {
       onSubmit={handleSubmit}
       className="max-w-2xl bg-white shadow-lg rounded-lg p-6 space-y-4"
     >
-      {/* Agency */}
-      <div>
-        <label className="block text-gray-700 mb-1">Agency</label>
-        <select
-          name="range"
-          value={formData.range}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
-          required
-          disabled={loadingAgencies || !!agencyError}
-        >
-          <option value="">
-            {loadingAgencies ? "Loading agencies..." : "Select agency"}
-          </option>
-          {agencies.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-        {agencyError && (
-          <p className="text-sm text-red-600 mt-1">{agencyError}</p>
-        )}
-      </div>
-
       {/* Range (Sector) */}
       <div>
         <label className="block text-gray-700 mb-1">Range (Sector)</label>
@@ -186,19 +120,47 @@ export default function DistributorForm({ onSubmit }) {
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required
-          disabled={loadingRanges || !!rangeError}
         >
-          <option value="">
-            {loadingRanges ? "Loading ranges..." : "Select range"}
-          </option>
+          <option value="">Select range</option>
           {ranges.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
             </option>
           ))}
         </select>
-        {rangeError && (
-          <p className="text-sm text-red-600 mt-1">{rangeError}</p>
+      </div>
+
+      {/* Agency */}
+      <div>
+        <label className="block text-gray-700 mb-1">Agency</label>
+        <select
+          name="range"
+          value={formData.range}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          required
+          disabled={!formData.sector || loadingAgencies}
+        >
+          <option value="">
+            {!formData.sector
+              ? "Select range first"
+              : loadingAgencies
+              ? "Loading agencies..."
+              : agencyError
+              ? "Error loading agencies"
+              : "Select agency"}
+          </option>
+          {filteredAgencies.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        {agencyError && (
+          <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+        )}
+        {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.sector && (
+          <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
         )}
       </div>
 

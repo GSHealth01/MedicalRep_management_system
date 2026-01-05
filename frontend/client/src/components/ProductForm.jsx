@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { api } from "../services/api";
 
 export default function ProductForm({ onSubmit, initialData, isEditing, onCancel }) {
   const [formData, setFormData] = useState({
@@ -8,7 +9,41 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
     route_of_administration: "",
     pack_size: "",
     strength: "",
+    range: "",
+    agency: ""
   });
+
+  // Add agencies state
+  const [agencies, setAgencies] = useState([]);
+  const [loadingAgencies, setLoadingAgencies] = useState(true);
+  const [agencyError, setAgencyError] = useState("");
+
+  // Load agencies from API
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingAgencies(true);
+      setAgencyError("");
+      try {
+        const res = await api.get("/agencies");
+        const payload = res?.data?.agencies || [];
+        if (mounted) setAgencies(payload);
+      } catch (err) {
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load agencies");
+      } finally {
+        if (mounted) setLoadingAgencies(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Hardcoded ranges (same as EmployeeForm)
+  const ranges = useMemo(() => [
+    { id: 'A', name: 'A' },
+    { id: 'B', name: 'B' }
+  ], []);
+
+  const [filteredAgencies, setFilteredAgencies] = useState([]);
 
   // Load initial data when editing
   useEffect(() => {
@@ -20,6 +55,8 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
         route_of_administration: initialData.route_of_administration || "",
         pack_size: initialData.pack_size || "",
         strength: initialData.strength || "",
+        range: initialData.range || "",
+        agency: initialData.agency || ""
       });
     } else if (!isEditing) {
       // Reset form when not editing
@@ -30,9 +67,25 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
         route_of_administration: "",
         pack_size: "",
         strength: "",
+        range: "",
+        agency: ""
       });
     }
   }, [initialData, isEditing]);
+
+  // when range changes, filter agencies based on the selected range
+  useEffect(() => {
+    if (!formData.range) {
+      setFilteredAgencies([]);
+      return;
+    }
+    // Filter agencies based on the selected range
+    const filtered = agencies.filter(agency => {
+      // Check if agency name starts with the selected range (A or B)
+      return agency.name && agency.name.startsWith(formData.range);
+    });
+    setFilteredAgencies(filtered);
+  }, [formData.range, agencies]);
 
   const canSubmit = useMemo(() => {
     return formData.name && formData.therapeutic_category && formData.generic_name;
@@ -40,6 +93,11 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // clear dependent agency when range changes
+    if (name === "range") {
+      setFormData((s) => ({ ...s, range: value, agency: "" }));
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value
@@ -58,6 +116,8 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
     if (formData.route_of_administration.trim()) payload.route_of_administration = formData.route_of_administration.trim();
     if (formData.pack_size.trim()) payload.pack_size = formData.pack_size.trim();
     if (formData.strength.trim()) payload.strength = formData.strength.trim();
+    if (formData.range.trim()) payload.range = formData.range.trim();
+    if (formData.agency.trim()) payload.agency = formData.agency.trim();
 
     onSubmit && onSubmit(payload, formData);
 
@@ -70,6 +130,8 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
         route_of_administration: "",
         pack_size: "",
         strength: "",
+        range: "",
+        agency: ""
       });
     }
   };
@@ -159,6 +221,57 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
           placeholder="Enter strength"
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+      </div>
+
+      {/* Range (Sector) */}
+      <div>
+        <label className="block text-gray-700 mb-1">Range (Sector)</label>
+        <select
+          name="range"
+          value={formData.range}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select range</option>
+          {ranges.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Agency (Sub-sector) */}
+      <div>
+        <label className="block text-gray-700 mb-1">Agency (Sub-sector)</label>
+        <select
+          name="agency"
+          value={formData.agency}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={!formData.range || loadingAgencies}
+        >
+          <option value="">
+            {!formData.range
+              ? "Select range first"
+              : loadingAgencies
+              ? "Loading agencies..."
+              : agencyError
+              ? "Error loading agencies"
+              : "Select agency"}
+          </option>
+          {filteredAgencies.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        {agencyError && (
+          <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+        )}
+        {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.range && (
+          <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
+        )}
       </div>
 
       {/* Buttons */}

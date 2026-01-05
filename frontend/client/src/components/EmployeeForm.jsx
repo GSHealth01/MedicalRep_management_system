@@ -5,6 +5,7 @@ export default function EmployeeForm({ onSubmit }) {
   const [formData, setFormData] = useState({
     username: "",       // used as email
     password: "",       // NEW
+    name: "",           // NEW: Employee's full name
     empNo: "",
     designation: "",    // maps to role (MR/FC/JE/SE/TM/PM/ADMIN)
     birthday: "",
@@ -18,6 +19,11 @@ export default function EmployeeForm({ onSubmit }) {
   const [distributors, setDistributors] = useState([]);
   const [loadingDistributors, setLoadingDistributors] = useState(true);
   const [distributorError, setDistributorError] = useState("");
+
+  // Add agencies state
+  const [agencies, setAgencies] = useState([]);
+  const [loadingAgencies, setLoadingAgencies] = useState(true);
+  const [agencyError, setAgencyError] = useState("");
 
   // Load distributors from API
   useEffect(() => {
@@ -39,24 +45,29 @@ export default function EmployeeForm({ onSubmit }) {
     return () => { mounted = false; };
   }, []);
 
-  // Hardcoded ranges and agencies
+  // Load agencies from API
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingAgencies(true);
+      setAgencyError("");
+      try {
+        const res = await api.get("/agencies");
+        const payload = res?.data?.agencies || [];
+        if (mounted) setAgencies(payload);
+      } catch (err) {
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load agencies");
+      } finally {
+        if (mounted) setLoadingAgencies(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Hardcoded ranges
   const ranges = useMemo(() => [
     { id: 'A', name: 'A' },
     { id: 'B', name: 'B' }
-  ], []);
-
-  const agencies = useMemo(() => [
-    { id: 'A1', name: 'A1', range: 'A' },
-    { id: 'A2', name: 'A2', range: 'A' },
-    { id: 'A3', name: 'A3', range: 'A' },
-    { id: 'A4', name: 'A4', range: 'A' },
-    { id: 'B1', name: 'B1', range: 'B' },
-    { id: 'B2', name: 'B2', range: 'B' },
-    { id: 'B3', name: 'B3', range: 'B' },
-    { id: 'B4', name: 'B4', range: 'B' },
-    { id: 'B5', name: 'B5', range: 'B' },
-    { id: 'B6', name: 'B6', range: 'B' },
-    { id: 'B7', name: 'B7', range: 'B' }
   ], []);
 
   const [filteredAgencies, setFilteredAgencies] = useState([]);
@@ -65,6 +76,7 @@ export default function EmployeeForm({ onSubmit }) {
   const canSubmit = useMemo(() => {
     const hasEmail = /\S+@\S+\.\S+/.test(formData.username);
     return (
+      !!formData.name &&
       hasEmail &&
       !!formData.password &&
       !!formData.empNo &&
@@ -80,7 +92,12 @@ export default function EmployeeForm({ onSubmit }) {
       setFilteredAgencies([]);
       return;
     }
-    const filtered = agencies.filter(agency => agency.range === formData.range);
+    // Filter agencies based on the selected range
+    // Agencies from API might have different structure, so we check if name starts with range
+    const filtered = agencies.filter(agency => {
+      // Check if agency name starts with the selected range (A or B)
+      return agency.name && agency.name.startsWith(formData.range);
+    });
     setFilteredAgencies(filtered);
   }, [formData.range, agencies]);
 
@@ -123,7 +140,7 @@ export default function EmployeeForm({ onSubmit }) {
     // For Prisma backend, we need to send the data to the correct endpoint
     // The admin/users endpoint expects specific field names that match the database schema
     const prismaPayload = {
-      name: nameGuess || formData.empNo,
+      name: formData.name || nameGuess || formData.empNo,
       email: email,
       password: formData.password,
       empNo: formData.empNo,
@@ -156,6 +173,20 @@ export default function EmployeeForm({ onSubmit }) {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl bg-white shadow-lg rounded-lg p-6 space-y-4">
+      {/* Employee Name */}
+      <div>
+        <label className="block text-gray-700 mb-1">Employee Name *</label>
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          placeholder="Enter employee full name"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          required
+        />
+      </div>
+
       {/* Username (Email) */}
       <div>
         <label className="block text-gray-700 mb-1">Username (Email)</label>
@@ -275,11 +306,15 @@ export default function EmployeeForm({ onSubmit }) {
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
           required={formData.designation !== "ADMIN"}
-          disabled={!formData.range}
+          disabled={!formData.range || loadingAgencies}
         >
           <option value="">
             {!formData.range
               ? "Select range first"
+              : loadingAgencies
+              ? "Loading agencies..."
+              : agencyError
+              ? "Error loading agencies"
               : "Select agency"}
           </option>
           {filteredAgencies.map((a) => (
@@ -288,6 +323,12 @@ export default function EmployeeForm({ onSubmit }) {
             </option>
           ))}
         </select>
+        {agencyError && (
+          <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+        )}
+        {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.range && (
+          <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
+        )}
       </div>
 
       {/* Distributors (Multiple Selection with Checkboxes) */}
