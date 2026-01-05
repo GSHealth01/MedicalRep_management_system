@@ -119,16 +119,18 @@ export default function Ranges() {
               <label htmlFor="range-name" className="block text-sm font-medium text-gray-700 mb-1">
                 Range Name *
               </label>
-              <input
-                type="text"
+              <select
                 id="range-name"
                 name="name"
                 value={form.name}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., A1"
                 required
-              />
+              >
+                <option value="">Select Range</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+              </select>
             </div>
 
             <div>

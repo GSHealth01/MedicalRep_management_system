@@ -33,7 +33,7 @@ export default function ManageSectors() {
 
   // Add a new sector (POST /ranges)
   const addSector = async () => {
-    if (!newSector.trim()) return;
+    if (!newSector) return;
     try {
       const body = { name: newSector.trim() };
       const res = await api.post("/ranges", body);
@@ -80,18 +80,21 @@ export default function ManageSectors() {
 
       {/* Add Sector */}
       <div className="mb-6 flex gap-2">
-        <input
-          type="text"
-          placeholder="Enter sector name"
+        <select
           className="border rounded px-3 py-2 flex-1 shadow-sm"
           value={newSector}
           onChange={(e) => setNewSector(e.target.value)}
-        />
+        >
+          <option value="">Select Range</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+        </select>
         <button
           onClick={addSector}
           className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          disabled={!newSector}
         >
-          Add Sector
+          Add Range
         </button>
       </div>
 
