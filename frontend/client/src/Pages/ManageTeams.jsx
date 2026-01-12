@@ -278,9 +278,9 @@ export default function ManageTeams() {
       setLoading(true);
       setErr("");
       try {
-        const res = await api.get("/teams");
+        const res = await api.get("/admin/teams");
         const payload = res?.data?.data ?? res?.data ?? {};
-        const items = payload?.teams || [];
+        const items = payload?.items || [];
         if (mounted) setTeams(items);
       } catch (e) {
         console.error("Failed to load teams", e);
@@ -297,13 +297,14 @@ export default function ManageTeams() {
   // Create Team (TeamForm should send { name, range_id } or similar)
   const handleAddTeam = async (payload) => {
     try {
-      const res = await api.post("/teams", payload);
+      const res = await api.post("/admin/teams", payload);
       const created = res?.data?.data || {};
 
       const row = {
         id: created.id,
         name: created.name,
         range: created.range,
+        agency: created.agency,
         _count: { users: 0 },
       };
 
@@ -336,7 +337,7 @@ export default function ManageTeams() {
         if (range) updateData.range_id = range.id;
       }
 
-      await api.put(`/teams/${editingTeam.id}`, updateData);
+      await api.put(`/admin/teams/${editingTeam.id}`, updateData);
 
       setTeams((list) =>
         list.map((team) =>
@@ -368,7 +369,7 @@ export default function ManageTeams() {
     }
 
     try {
-      await api.delete(`/teams/${team.id}`);
+      await api.delete(`/admin/teams/${team.id}`);
       setTeams((list) => list.filter((t) => t.id !== team.id));
       showNotification(`Team ${team.name} deleted successfully!`, "success");
     } catch (e) {
