@@ -58,7 +58,7 @@ exports.list = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const {
-      name, contactNumber, email, specialty, categorization, dateAdded, range_id
+      name, contactNumber, email, specialty, categorization, dateAdded, sector_id
     } = req.body;
 
     if (!name) {
@@ -73,19 +73,14 @@ exports.create = async (req, res) => {
         specialty,
         categorization,
         dateAdded: dateAdded ? new Date(dateAdded + 'T00:00:00.000Z') : undefined,
-        range_id: range_id ? parseInt(range_id) : undefined
+        sector_id: sector_id ? parseInt(sector_id) : undefined
       },
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true,
-            agency: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
+            agency: true,
+            range: true
           }
         }
       }
@@ -109,16 +104,11 @@ exports.getOne = async (req, res) => {
     const doctor = await prisma.doctor.findUnique({
       where: { id: parseInt(req.params.id) },
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true,
-            agency: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
+            agency: true,
+            range: true
           }
         }
       }
@@ -148,25 +138,20 @@ exports.update = async (req, res) => {
       updateData.dateAdded = new Date(updateData.dateAdded + 'T00:00:00.000Z');
     }
 
-    // Handle range_id conversion if provided
-    if (updateData.range_id) {
-      updateData.range_id = parseInt(updateData.range_id);
+    // Handle sector_id conversion if provided
+    if (updateData.sector_id) {
+      updateData.sector_id = parseInt(updateData.sector_id);
     }
 
     const doctor = await prisma.doctor.update({
       where: { id: parseInt(id) },
       data: updateData,
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true,
-            agency: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
+            agency: true,
+            range: true
           }
         }
       }

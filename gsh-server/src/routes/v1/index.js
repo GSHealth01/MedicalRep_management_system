@@ -2,7 +2,7 @@ const router = require("express").Router();
 
 router.use("/auth", require("./auth.routes"));
 router.use("/debug", require("./debug.routes"));
-// router.use("/agencies", require("./agency.routes"));
+router.use("/agencies", require("./agency.routes"));
 // router.use("/ranges", require("./range.routes"));
 router.use("/areas", require("./area.routes"));
 router.use("/teams", require("./team.routes"));

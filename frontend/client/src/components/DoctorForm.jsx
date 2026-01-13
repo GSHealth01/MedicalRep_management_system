@@ -128,9 +128,17 @@ export default function DoctorForm({ onSubmit }) {
       return;
     }
 
+    // Find the selected agency
+    const selectedAgency = agencies.find(a => a.name === formData.agency);
+
+    if (!selectedAgency) {
+      alert("Invalid agency selection");
+      return;
+    }
+
     // Normalize for BE
     const payload = {
-      range_id: selectedRange.id,             // required by BE
+      sector_id: selectedAgency.id,           // required by BE
       name: formData.doctorName,              // BE expects "name"
       contactNumber: formData.contactNumber,
       email: formData.email || undefined,

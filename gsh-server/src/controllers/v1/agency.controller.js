@@ -2,19 +2,19 @@ const { prisma } = require('../../../lib/prisma');
 
 async function createAgency(req, res) {
   try {
-    const { name } = req.body;
+    const { name, range = 'A' } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: 'Name is required' });
     }
 
-    const newAgency = await prisma.agency.create({
-      data: { name }
+    const newSector = await prisma.sector.create({
+      data: { agency: name, range }
     });
 
     res.status(201).json({
       message: 'Agency created successfully',
-      agency: newAgency
+      agency: { id: newSector.id, name: newSector.agency }
     });
   } catch (error) {
     console.error('Error creating agency:', error);
@@ -29,14 +29,22 @@ async function createAgency(req, res) {
 
 async function getAllAgencies(req, res) {
   try {
-    const agencies = await prisma.agency.findMany({
-      include: {
+    const sectors = await prisma.sector.findMany({
+      select: {
+        id: true,
+        agency: true,
         _count: {
-          select: { ranges: true, users: true, distributors: true }
+          select: { users: true, distributors: true }
         }
       },
-      orderBy: { name: 'asc' }
+      orderBy: { agency: 'asc' }
     });
+
+    const agencies = sectors.map(s => ({
+      id: s.id,
+      name: s.agency,
+      _count: s._count
+    }));
 
     res.json({ agencies });
   } catch (error) {
@@ -48,15 +56,9 @@ async function getAllAgencies(req, res) {
 async function getOneAgency(req, res) {
   try {
     const { id } = req.params;
-    const agency = await prisma.agency.findUnique({
+    const sector = await prisma.sector.findUnique({
       where: { id: parseInt(id) },
       include: {
-        ranges: {
-          select: {
-            id: true,
-            name: true
-          }
-        },
         users: {
           select: {
             id: true,
@@ -67,16 +69,23 @@ async function getOneAgency(req, res) {
         },
         distributors: {
           select: {
-            id: true,
+            distributor_code: true,
             name: true
           }
         }
       }
     });
 
-    if (!agency) {
+    if (!sector) {
       return res.status(404).json({ message: 'Agency not found' });
     }
+
+    const agency = {
+      id: sector.id,
+      name: sector.agency,
+      users: sector.users,
+      distributors: sector.distributors
+    };
 
     res.json({ agency });
   } catch (error) {
@@ -94,14 +103,14 @@ async function updateAgency(req, res) {
       return res.status(400).json({ message: 'Name is required' });
     }
 
-    const updatedAgency = await prisma.agency.update({
+    const updatedSector = await prisma.sector.update({
       where: { id: parseInt(id) },
-      data: { name }
+      data: { agency: name }
     });
 
     res.json({
       message: 'Agency updated successfully',
-      agency: updatedAgency
+      agency: { id: updatedSector.id, name: updatedSector.agency }
     });
   } catch (error) {
     console.error('Error updating agency:', error);
@@ -122,7 +131,7 @@ async function deleteAgency(req, res) {
   try {
     const { id } = req.params;
 
-    await prisma.agency.delete({
+    await prisma.sector.delete({
       where: { id: parseInt(id) }
     });
 

@@ -77,6 +77,12 @@ exports.create = async (req, res) => {
     if (strength && strength.trim()) {
       productData.strength = strength.trim();
     }
+    if (req.body.range && req.body.range.trim()) {
+      productData.range = req.body.range.trim();
+    }
+    if (req.body.agency && req.body.agency.trim()) {
+      productData.agency = req.body.agency.trim();
+    }
 
     const product = await prisma.product.create({
       data: productData
@@ -140,6 +146,12 @@ exports.update = async (req, res) => {
     }
     if (updateData.strength && updateData.strength.trim()) {
       productData.strength = updateData.strength.trim();
+    }
+    if (updateData.range && updateData.range.trim()) {
+      productData.range = updateData.range.trim();
+    }
+    if (updateData.agency && updateData.agency.trim()) {
+      productData.agency = updateData.agency.trim();
     }
 
     const product = await prisma.product.update({

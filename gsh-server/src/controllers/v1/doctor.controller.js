@@ -54,10 +54,11 @@ async function getAllDoctors(req, res) {
   try {
     const doctors = await prisma.doctor.findMany({
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true
+            agency: true,
+            range: true
           }
         },
         _count: {
@@ -83,10 +84,11 @@ async function getOneDoctor(req, res) {
     const doctor = await prisma.doctor.findUnique({
       where: { id: parseInt(id) },
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true
+            agency: true,
+            range: true
           }
         },
         users: {
@@ -144,10 +146,11 @@ async function updateDoctor(req, res) {
       where: { id: parseInt(id) },
       data: updateData,
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true
+            agency: true,
+            range: true
           }
         },
         _count: {

@@ -109,35 +109,13 @@ exports.create = async (req, res) => {
       securityAnswerHash = await bcrypt.hash(security_answer, 10);
     }
 
-    // Find or create agency and range by name since frontend sends string names
-    let agencyId, rangeId;
-    
+    // Set sector_id from agency_id
+    let sectorId;
     if (agency_id) {
-      let agency = await prisma.agency.findFirst({ where: { name: agency_id } });
-      if (!agency) {
-        // Create agency if it doesn't exist
-        agency = await prisma.agency.create({
-          data: { name: agency_id }
-        });
-      }
-      agencyId = agency.id;
-    }
-    
-    if (range_id) {
-      let range = await prisma.range.findFirst({ where: { name: range_id } });
-      if (!range) {
-        // Create range if it doesn't exist
-        range = await prisma.range.create({
-          data: {
-            name: range_id,
-            agency_id: agencyId // Link to the agency if available
-          }
-        });
-      }
-      rangeId = range.id;
+      sectorId = parseInt(agency_id);
     }
 
-    console.log('Found/Created agency_id:', agencyId, 'range_id:', rangeId); // Debug log
+    console.log('Found sector_id:', sectorId); // Debug log
     console.log('Distributors to store:', distributor_ids || distributor_id); // Debug log
 
     // Build user creation data
@@ -149,19 +127,19 @@ exports.create = async (req, res) => {
       emp_no: emp_no,
       join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,
       birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,
+      sector_id: sectorId,
       team_id: team_id && !isNaN(parseInt(team_id)) ? parseInt(team_id) : undefined,
       security_question: security_question || "What is your favorite color?",
       security_answer: securityAnswerHash || await bcrypt.hash("blue", 10)
     };
 
     console.log('User data to create:', userData); // Debug log
-    console.log('Agency/Range IDs:', { agencyId, rangeId }); // Debug log
+    console.log('Sector ID:', { sectorId }); // Debug log
 
     const user = await prisma.user.create({
       data: userData,
       include: {
-        range: { select: { id: true, name: true } },
-        agency: { select: { id: true, name: true } },
+        sector: { select: { id: true, agency: true, range: true } },
         team: { select: { id: true, name: true } },
         distributors: {
           include: {
@@ -171,20 +149,18 @@ exports.create = async (req, res) => {
       }
     });
 
-    // Update user with agency/range if they were found
-    if (agencyId || rangeId) {
+    // Update user with sector if provided
+    if (sectorId) {
       const updateData = {};
-      if (agencyId) updateData.agency_id = agencyId;
-      if (rangeId) updateData.range_id = rangeId;
-      
+      updateData.sector_id = sectorId;
+
       console.log('Updating user with:', updateData);
-      
+
       const updatedUser = await prisma.user.update({
         where: { id: user.id },
         data: updateData,
         include: {
-          range: { select: { id: true, name: true } },
-          agency: { select: { id: true, name: true } },
+          sector: { select: { id: true, agency: true, range: true } },
           team: { select: { id: true, name: true } },
           distributors: {
             include: {
@@ -201,8 +177,7 @@ exports.create = async (req, res) => {
       const finalUser = await prisma.user.findUnique({
         where: { id: updatedUser.id },
         include: {
-          range: { select: { id: true, name: true } },
-          agency: { select: { id: true, name: true } },
+          sector: { select: { id: true, agency: true, range: true } },
           team: { select: { id: true, name: true } },
           distributors: {
             include: {
@@ -211,7 +186,7 @@ exports.create = async (req, res) => {
           }
         }
       });
-      
+
       return ApiResponse.ok(
         res,
         "User created",
@@ -223,8 +198,7 @@ exports.create = async (req, res) => {
           designation: finalUser.designation,
           join_date: finalUser.join_date,
           birthday: finalUser.birthday,
-          range: finalUser.range,
-          agency: finalUser.agency,
+          sector: finalUser.sector,
           team: finalUser.team,
           distributors: finalUser.distributors
         },
@@ -239,8 +213,7 @@ exports.create = async (req, res) => {
     const finalUser = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        range: { select: { id: true, name: true } },
-        agency: { select: { id: true, name: true } },
+        sector: { select: { id: true, agency: true, range: true } },
         team: { select: { id: true, name: true } },
         distributors: {
           include: {
@@ -261,8 +234,7 @@ exports.create = async (req, res) => {
         designation: finalUser.designation,
         join_date: finalUser.join_date,
         birthday: finalUser.birthday,
-        range: finalUser.range,
-        agency: finalUser.agency,
+        sector: finalUser.sector,
         team: finalUser.team,
         distributors: finalUser.distributors
       },

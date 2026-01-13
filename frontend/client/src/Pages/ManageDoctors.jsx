@@ -12,7 +12,7 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
     email: doctor?.email || '',
     specialty: doctor?.specialty || doctor?.speciality || '',
     categorization: doctor?.categorization || '',
-    sector: doctor?.sector?.name || doctor?.sector || '',
+    sector: doctor?.sector?.range || '',
     dateAdded: doctor?.date ? new Date(doctor.date).toISOString().slice(0, 10) : ''
   });
   const [loading, setLoading] = useState(false);
@@ -144,14 +144,8 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
 function ViewDoctorModal({ doctor, onClose }) {
   if (!doctor) return null;
 
-  const sectorName =
-    typeof doctor.range === "object"
-      ? (doctor.range?.name || doctor.range?.code || doctor.range?._id || "")
-      : doctor.range?.name || "";
-  const agencyName =
-    typeof doctor.range === "object" && doctor.range?.agency
-      ? (doctor.range.agency?.name || doctor.range.agency?.code || "")
-      : "";
+  const sectorName = doctor.sector?.range || "";
+  const agencyName = doctor.sector?.agency || "";
   const displayDate = doctor.dateAdded
     ? new Date(doctor.dateAdded).toISOString().slice(0, 10)
     : doctor.date
@@ -252,7 +246,7 @@ export default function ManageDoctors() {
         specialty: payload.specialty,
         categorization: payload.categorization,
         dateAdded: payload.dateAdded,
-        range: created.range || { id: payload.range_id, name: 'Unknown' }, 
+        range: created.sector ? { name: created.sector.range, agency: { name: created.sector.agency } } : { id: payload.sector_id, name: 'Unknown' },
         
       };
       setDoctors((list) => [newRow, ...list]);
@@ -274,7 +268,7 @@ export default function ManageDoctors() {
       if (formData.email.trim()) updateData.email = formData.email.trim();
       if (formData.specialty.trim()) updateData.specialty = formData.specialty.trim();
       if (formData.categorization) updateData.categorization = formData.categorization;
-      if (formData.sector) updateData.sector = formData.sector;
+      updateData.sector_id = editingDoctor.sector?.id;
 
       await api.put(`/admin/doctors/${editingDoctor.id || editingDoctor._id}`, updateData);
 
@@ -288,7 +282,7 @@ export default function ManageDoctors() {
                 email: formData.email,
                 specialty: formData.specialty,
                 categorization: formData.categorization,
-                sector: formData.sector ? { name: formData.sector } : doc.sector,
+                sector: editingDoctor.sector,
                 date: formData.dateAdded ? new Date(formData.dateAdded).toISOString() : doc.date
               }
             : doc
@@ -404,14 +398,8 @@ export default function ManageDoctors() {
                 </tr>
               ) : (
                 doctors.map((doc) => {
-                  const sectorName =
-                    typeof doc.range === "object"
-                      ? (doc.range?.name || doc.range?.code || doc.range?._id || "")
-                      : doc.range?.name || "";
-                  const agencyName =
-                    typeof doc.range === "object" && doc.range?.agency
-                      ? (doc.range.agency?.name || doc.range.agency?.code || "")
-                      : "";
+                  const sectorName = doc.sector?.range || "";
+                  const agencyName = doc.sector?.agency || "";
                   const displayDate = doc.dateAdded
                     ? new Date(doc.dateAdded).toISOString().slice(0, 10)
                     : doc.date

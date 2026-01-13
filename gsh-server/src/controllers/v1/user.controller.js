@@ -179,8 +179,7 @@ async function getCurrentUserProfile(req, res) {
         designation: true,
         join_date: true,
         birthday: true,
-        agency: { select: { id: true, name: true } },
-        range: { select: { id: true, name: true } },
+        sector: { select: { id: true, agency: true, range: true } },
         team: { select: { id: true, name: true } },
         distributors: {
           include: {
@@ -191,8 +190,7 @@ async function getCurrentUserProfile(req, res) {
                 coverage_town: true,
                 route: true,
                 area: { select: { name: true } },
-                range: { select: { name: true } },
-                agency: { select: { name: true } }
+                sector: { select: { agency: true, range: true } }
               }
             }
           }
@@ -225,8 +223,8 @@ async function getCurrentUserProfile(req, res) {
       designation: user.designation,
       join_date: user.join_date,
       birthday: user.birthday,
-      agency: user.agency,
-      range: user.range,
+      agency: user.sector ? { id: user.sector.id, name: user.sector.agency } : null,
+      range: user.sector ? { id: user.sector.id, name: user.sector.range } : null,
       team: user.team,
       // For DCR compatibility - return first distributor as 'distributor'
       distributor: distributorInfo,

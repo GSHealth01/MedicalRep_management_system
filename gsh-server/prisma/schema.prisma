@@ -155,6 +155,8 @@ model product {
   route_of_administration String?
   pack_size               String?
   strength                String?
+  range                   String?
+  agency                  String?
   dateAdded               DateTime? @default(now())
 
   distributors            DistributorProducts[]

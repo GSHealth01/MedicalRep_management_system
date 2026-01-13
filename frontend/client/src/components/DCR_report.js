@@ -4,11 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 
-// Sample data
-const doctors = [
-  "M. Mendis - VP", "M. Mendis - MO", "M. Mendis - PEAD", "M. Mendis - GP", "Dr. Davis",
-  "Dr. Miller", "Dr. Wilson", "Dr. Moore", "Dr. Taylor", "Dr. Anderson"
-];
+// Doctors will be fetched from API
 
 const baseProductCategories = {
   "Cilacar": [
@@ -261,6 +257,8 @@ export default function RepdetailsReport() {
   const [itineraryMessage, setItineraryMessage] = useState("");
   const [areaDisabled, setAreaDisabled] = useState(false);
   const [townDisabled, setTownDisabled] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(true);
 
   // Step 2 State
   const [selectedProductTab, setSelectedProductTab] = useState("Cilacar");
@@ -341,6 +339,29 @@ export default function RepdetailsReport() {
       console.log('DCR: Set product categories for agency:', agencyName, Object.keys(categories));
     }
   }, [userProfile]);
+
+  // Fetch doctors on component mount
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await api.get('/doctors');
+        const doctorsData = response.data.doctors;
+        // Format doctor names: "Name - Specialty" if specialty exists
+        const formattedDoctors = doctorsData.map(doctor =>
+          doctor.specialty ? `${doctor.name} - ${doctor.specialty}` : doctor.name
+        );
+        setDoctors(formattedDoctors);
+      } catch (error) {
+        console.error('Error fetching doctors:', error);
+        // Fallback to empty array
+        setDoctors([]);
+      } finally {
+        setDoctorsLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   // Fetch itinerary for selected date
   useEffect(() => {
@@ -622,26 +643,34 @@ export default function RepdetailsReport() {
       {/* Doctor dropdown */}
       <div className="mb-8">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Doctor</label>
-        <div id="doctor-dropdown" className="relative" onClick={() => setShowDoctorDropdown(v => !v)}>
-          <div className="flex justify-between items-center px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:border-blue-500 hover:bg-blue-50">
-            <span className="text-gray-700">Select Doctor(s)</span>
+        <div id="doctor-dropdown" className="relative" onClick={() => !doctorsLoading && setShowDoctorDropdown(v => !v)}>
+          <div className={`flex justify-between items-center px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 ${!doctorsLoading ? 'cursor-pointer hover:border-blue-500 hover:bg-blue-50' : 'cursor-not-allowed'}`}>
+            <span className="text-gray-700">
+              {doctorsLoading ? 'Loading doctors...' : 'Select Doctor(s)'}
+            </span>
             <div className="flex items-center">
               {selectedDoctors.length > 0 && (
                 <span className="text-sm text-blue-600 mr-3 font-semibold bg-blue-100 px-2 py-1 rounded-full">
                   {selectedDoctors.length} selected
                 </span>
               )}
-              <span className="text-gray-500 text-lg">▾</span>
+              {!doctorsLoading && <span className="text-gray-500 text-lg">▾</span>}
             </div>
           </div>
-          {showDoctorDropdown && (
+          {showDoctorDropdown && !doctorsLoading && (
             <div className="absolute top-full left-0 right-0 bg-white border-2 border-gray-200 rounded-lg max-h-60 overflow-y-auto z-10 shadow-xl mt-1">
-              {doctors.map((doc) => (
-                <label key={doc} className={`flex items-center px-4 py-3 cursor-pointer text-sm ${selectedDoctors.includes(doc) ? 'bg-blue-50 text-blue-700 font-medium border-l-4 border-blue-500' : 'hover:bg-gray-50'}`}>
-                  <input type="checkbox" checked={selectedDoctors.includes(doc)} onChange={(e) => { e.stopPropagation(); toggleDoctor(doc); }} className="mr-3 scale-125 cursor-pointer" />
-                  {doc}
-                </label>
-              ))}
+              {doctors.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                  No doctors available. Please contact admin to add doctors.
+                </div>
+              ) : (
+                doctors.map((doc) => (
+                  <label key={doc} className={`flex items-center px-4 py-3 cursor-pointer text-sm ${selectedDoctors.includes(doc) ? 'bg-blue-50 text-blue-700 font-medium border-l-4 border-blue-500' : 'hover:bg-gray-50'}`}>
+                    <input type="checkbox" checked={selectedDoctors.includes(doc)} onChange={(e) => { e.stopPropagation(); toggleDoctor(doc); }} className="mr-3 scale-125 cursor-pointer" />
+                    {doc}
+                  </label>
+                ))
+              )}
             </div>
           )}
         </div>

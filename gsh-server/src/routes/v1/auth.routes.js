@@ -70,7 +70,7 @@ router.post('/signin', async (req, res) => {
 
   // Check if user has required fields for non-admin users
   if (user.designation !== 'ADMIN') {
-    if (!user.agency_id || !user.range_id) {
+    if (!user.sector_id) {
       return res.status(400).json({ msg: 'User account is incomplete. Please contact administrator.' });
     }
   }
