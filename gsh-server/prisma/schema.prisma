@@ -12,31 +12,14 @@ datasource db {
 }
 
 // ===============================
-// AGENCY (Top-level organization)
+// SECTOR (Agency and Range combined)
 // ===============================
 
-model agency {
+model sector {
   id           Int           @id @default(autoincrement())
-  name         String        @unique
+  agency       String        // REQUIRED
+  range        String        // A or B
   dateAdded    DateTime?     @default(now())
-
-  ranges        range[]
-  users         user[]
-  distributors  distributor[]
-  teams         team[]
-}
-
-// ===============================
-// RANGE (Territory inside agency)
-// ===============================
-
-model range {
-  id           Int           @id @default(autoincrement())
-  name         String        // REQUIRED
-  dateAdded    DateTime?     @default(now())
-
-  agency_id    Int
-  agency       agency        @relation(fields: [agency_id], references: [id])
 
   users        user[]
   teams        team[]
@@ -63,13 +46,9 @@ model team {
 
   dateAdded DateTime?     @default(now())
 
-  // TEAM → RANGE (Many teams belong to one range)
-  range_id   Int
-  range      range        @relation(fields: [range_id], references: [id])
-
-  // TEAM → AGENCY
-  agency_id  Int
-  agency     agency       @relation(fields: [agency_id], references: [id])
+  // TEAM → SECTOR
+  sector_id  Int
+  sector     sector       @relation(fields: [sector_id], references: [id])
 
   // TEAM → USERS (Team has many MRs)
   users      user[]
@@ -102,14 +81,11 @@ model distributor {
   route            String?
   dateAdded        DateTime? @default(now())
 
-  agency_id        Int
-  agency           agency @relation(fields: [agency_id], references: [id])
+  sector_id        Int
+  sector           sector @relation(fields: [sector_id], references: [id])
 
   area_id          Int
   area             area   @relation(fields: [area_id], references: [id])
-
-  range_id         Int
-  range            range  @relation(fields: [range_id], references: [id])
 
   products         DistributorProducts[]
   users            UserDistributors[]
@@ -135,11 +111,8 @@ model user {
   security_question String?
   security_answer   String?
 
-  agency_id Int?
-  agency    agency? @relation(fields: [agency_id], references: [id])
-
-  range_id  Int?
-  range     range?  @relation(fields: [range_id], references: [id])
+  sector_id Int?
+  sector    sector? @relation(fields: [sector_id], references: [id])
 
   team_id   Int?
   team      team?   @relation(fields: [team_id], references: [id])
@@ -163,8 +136,8 @@ model doctor {
   categorization String?
   dateAdded      DateTime? @default(now())
 
-  range_id       Int?
-  range          range? @relation(fields: [range_id], references: [id])
+  sector_id      Int?
+  sector         sector? @relation(fields: [sector_id], references: [id])
 
   users          UserDoctors[]
   prescriptions  DoctorPrescriptions[]

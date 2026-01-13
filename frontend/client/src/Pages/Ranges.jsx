@@ -2,59 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
 export default function Ranges() {
-  const [ranges, setRanges] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
 
   // Hardcoded agencies list
   const hardcodedAgencies = [
-    { id: 'A1', name: 'A1' },
-    { id: 'A2', name: 'A2' },
-    { id: 'A3', name: 'A3' },
-    { id: 'A4', name: 'A4' },
-    { id: 'A5', name: 'A5' },
-    { id: 'B1', name: 'B1' },
-    { id: 'B2', name: 'B2' },
-    { id: 'B3', name: 'B3' },
-    { id: 'B4', name: 'B4' },
-    { id: 'B5', name: 'B5' },
-    { id: 'B6', name: 'B6' },
-    { id: 'B7', name: 'B7' },
-    { id: 'B8', name: 'B8' },
-    { id: 'B9', name: 'B9' },
-    { id: 'B10', name: 'B10' }
+    'A1', 'A2', 'A3', 'A4', 'A5',
+    'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10'
   ];
 
-  // Get filtered agencies based on selected range
-  const getFilteredAgencies = (rangeName) => {
-    if (!rangeName) return [];
-    if (rangeName === 'A') {
-      return hardcodedAgencies.filter(a => a.name.startsWith('A'));
-    } else if (rangeName === 'B') {
-      return hardcodedAgencies.filter(a => a.name.startsWith('B'));
-    }
-    return [];
-  };
-
   const [form, setForm] = useState({
-    name: '',
-    agency_id: ''
+    agency: '',
+    range: ''
   });
 
-  // Fetch ranges on component mount
+  // Fetch sectors on component mount
   useEffect(() => {
-    fetchRanges();
+    fetchSectors();
   }, []);
 
-  const fetchRanges = async () => {
+  const fetchSectors = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/ranges');
-      setRanges(response.data.ranges || []);
+      const response = await api.get(`/admin/sectors?t=${Date.now()}`);
+      console.log('Fetched sectors:', response.data.data?.items);
+      setSectors(response.data.data?.items || []);
     } catch (error) {
-      console.error('Error fetching ranges:', error);
-      setMessage('Failed to load ranges');
+      console.error('Error fetching sectors:', error);
+      setMessage('Failed to load sectors');
     } finally {
       setLoading(false);
     }
@@ -72,39 +49,31 @@ export default function Ranges() {
     e.preventDefault();
     setMessage('');
 
-    if (!form.name || !form.agency_id) {
+    if (!form.agency || !form.range) {
       setMessage('Please fill in all required fields');
       return;
     }
 
-    // Check if agency is already assigned to another range
-    const selectedAgency = hardcodedAgencies.find(a => a.id === form.agency_id);
-    console.log('Duplicate check:', {
-      selectedAgency,
-      formAgencyId: form.agency_id,
-      ranges: ranges.map(r => ({ name: r.name, agency: r.agency }))
-    });
-    
-    const existingAssignment = ranges.find(r =>
-      r.agency && r.agency.id === form.agency_id
+    // Check if sector already exists
+    const existingSector = sectors.find(s =>
+      s.agency === form.agency && s.range === form.range
     );
-    console.log('Existing assignment found:', existingAssignment);
     
-    if (existingAssignment) {
-      setMessage(`Agency ${selectedAgency?.name} is already assigned to Range ${existingAssignment.name}. Please choose a different agency.`);
+    if (existingSector) {
+      setMessage(`Sector with Agency ${form.agency} and Range ${form.range} already exists.`);
       return;
     }
 
     try {
       setSubmitting(true);
-      await api.post('/ranges', form);
+      await api.post('/admin/sectors', form);
 
-      setMessage('Range created successfully!');
-      setForm({ name: '', agency_id: '' });
-      fetchRanges(); // Refresh the list
+      setMessage('Sector created successfully!');
+      setForm({ agency: '', range: '' });
+      fetchSectors(); // Refresh the list
     } catch (error) {
-      console.error('Error creating range:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to create range';
+      console.error('Error creating sector:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to create sector';
       setMessage(errorMsg);
     } finally {
       setSubmitting(false);
@@ -112,17 +81,17 @@ export default function Ranges() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this range?')) {
+    if (!window.confirm('Are you sure you want to delete this sector?')) {
       return;
     }
 
     try {
-      await api.delete(`/ranges/${id}`);
-      setMessage('Range deleted successfully!');
-      fetchRanges(); // Refresh the list
+      await api.delete(`/admin/sectors/${id}`);
+      setMessage('Sector deleted successfully!');
+      fetchSectors(); // Refresh the list
     } catch (error) {
-      console.error('Error deleting range:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to delete range';
+      console.error('Error deleting sector:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to delete sector';
       setMessage(errorMsg);
     }
   };
@@ -134,7 +103,7 @@ export default function Ranges() {
 
   return (
     <div className="p-8 overflow-y-auto">
-      <h1 className="text-3xl font-bold mb-8 text-gray-800">Manage Ranges</h1>
+      <h1 className="text-3xl font-bold mb-8 text-gray-800">Manage Sectors</h1>
 
       {message && (
         <div className={`mb-4 p-3 rounded ${
@@ -147,18 +116,18 @@ export default function Ranges() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Column 1: Add New Range Form */}
+        {/* Column 1: Add New Sector Form */}
         <div className="lg:col-span-1 bg-white rounded-lg shadow-md p-6 h-fit">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Add New Range</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">Add New Sector</h2>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="range-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Range Name *
+              <label htmlFor="range" className="block text-sm font-medium text-gray-700 mb-1">
+                Range *
               </label>
               <select
-                id="range-name"
-                name="name"
-                value={form.name}
+                id="range"
+                name="range"
+                value={form.range}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
@@ -171,20 +140,20 @@ export default function Ranges() {
 
             <div>
               <label htmlFor="agency" className="block text-sm font-medium text-gray-700 mb-1">
-                Assign to Agency *
+                Agency *
               </label>
               <select
                 id="agency"
-                name="agency_id"
-                value={form.agency_id}
+                name="agency"
+                value={form.agency}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
                 <option value="">Select an Agency</option>
-                {getFilteredAgencies(form.name).map(agency => (
-                  <option key={agency.id} value={agency.id}>
-                    {agency.name}
+                {hardcodedAgencies.map(agency => (
+                  <option key={agency} value={agency}>
+                    {agency}
                   </option>
                 ))}
               </select>
@@ -195,46 +164,49 @@ export default function Ranges() {
               disabled={submitting}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {submitting ? 'Creating...' : 'Create Range'}
+              {submitting ? 'Creating...' : 'Create Sector'}
             </button>
           </form>
         </div>
 
-        {/* Column 2: List of Existing Ranges */}
+        {/* Column 2: List of Existing Sectors */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-6 border-b">
-             <h2 className="text-xl font-semibold text-gray-700">All Ranges</h2>
+             <h2 className="text-xl font-semibold text-gray-700">All Sectors</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agency</th>
                   <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Range</th>
                   <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</th>
                   <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {ranges.length === 0 ? (
+                {sectors.length === 0 ? (
                   <tr>
-                    <td colSpan="3" className="py-4 px-6 text-center text-gray-500">
-                      No ranges found.
+                    <td colSpan="4" className="py-4 px-6 text-center text-gray-500">
+                      No sectors found.
                     </td>
                   </tr>
                 ) : (
-                  ranges.map(range => (
-                    <tr key={range.id} className="hover:bg-gray-50">
+                  sectors.map(sector => (
+                    <tr key={sector.id} className="hover:bg-gray-50">
                       <td className="py-4 px-6">
-                        <div className="font-medium text-gray-900">{range.name}</div>
-                        <div className="text-sm text-gray-500">Agency: {range.agency?.name || 'N/A'}</div>
+                        <div className="font-medium text-gray-900">{sector.agency}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="font-medium text-gray-900">{sector.range}</div>
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-700">
-                        Agency: {range.agency?.name || "None"} | Users: {range._count?.users || 0} | Teams: {range._count?.teams || 0}
+                        Users: {sector._count?.users || 0} | Teams: {sector._count?.teams || 0} | Doctors: {sector._count?.doctors || 0} | Distributors: {sector._count?.distributors || 0}
                       </td>
                       <td className="py-4 px-6">
                         <button
-                          onClick={() => handleDelete(range.id)}
+                          onClick={() => handleDelete(sector.id)}
                           className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm"
                         >
                           Delete

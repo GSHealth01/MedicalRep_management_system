@@ -26,7 +26,7 @@ exports.list = async (req, res) => {
         skip,
         take: Number(limit),
         include: {
-          agency: { select: { id: true, name: true } },
+          sector: { select: { id: true, agency: true, range: true } },
           area: { select: { id: true, name: true } }
         }
       }),
@@ -54,13 +54,13 @@ exports.create = async (req, res) => {
     console.log('Distributor create request body:', req.body); // Debug log
 
     const {
-      name, coverage_town, route, agency_id, area_id, area, range_id, distributor_code
+      name, coverage_town, route, sector_id, area_id, area, distributor_code
     } = req.body;
 
-    console.log('Extracted fields:', { name, coverage_town, route, agency_id, area_id, area, range_id, distributor_code }); // Debug log
+    console.log('Extracted fields:', { name, coverage_town, route, sector_id, area_id, area, distributor_code }); // Debug log
 
-    if (!name || !distributor_code || !agency_id || !range_id) {
-      return ApiResponse.error(res, "Name, distributor_code, agency_id, and range_id are required", 400);
+    if (!name || !distributor_code || !sector_id) {
+      return ApiResponse.error(res, "Name, distributor_code, and sector_id are required", 400);
     }
 
     let areaIdToUse = area_id;
@@ -93,14 +93,12 @@ exports.create = async (req, res) => {
         name,
         coverage_town,
         route,
-        agency_id: parseInt(agency_id),
-        area_id: parseInt(areaIdToUse),
-        range_id: parseInt(range_id)
+        sector_id: parseInt(sector_id),
+        area_id: parseInt(areaIdToUse)
       },
       include: {
-        agency: { select: { id: true, name: true } },
-        area: { select: { id: true, name: true } },
-        range: { select: { id: true, name: true } }
+        sector: { select: { id: true, agency: true, range: true } },
+        area: { select: { id: true, name: true } }
       }
     });
 

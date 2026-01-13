@@ -20,18 +20,23 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
   const [loadingAgencies, setLoadingAgencies] = useState(true);
   const [agencyError, setAgencyError] = useState("");
 
-  // Load agencies from API
+  // Load sectors from API and map to agencies
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoadingAgencies(true);
       setAgencyError("");
       try {
-        const res = await api.get("/agencies");
-        const payload = res?.data?.agencies || [];
-        if (mounted) setAgencies(payload);
+        const res = await api.get("/admin/sectors");
+        const payload = res?.data?.data?.items || [];
+        // Map sectors to agency format
+        const agencyList = payload.map(sector => ({
+          id: sector.id,
+          name: sector.agency
+        }));
+        if (mounted) setAgencies(agencyList);
       } catch (err) {
-        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load agencies");
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load sectors");
       } finally {
         if (mounted) setLoadingAgencies(false);
       }

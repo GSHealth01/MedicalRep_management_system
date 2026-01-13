@@ -10,27 +10,17 @@ function normEmail(v) {
 exports.list = async (req, res) => {
   try {
     const { range, agency, limit } = req.query;
-    
+
     // Build where clause for filtering
     const where = {};
-    
-    if (range) {
-      // Handle both numeric range_id and string range name
-      if (!isNaN(parseInt(range))) {
-        where.range_id = parseInt(range);
-      } else {
-        // Filter by range name (like "A" or "B")
-        where.range = { name: range };
+
+    if (range || agency) {
+      where.sector = {};
+      if (range) {
+        where.sector.range = range;
       }
-    }
-    
-    if (agency) {
-      // Handle both numeric agency_id and string agency name
-      if (!isNaN(parseInt(agency))) {
-        where.agency_id = parseInt(agency);
-      } else {
-        // Filter by agency name
-        where.agency = { name: agency };
+      if (agency) {
+        where.sector.agency = agency;
       }
     }
 
@@ -39,8 +29,8 @@ exports.list = async (req, res) => {
     const users = await prisma.user.findMany({
       where,
       include: {
-        range: { select: { id: true, name: true } },
-        agency: { select: { id: true, name: true } },
+        sector: { select: { id: true, agency: true, range: true } },
+        team: { select: { id: true, name: true } },
         distributors: {
           include: {
             distributor: { select: { distributor_code: true, name: true } }
@@ -48,7 +38,7 @@ exports.list = async (req, res) => {
         }
       },
       orderBy: { id: 'desc' },
-      take: limit ? parseInt(limit) : undefined
+      take: limit ? parseInt(limit) : 200
     });
 
     console.log(`Found ${users.length} users`); // Debug log

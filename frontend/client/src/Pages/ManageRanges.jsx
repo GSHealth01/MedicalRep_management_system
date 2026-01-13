@@ -3,42 +3,16 @@ import { api } from "../services/api"; // baseURL should be http://localhost:400
 
 export default function ManageSectors() {
   const [sectors, setSectors] = useState([]);
-  const [newSector, setNewSector] = useState("");
   const [newAgency, setNewAgency] = useState("");
-  const [selectedSector, setSelectedSector] = useState(null);
+  const [newRange, setNewRange] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [agencies, setAgencies] = useState([]);
 
   // Hardcoded agencies
   const hardcodedAgencies = [
-    { id: 'A1', name: 'A1' },
-    { id: 'A2', name: 'A2' },
-    { id: 'A3', name: 'A3' },
-    { id: 'A4', name: 'A4' },
-    { id: 'A5', name: 'A5' },
-    { id: 'B1', name: 'B1' },
-    { id: 'B2', name: 'B2' },
-    { id: 'B3', name: 'B3' },
-    { id: 'B4', name: 'B4' },
-    { id: 'B5', name: 'B5' },
-    { id: 'B6', name: 'B6' },
-    { id: 'B7', name: 'B7' },
-    { id: 'B8', name: 'B8' },
-    { id: 'B9', name: 'B9' },
-    { id: 'B10', name: 'B10' }
+    'A1', 'A2', 'A3', 'A4', 'A5',
+    'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10'
   ];
-
-  // Get filtered agencies based on selected sector
-  const getFilteredAgencies = (sectorName) => {
-    if (!sectorName) return [];
-    if (sectorName === 'A') {
-      return hardcodedAgencies.filter(a => a.name.startsWith('A'));
-    } else if (sectorName === 'B') {
-      return hardcodedAgencies.filter(a => a.name.startsWith('B'));
-    }
-    return [];
-  };
 
   // Load sectors on mount
   useEffect(() => {
@@ -46,9 +20,8 @@ export default function ManageSectors() {
       setLoading(true);
       setErr("");
       try {
-        // Load ranges (sectors) from new API
-        const rangesRes = await api.get("/ranges");
-        setSectors(rangesRes.data.ranges || []);
+        const res = await api.get("/admin/sectors");
+        setSectors(res.data.items || []);
       } catch (e) {
         setErr(e?.response?.data?.message || "Failed to load data");
       } finally {
@@ -57,75 +30,18 @@ export default function ManageSectors() {
     })();
   }, []);
 
-  // Add a new sector (POST /ranges)
+  // Add a new sector
   const addSector = async () => {
-    if (!newSector) return;
+    if (!newAgency || !newRange) return;
     try {
-      const body = { name: newSector.trim() };
-      const res = await api.post("/ranges", body);
-      const created = res?.data?.range || {};
-      const row = {
-        id: created.id,
-        name: created.name,
-        agency: created.agency,
-        _count: created._count || { users: 0, teams: 0 }
-      };
-      setSectors((s) => [...s, row]);
-      setNewSector("");
+      const body = { agency: newAgency.trim(), range: newRange };
+      const res = await api.post("/admin/sectors", body);
+      const created = res?.data?.data || {};
+      setSectors((s) => [...s, created]);
+      setNewAgency("");
+      setNewRange("");
     } catch (e) {
       alert(e?.response?.data?.message || "Failed to add sector");
-    }
-  };
-
-  // Add an agency (using hardcoded agencies)
-  const addAgency = async (sector) => {
-    console.log('addAgency called with:', { sector, newAgency, sectors });
-    if (!newAgency.trim()) return;
-    
-    // Find the selected agency from hardcoded list
-    const selectedAgency = hardcodedAgencies.find(a => a.name === newAgency);
-    if (!selectedAgency) {
-      alert("Invalid agency selected");
-      return;
-    }
-    
-    // Check if agency is already assigned to this sector
-    if (sector.agency?.name === selectedAgency.name) {
-      alert(`Agency ${selectedAgency.name} is already assigned to Range ${sector.name}`);
-      return;
-    }
-    
-    // Check if agency is already assigned to another sector
-    const existingAssignment = sectors.find(s =>
-      s.agency?.name === selectedAgency.name && s.id !== sector.id
-    );
-    
-    if (existingAssignment) {
-      alert(`Agency ${selectedAgency.name} is already assigned to Range ${existingAssignment.name}. Please unassign it first.`);
-      return;
-    }
-    
-    try {
-      // Update the sector with the selected agency
-      const body = {
-        name: sector.name,
-        agency_id: selectedAgency.id
-      };
-      await api.put(`/ranges/${sector.id}`, body);
-      
-      // Update local state
-      setSectors((s) =>
-        s.map((sec) =>
-          sec.id === sector.id
-            ? { ...sec, agency: { name: selectedAgency.name, id: selectedAgency.id } }
-            : sec
-        )
-      );
-      
-      setNewAgency("");
-      setSelectedSector(null);
-    } catch (e) {
-      alert(e?.response?.data?.message || "Failed to assign agency");
     }
   };
 
@@ -133,25 +49,37 @@ export default function ManageSectors() {
   // UI
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Manage Ranges (Sectors)</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Manage Sectors</h1>
 
       {/* Add Sector */}
       <div className="mb-6 flex gap-2">
         <select
-          className="border rounded px-3 py-2 flex-1 shadow-sm"
-          value={newSector}
-          onChange={(e) => setNewSector(e.target.value)}
+          className="border rounded px-3 py-2 shadow-sm"
+          value={newRange}
+          onChange={(e) => setNewRange(e.target.value)}
         >
           <option value="">Select Range</option>
           <option value="A">A</option>
           <option value="B">B</option>
         </select>
+        <select
+          className="border rounded px-3 py-2 shadow-sm"
+          value={newAgency}
+          onChange={(e) => setNewAgency(e.target.value)}
+        >
+          <option value="">Select Agency</option>
+          {hardcodedAgencies.map((agency) => (
+            <option key={agency} value={agency}>
+              {agency}
+            </option>
+          ))}
+        </select>
         <button
           onClick={addSector}
           className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          disabled={!newSector}
+          disabled={!newRange || !newAgency}
         >
-          Add Range
+          Add Sector
         </button>
       </div>
 
@@ -163,66 +91,18 @@ export default function ManageSectors() {
           <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
             <thead className="bg-blue-600 text-white">
               <tr>
+                <th className="py-2 px-4 text-left">Agency</th>
                 <th className="py-2 px-4 text-left">Range</th>
-                <th className="py-2 px-4 text-left">Agencies</th>
-                <th className="py-2 px-4 text-center">Actions</th>
+                <th className="py-2 px-4 text-center">Counts</th>
               </tr>
             </thead>
             <tbody>
               {sectors.map((sector) => (
                 <tr key={sector.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2 px-4">
-                    <div className="font-medium">{sector.name}</div>
-                    <div className="text-xs text-gray-500">
-                      Agency: {sector.agency?.name || 'N/A'} | Users: {sector._count?.users || 0} | Teams: {sector._count?.teams || 0}
-                    </div>
-                  </td>
-
-                  <td className="py-2 px-4">
-                    {sector.agency?.name || "None"}
-                  </td>
-
+                  <td className="py-2 px-4">{sector.agency}</td>
+                  <td className="py-2 px-4">{sector.range}</td>
                   <td className="py-2 px-4 text-center">
-                    {selectedSector === sector.id ? (
-                      <div className="flex gap-2 justify-center">
-                        <select
-                          className="border rounded px-2 py-1"
-                          value={newAgency}
-                          onChange={(e) => {
-                            console.log('Agency changed to:', e.target.value);
-                            setNewAgency(e.target.value);
-                          }}
-                        >
-                          <option value="">Select Agency</option>
-                          {getFilteredAgencies(sector.name).map((agency) => (
-                            <option key={agency.id} value={agency.name}>
-                              {agency.name}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => addAgency(sector)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                        >
-                          Add
-                        </button>
-                        <button
-                          onClick={() => setSelectedSector(null)}
-                          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setSelectedSector(sector.id);
-                        }}
-                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
-                      >
-                        + Add Agency
-                      </button>
-                    )}
+                    Users: {sector._count?.users || 0} | Teams: {sector._count?.teams || 0} | Doctors: {sector._count?.doctors || 0} | Distributors: {sector._count?.distributors || 0}
                   </td>
                 </tr>
               ))}

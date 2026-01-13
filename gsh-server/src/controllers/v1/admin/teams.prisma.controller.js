@@ -20,11 +20,7 @@ exports.list = async (req, res) => {
       take: Number(limit),
       orderBy,
       include: {
-        range: {
-          include: {
-            agency: true
-          }
-        },
+        sector: true,
         users: {
           select: {
             id: true,
@@ -106,8 +102,7 @@ exports.create = async (req, res) => {
   const transaction = await prisma.$transaction(async (tx) => {
     const {
       name,
-      range_id,
-      agency_id,
+      sector_id,
       // Employee IDs that will be assigned to the team
       ops = [],
       sms = [],
@@ -118,30 +113,23 @@ exports.create = async (req, res) => {
       fcs = [],
       mrs = []
     } = req.body;
-    
-    if (!name || !range_id || !agency_id) {
-      throw new AppError(400, "Name, range_id, and agency_id are required");
+
+    if (!name || !sector_id) {
+      throw new AppError(400, "Name and sector_id are required");
     }
 
-    // Check if range and agency exist
-    const [range, agency] = await Promise.all([
-      tx.range.findUnique({ where: { id: parseInt(range_id) } }),
-      tx.agency.findUnique({ where: { id: parseInt(agency_id) } })
-    ]);
+    // Check if sector exists
+    const sector = await tx.sector.findUnique({ where: { id: parseInt(sector_id) } });
 
-    if (!range) {
-      throw new AppError(404, "Range not found");
-    }
-    if (!agency) {
-      throw new AppError(404, "Agency not found");
+    if (!sector) {
+      throw new AppError(404, "Sector not found");
     }
 
     // Create the team first
     const team = await tx.team.create({
       data: {
         name: name,
-        range_id: parseInt(range_id),
-        agency_id: parseInt(agency_id),
+        sector_id: parseInt(sector_id),
       }
     });
 
@@ -181,8 +169,7 @@ exports.create = async (req, res) => {
             designation: true
           }
         },
-        range: true,
-        agency: true
+        sector: true
       }
     });
 
@@ -220,8 +207,7 @@ exports.create = async (req, res) => {
     return ApiResponse.ok(res, "Team created successfully", {
       id: teamWithUsers.id,
       name: teamWithUsers.name,
-      range: teamWithUsers.range,
-      agency: teamWithUsers.agency,
+      sector: teamWithUsers.sector,
       assignedUsers: {
         ops: groupedUsers.ops,
         sms: groupedUsers.sms,
@@ -243,11 +229,7 @@ exports.getOne = async (req, res) => {
     const team = await prisma.team.findUnique({
       where: { id: parseInt(req.params.id) },
       include: {
-        range: {
-          include: {
-            agency: true
-          }
-        }
+        sector: true
       }
     });
 
@@ -267,31 +249,18 @@ exports.getOne = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { name, range_id, agency_id } = req.body;
+    const { name, sector_id } = req.body;
     const { id } = req.params;
 
     const updateData = {};
     if (name) updateData.name = name;
-    if (range_id) updateData.range_id = parseInt(range_id);
-    if (agency_id) updateData.agency_id = parseInt(agency_id);
+    if (sector_id) updateData.sector_id = parseInt(sector_id);
 
-    // Check if range and agency exist if provided
-    if (range_id || agency_id) {
-      const checks = [];
-      if (range_id) {
-        checks.push(prisma.range.findUnique({ where: { id: parseInt(range_id) } }));
-      }
-      if (agency_id) {
-        checks.push(prisma.agency.findUnique({ where: { id: parseInt(agency_id) } }));
-      }
-      
-      const [rangeResult, agencyResult] = await Promise.all(checks);
-      
-      if (range_id && !rangeResult) {
-        throw new AppError(404, "Range not found");
-      }
-      if (agency_id && !agencyResult) {
-        throw new AppError(404, "Agency not found");
+    // Check if sector exists if provided
+    if (sector_id) {
+      const sector = await prisma.sector.findUnique({ where: { id: parseInt(sector_id) } });
+      if (!sector) {
+        throw new AppError(404, "Sector not found");
       }
     }
 

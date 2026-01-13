@@ -3,7 +3,8 @@ import { api } from "../services/api"; // baseURL should point to your BE (e.g.,
 
 export default function DoctorForm({ onSubmit }) {
   const [formData, setFormData] = useState({
-    sector: "",            // <-- NEW: sector _id
+    range: "",             // "A" or "B"
+    agency: "",            // agency name like "A1", "A2", etc.
     doctorName: "",
     contactNumber: "",
     email: "",
@@ -12,39 +13,101 @@ export default function DoctorForm({ onSubmit }) {
     date: "",
   });
 
+  const [ranges, setRanges] = useState([]);
+  const [agencies, setAgencies] = useState([]);
+  const [loadingRanges, setLoadingRanges] = useState(false);
+  const [loadingAgencies, setLoadingAgencies] = useState(true);
+  const [errRanges, setErrRanges] = useState("");
+  const [errAgencies, setErrAgencies] = useState("");
 
-  const [sectors, setSectors] = useState([]);
-  const [loadingSectors, setLoadingSectors] = useState(true);
-  const [sectorError, setSectorError] = useState("");
+  // Helpers
+  const normalizeItems = (res) => {
+    // Handle different response structures
+    const data = res?.data;
 
-  // Load ranges (sectors) from DB
+    // If response has agencies key
+    if (data?.agencies && Array.isArray(data.agencies)) {
+      return data.agencies;
+    }
+
+    // If response has ranges key
+    if (data?.ranges && Array.isArray(data.ranges)) {
+      return data.ranges;
+    }
+
+    // If response has data.items structure
+    if (data?.data?.items && Array.isArray(data.data.items)) {
+      return data.data.items;
+    }
+
+    // If response has items directly
+    if (data?.items && Array.isArray(data.items)) {
+      return data.items;
+    }
+
+    // If response is an array directly
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    return [];
+  };
+
+  // Load ranges and agencies
   useEffect(() => {
     let mounted = true;
+
+    // Load ranges (hardcoded)
+    setRanges([
+      { id: 'A', name: 'A' },
+      { id: 'B', name: 'B' }
+    ]);
+    setLoadingRanges(false);
+
+    // Load sectors as agencies
     (async () => {
-      setLoadingSectors(true);
-      setSectorError("");
+      setLoadingAgencies(true);
+      setErrAgencies("");
       try {
-        const res = await api.get("/ranges", { params: { limit: 200 } });
-        const payload = res?.data?.ranges ?? res?.data ?? {};
-        const items = Array.isArray(payload) ? payload : [];
-        if (mounted) setSectors(items);
-      } catch (err) {
-        if (mounted) setSectorError(err?.response?.data?.message || "Failed to load ranges");
+        const res = await api.get("/admin/sectors");
+        const payload = res?.data?.data?.items || [];
+        // Map sectors to agency format
+        const agencyList = payload.map(sector => ({
+          id: sector.id,
+          name: sector.agency
+        }));
+        if (mounted) setAgencies(agencyList);
+      } catch (e) {
+        if (mounted) setErrAgencies(e?.response?.data?.message || "Failed to load sectors");
       } finally {
-        if (mounted) setLoadingSectors(false);
+        if (mounted) setLoadingAgencies(false);
       }
     })();
     return () => { mounted = false; };
   }, []);
 
+  // Filter agencies based on selected range
+  const filteredAgencies = useMemo(() => {
+    if (!formData.range) return [];
+    return agencies.filter(agency => agency.name.startsWith(formData.range));
+  }, [agencies, formData.range]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((s) => ({ ...s, [name]: value }));
+    setFormData((s) => {
+      const newData = { ...s, [name]: value };
+      // Clear agency when range changes
+      if (name === 'range') {
+        newData.agency = '';
+      }
+      return newData;
+    });
   };
 
   const canSubmit = useMemo(() => {
     return (
-      !!formData.sector &&
+      !!formData.range &&
+      !!formData.agency &&
       !!formData.doctorName.trim() &&
       !!formData.contactNumber.trim() &&
       // email optional in your BE, but keep if you want:
@@ -57,9 +120,17 @@ export default function DoctorForm({ onSubmit }) {
     e.preventDefault();
     if (!canSubmit) return;
 
+    // Find the range ID
+    const selectedRange = ranges.find(r => r.name === formData.range);
+
+    if (!selectedRange) {
+      alert("Invalid range selection");
+      return;
+    }
+
     // Normalize for BE
     const payload = {
-      range_id: formData.sector,               // required by BE
+      range_id: selectedRange.id,             // required by BE
       name: formData.doctorName,              // BE expects "name"
       contactNumber: formData.contactNumber,
       email: formData.email || undefined,
@@ -73,7 +144,8 @@ export default function DoctorForm({ onSubmit }) {
 
     // reset
     setFormData({
-      sector: "",
+      range: "",
+      agency: "",
       doctorName: "",
       contactNumber: "",
       email: "",
@@ -88,25 +160,43 @@ export default function DoctorForm({ onSubmit }) {
       onSubmit={handleSubmit}
       className="max-w-2xl bg-white shadow-lg rounded-lg p-6 space-y-4"
     >
-      {/* Range (Sector) */}
+      {/* Range */}
       <div>
-        <label className="block text-gray-700 mb-1">Range (Sector)</label>
+        <label className="block text-gray-700 mb-1">Range</label>
         <select
-          name="sector"
-          value={formData.sector}
+          name="range"
+          value={formData.range}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
-          disabled={loadingSectors || !!sectorError}
         >
-          <option value="">{loadingSectors ? "Loading ranges..." : "Select range"}</option>
-          {sectors.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name} {s.agency ? `(Agency: ${s.agency.name})` : ""}
+          <option value="">Select Range</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+        </select>
+      </div>
+
+      {/* Agency */}
+      <div>
+        <label className="block text-gray-700 mb-1">Agency</label>
+        <select
+          name="agency"
+          value={formData.agency}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+          disabled={!formData.range || loadingAgencies || !!errAgencies}
+        >
+          <option value="">
+            {loadingAgencies ? "Loading agencies..." : formData.range ? "Select agency" : "Select range first"}
+          </option>
+          {filteredAgencies.map((a) => (
+            <option key={a.id} value={a.name}>
+              {a.name}
             </option>
           ))}
         </select>
-        {sectorError && <p className="text-sm text-red-600 mt-1">{sectorError}</p>}
+        {errAgencies && <p className="text-sm text-red-600 mt-1">{errAgencies}</p>}
       </div>
 
       {/* Doctor Name */}

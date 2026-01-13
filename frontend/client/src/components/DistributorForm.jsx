@@ -17,18 +17,23 @@ export default function DistributorForm({ onSubmit }) {
   const [loadingAgencies, setLoadingAgencies] = useState(true);
   const [agencyError, setAgencyError] = useState("");
 
-  // Load agencies from API
+  // Load sectors from API and map to agencies
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoadingAgencies(true);
       setAgencyError("");
       try {
-        const res = await api.get("/agencies");
-        const payload = res?.data?.agencies || [];
-        if (mounted) setAgencies(payload);
+        const res = await api.get("/admin/sectors");
+        const payload = res?.data?.data?.items || [];
+        // Map sectors to agency format
+        const agencyList = payload.map(sector => ({
+          id: sector.id,
+          name: sector.agency
+        }));
+        if (mounted) setAgencies(agencyList);
       } catch (err) {
-        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load agencies");
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load sectors");
       } finally {
         if (mounted) setLoadingAgencies(false);
       }
@@ -81,13 +86,12 @@ export default function DistributorForm({ onSubmit }) {
 
     // Normalize payload for BE
     const payload = {
-      distributor_code: formData.distributorCode.trim(), 
+      distributor_code: formData.distributorCode.trim(),
       name: formData.distributorName.trim(),
-      coverage_town: formData.town.trim(), 
+      coverage_town: formData.town.trim(),
       route: formData.route,
-      range_id: parseInt(formData.sector), 
-      agency_id: parseInt(formData.range), 
-      area: formData.area.trim(), 
+      sector_id: parseInt(formData.range),
+      area: formData.area.trim(),
     };
 
     console.log('Submitting distributor payload:', payload);

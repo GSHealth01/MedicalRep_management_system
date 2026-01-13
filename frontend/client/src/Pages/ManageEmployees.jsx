@@ -327,8 +327,8 @@ export default function ManageEmployees() {
           email: item.email || "",
           emp_no: item.emp_no || item.empNo || "",
           designation: item.designation || "",
-          range: item.range || { name: item.range_name || "" },
-          agency: item.agency || { name: item.agency_name || "" },
+          range: item.sector ? { name: item.sector.range } : (item.range || { name: item.range_name || "" }),
+          agency: item.sector ? { name: item.sector.agency } : (item.agency || { name: item.agency_name || "" }),
           // Handle new distributors array and legacy single distributor
           distributors: item.distributors?.map(d => d.distributor) || [],
           distributor: item.distributor_code || "", // Keep for backward compatibility

@@ -14,39 +14,25 @@ async function seedAdminUser() {
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
     // First ensure required relations exist
-    let agency = await prisma.agency.findFirst({
-      where: { name: "Default Agency" }
+    let sector = await prisma.sector.findFirst({
+      where: { agency: "Default Agency", range: "A" }
     });
 
-    if (!agency) {
-      agency = await prisma.agency.create({
-        data: { name: "Default Agency" }
-      });
-    }
-
-    let range = await prisma.range.findFirst({
-      where: { name: "Default Range", agency_id: agency.id }
-    });
-
-    if (!range) {
-      range = await prisma.range.create({
-        data: {
-          name: "Default Range",
-          agency_id: agency.id
-        }
+    if (!sector) {
+      sector = await prisma.sector.create({
+        data: { agency: "Default Agency", range: "A" }
       });
     }
 
     let team = await prisma.team.findFirst({
-      where: { name: "Admin Team", range_id: range.id }
+      where: { name: "Admin Team", sector_id: sector.id }
     });
 
     if (!team) {
       team = await prisma.team.create({
         data: {
           name: "Admin Team",
-          range_id: range.id,
-          agency_id: agency.id
+          sector_id: sector.id
         }
       });
     }
@@ -66,8 +52,7 @@ async function seedAdminUser() {
         password: passwordHash,
         name: "System Admin",
         designation: "ADMIN",
-        agency_id: agency.id,
-        range_id: range.id,
+        sector_id: sector.id,
         team_id: team.id
       },
       create: {
@@ -76,8 +61,7 @@ async function seedAdminUser() {
         password: passwordHash,
         emp_no: empNo,
         designation: "ADMIN",
-        agency_id: agency.id,
-        range_id: range.id,
+        sector_id: sector.id,
         team_id: team.id
       }
     });

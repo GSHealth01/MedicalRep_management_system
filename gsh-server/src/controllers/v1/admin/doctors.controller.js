@@ -24,16 +24,11 @@ exports.list = async (req, res) => {
       prisma.doctor.findMany({
         where: filter,
         include: {
-          range: {
+          sector: {
             select: {
               id: true,
-              name: true,
-              agency: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
+              agency: true,
+              range: true
             }
           }
         },

@@ -3,9 +3,8 @@ import { api } from "../services/api"; // uses your existing axios instance with
 
 export default function TeamForm({ onSubmit }) {
   const [formData, setFormData] = useState({
-    range: "",         // "A" or "B"
+    sector: "",        // sector ID
     teamName: "",
-    agency: "",        // agency name like "A1", "A2", etc.
     medicalReps: [],   // array of selected employee IDs
     fieldCoordinators: [],
     juniorExecutives: [],
@@ -14,14 +13,11 @@ export default function TeamForm({ onSubmit }) {
     productManagers: []
   });
 
-  const [ranges, setRanges] = useState([]);
-  const [agencies, setAgencies] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [loadingRanges, setLoadingRanges] = useState(false);
-  const [loadingAgencies, setLoadingAgencies] = useState(true);
+  const [loadingSectors, setLoadingSectors] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
-  const [errRanges, setErrRanges] = useState("");
-  const [errAgencies, setErrAgencies] = useState("");
+  const [errSectors, setErrSectors] = useState("");
   const [errEmployees, setErrEmployees] = useState("");
 
   // Helpers
@@ -62,45 +58,29 @@ export default function TeamForm({ onSubmit }) {
     return [];
   };
 
-  // Load ranges and agencies
+  // Load sectors
   useEffect(() => {
     let mounted = true;
 
-    // Load ranges
     (async () => {
-      setLoadingRanges(true);
-      setErrRanges("");
+      setLoadingSectors(true);
+      setErrSectors("");
       try {
-        const res = await api.get("/ranges");
+        const res = await api.get("/admin/sectors");
         const items = normalizeItems(res);
-        if (mounted) setRanges(items);
+        if (mounted) setSectors(items);
       } catch (e) {
-        if (mounted) setErrRanges(e?.response?.data?.message || "Failed to load ranges");
+        if (mounted) setErrSectors(e?.response?.data?.message || "Failed to load sectors");
       } finally {
-        if (mounted) setLoadingRanges(false);
-      }
-    })();
-
-    // Load agencies
-    (async () => {
-      setLoadingAgencies(true);
-      setErrAgencies("");
-      try {
-        const res = await api.get("/agencies", { params: { limit: 200 } });
-        const items = normalizeItems(res);
-        if (mounted) setAgencies(items);
-      } catch (e) {
-        if (mounted) setErrAgencies(e?.response?.data?.message || "Failed to load agencies");
-      } finally {
-        if (mounted) setLoadingAgencies(false);
+        if (mounted) setLoadingSectors(false);
       }
     })();
     return () => { mounted = false; };
   }, []);
 
-  // Load employees when range changes
+  // Load employees when sector changes
   useEffect(() => {
-    if (!formData.range) {
+    if (!formData.sector) {
       setEmployees([]);
       return;
     }
@@ -110,7 +90,7 @@ export default function TeamForm({ onSubmit }) {
       setLoadingEmployees(true);
       setErrEmployees("");
       try {
-        const res = await api.get("/admin/users", { params: { range: formData.range, limit: 500 } });
+        const res = await api.get("/admin/users", { params: { sector_id: formData.sector, limit: 500 } });
         // For users API, the response is { success, message, data: usersArray }
         const items = res?.data?.data || [];
         if (mounted) setEmployees(items);
@@ -121,13 +101,7 @@ export default function TeamForm({ onSubmit }) {
       }
     })();
     return () => { mounted = false; };
-  }, [formData.range]);
-
-  // Filter agencies based on selected range
-  const filteredAgencies = useMemo(() => {
-    if (!formData.range) return [];
-    return agencies.filter(agency => agency.name.startsWith(formData.range));
-  }, [agencies, formData.range]);
+  }, [formData.sector]);
 
   // Group employees by designation
   const employeesByDesignation = useMemo(() => {
@@ -174,15 +148,14 @@ export default function TeamForm({ onSubmit }) {
     return groups;
   }, [employees]);
 
-  const canSubmit = useMemo(() => !!formData.range && !!formData.teamName && !!formData.agency, [formData]);
+  const canSubmit = useMemo(() => !!formData.sector && !!formData.teamName, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((s) => {
       const newData = { ...s, [name]: value };
-      // Clear agency when range changes
-      if (name === 'range') {
-        newData.agency = '';
+      // Clear employees when sector changes
+      if (name === 'sector') {
         newData.medicalReps = [];
         newData.fieldCoordinators = [];
         newData.juniorExecutives = [];
@@ -218,28 +191,9 @@ export default function TeamForm({ onSubmit }) {
     e.preventDefault();
     if (!canSubmit) return;
 
-    // Find the agency ID
-    const selectedAgency = agencies.find(a => a.name === formData.agency);
-
-    if (!selectedAgency) {
-      alert("Invalid agency selection");
-      return;
-    }
-
-    // For range, we need to find the range by name (A or B)
-    // Since agencies are named like A1, A2, B1, B2, etc., the range is the first character
-    const rangeName = formData.range;
-    const selectedRange = ranges.find(r => r.name === rangeName);
-
-    if (!selectedRange) {
-      alert("Invalid range selection");
-      return;
-    }
-
     const payload = {
       name: formData.teamName,
-      agency_id: selectedAgency.id,
-      range_id: selectedRange.id,
+      sector_id: parseInt(formData.sector),
       mrs: formData.medicalReps,
       fcs: formData.fieldCoordinators,
       jes: formData.juniorExecutives,
@@ -252,9 +206,8 @@ export default function TeamForm({ onSubmit }) {
 
     // reset
     setFormData({
-      range: "",
+      sector: "",
       teamName: "",
-      agency: "",
       medicalReps: [],
       fieldCoordinators: [],
       juniorExecutives: [],
@@ -314,43 +267,27 @@ export default function TeamForm({ onSubmit }) {
 
   return (
     <form onSubmit={submit} className="max-w-4xl bg-white shadow-lg rounded-lg p-6 space-y-6">
-      {/* Range */}
+      {/* Sector */}
       <div>
-        <label className="block text-gray-700 mb-1">Range</label>
+        <label className="block text-gray-700 mb-1">Sector</label>
         <select
-          name="range"
-          value={formData.range}
+          name="sector"
+          value={formData.sector}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
           required
-        >
-          <option value="">Select Range</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-        </select>
-      </div>
-
-      {/* Agency */}
-      <div>
-        <label className="block text-gray-700 mb-1">Agency</label>
-        <select
-          name="agency"
-          value={formData.agency}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
-          required
-          disabled={!formData.range || loadingAgencies || !!errAgencies}
+          disabled={loadingSectors || !!errSectors}
         >
           <option value="">
-            {loadingAgencies ? "Loading agencies..." : formData.range ? "Select agency" : "Select range first"}
+            {loadingSectors ? "Loading sectors..." : "Select sector"}
           </option>
-          {filteredAgencies.map((a) => (
-            <option key={a.id} value={a.name}>
-              {a.name}
+          {sectors.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.agency} - {s.range}
             </option>
           ))}
         </select>
-        {errAgencies && <p className="text-sm text-red-600 mt-1">{errAgencies}</p>}
+        {errSectors && <p className="text-sm text-red-600 mt-1">{errSectors}</p>}
       </div>
 
       {/* Team Name */}
@@ -369,7 +306,7 @@ export default function TeamForm({ onSubmit }) {
 
 
       {/* Employee Selection Dropdowns */}
-      {formData.range && (
+      {formData.sector && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {renderEmployeeDropdown("Medical Reps", "Medical Rep", "medicalReps")}
           {renderEmployeeDropdown("Field Coordinators", "Field Coordinator", "fieldCoordinators")}
