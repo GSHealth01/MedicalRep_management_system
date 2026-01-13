@@ -6,76 +6,21 @@ import { api } from "../services/api";
 
 // Doctors will be fetched from API
 
-const baseProductCategories = {
-  "Cilacar": [
-    { name: "Cilacar Tab 10mg", samplingPrice: 150, stockingPrice: 120, detailedPrice: 10 },
-    { name: "Cilacar Tab 20mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 },
-    { name: "Cilacar Tab 5mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-  ],
-  "Dicloran": [
-    { name: "Dicloran Gel", samplingPrice: 75, stockingPrice: 60, detailedPrice: 0 },
-    { name: "Dicloran SR-100mg", samplingPrice: 180, stockingPrice: 150, detailedPrice: 5 },
-    { name: "Dicloran SR-75mg", samplingPrice: 120, stockingPrice: 95, detailedPrice: 5 },
-    { name: "Dicloran Tab 50mg", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-  ],
-  "DilcardiaSR": [
-    { name: "DilcardiaSR 90mg", samplingPrice: 200, stockingPrice: 180, detailedPrice: 10 }
-  ],
-  "Maskacid": [
-    { name: "Maskacid SRL Exp.", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
-  ],
-  "Ornigil": [
-    { name: "Ornigil 500mg Tab", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 }
-  ],
-  "Pedivit Forte": [
-    { name: "Pedivit Forte", samplingPrice: 130, stockingPrice: 110, detailedPrice: 10 }
-  ],
-  "Unimelo": [
-    { name: "Unimelo 7.5mg Tab", samplingPrice: 220, stockingPrice: 200, detailedPrice: 15 }
-  ],
-  "Vasolip": [
-    { name: "Vasolip 10mg Tab.", samplingPrice: 160, stockingPrice: 140, detailedPrice: 10 },
-    { name: "Vasolip 20mg Tab.", samplingPrice: 210, stockingPrice: 190, detailedPrice: 10 }
-  ]
-};
+// Function to transform products from API to expected format
+const transformProductsToCategories = (products) => {
+  const categories = {};
 
-// Agency-specific temporary products
-const agencyProducts = {
-  "B": {
-    "Product 1": [
-      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "Product 2": [
-      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "Product 3": [
-      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "Product 4": [
-      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "Product 5": [
-      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "Product 6": [
-      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ],
-    "Product 7": [
-      { name: "Standard", samplingPrice: 100, stockingPrice: 80, detailedPrice: 5 }
-    ]
-  }
-};
-
-// Function to get product categories based on user agency
-const getProductCategories = (userAgency) => {
-  const categories = { ...baseProductCategories };
-
-  if (userAgency && agencyProducts[userAgency]) {
-    // Add agency-specific products
-    Object.keys(agencyProducts[userAgency]).forEach(category => {
-      categories[category] = agencyProducts[userAgency][category];
-    });
-  }
+  products.forEach(product => {
+    if (product.variants && product.variants.length > 0) {
+      // Use product name as category
+      categories[product.name] = product.variants.map(variant => ({
+        name: `${product.name} ${variant.strength || ''} ${variant.pack_size || ''}`.trim(),
+        samplingPrice: variant.sampling_price || 0,
+        stockingPrice: variant.stocking_price || 0,
+        detailedPrice: variant.detailed_price || 0
+      }));
+    }
+  });
 
   return categories;
 };
@@ -96,6 +41,9 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
       productsWithPrices.forEach((priceInfo, index) => {
         if (index < productStates.length) {
           const stateInfo = productStates[index];
+          if (stateInfo.sampling && stateInfo.samplingQty) {
+            total += (priceInfo.samplingPrice || 0) * (parseInt(stateInfo.samplingQty) || 0);
+          }
           if (stateInfo.stocking && stateInfo.stockingQty) {
             total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.stockingQty) || 0);
           }
@@ -132,7 +80,7 @@ const generateSummaryData = (tableData, productCategories) => {
 
                         if (productState.sampling && productState.samplingQty) {
                           const qty = parseInt(productState.samplingQty) || 0;
-                          const price = 0; // No price calculation for sampling
+                          const price = priceInfo.samplingPrice || 0;
                           docSummary.items.push({
                             name: `${category} - ${productState.name}`, type: "Sampling", qty: qty, unitPrice: price, lineTotal: qty * price
                           });
@@ -241,7 +189,7 @@ export default function RepdetailsReport() {
   const [step, setStep] = useState(1);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [productCategories, setProductCategories] = useState(baseProductCategories);
+  const [productCategories, setProductCategories] = useState({});
 
   // Step 1 State
   const [date, setDate] = useState("");
@@ -261,8 +209,10 @@ export default function RepdetailsReport() {
   const [doctorsLoading, setDoctorsLoading] = useState(true);
 
   // Step 2 State
-  const [selectedProductTab, setSelectedProductTab] = useState("Cilacar");
+  const [selectedProductTab, setSelectedProductTab] = useState("");
   const [tableData, setTableData] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
 
   // Step 3 State (Combined)
   const [otherBillsOpen, setOtherBillsOpen] = useState(false);
@@ -330,15 +280,37 @@ export default function RepdetailsReport() {
     }
   }, [user]);
 
-  // Set product categories based on user agency
+  // Fetch products and set categories
   useEffect(() => {
-    if (userProfile && userProfile.agency) {
-      const agencyName = userProfile.agency.name || userProfile.agency;
-      const categories = getProductCategories(agencyName);
-      setProductCategories(categories);
-      console.log('DCR: Set product categories for agency:', agencyName, Object.keys(categories));
+    const fetchProducts = async () => {
+      try {
+        setProductsLoading(true);
+        const response = await api.get('/products', { params: { limit: 500 } });
+        const productsData = response.data.data?.items || [];
+        setProducts(productsData);
+
+        // Transform products to categories format
+        const categories = transformProductsToCategories(productsData);
+        setProductCategories(categories);
+
+        // Set first category as selected tab if available
+        if (Object.keys(categories).length > 0) {
+          setSelectedProductTab(Object.keys(categories)[0]);
+        }
+
+        console.log('DCR: Fetched products:', productsData.length, 'categories:', Object.keys(categories));
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProductCategories({});
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    if (user && user.email) {
+      fetchProducts();
     }
-  }, [userProfile]);
+  }, [user]);
 
   // Fetch doctors on component mount
   useEffect(() => {
