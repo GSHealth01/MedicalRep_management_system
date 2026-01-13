@@ -2,16 +2,25 @@ import { useState, useMemo, useEffect } from "react";
 import { api } from "../services/api";
 
 export default function ProductForm({ onSubmit, initialData, isEditing, onCancel }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    therapeutic_category: "",
-    generic_name: "",
-    route_of_administration: "",
-    pack_size: "",
-    strength: "",
-    range: "",
-    agency: ""
-  });
+   const [formData, setFormData] = useState({
+     name: "",
+     therapeutic_category: "",
+     generic_name: "",
+     route_of_administration: "",
+     range: "",
+     agency: ""
+   });
+
+   const [variants, setVariants] = useState([
+     {
+       id: null,
+       strength: "",
+       pack_size: "",
+       sampling_price: "",
+       stocking_price: "",
+       detailed_price: ""
+     }
+   ]);
 
   // Add agencies state
   const [agencies, setAgencies] = useState([]);
@@ -53,11 +62,30 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
         therapeutic_category: initialData.therapeutic_category || "",
         generic_name: initialData.generic_name || "",
         route_of_administration: initialData.route_of_administration || "",
-        pack_size: initialData.pack_size || "",
-        strength: initialData.strength || "",
         range: initialData.range || "",
         agency: initialData.agency || ""
       });
+
+      // Load variants
+      if (initialData.variants && initialData.variants.length > 0) {
+        setVariants(initialData.variants.map(variant => ({
+          id: variant.id,
+          strength: variant.strength || "",
+          pack_size: variant.pack_size || "",
+          sampling_price: variant.sampling_price || "",
+          stocking_price: variant.stocking_price || "",
+          detailed_price: variant.detailed_price || ""
+        })));
+      } else {
+        setVariants([{
+          id: null,
+          strength: "",
+          pack_size: "",
+          sampling_price: "",
+          stocking_price: "",
+          detailed_price: ""
+        }]);
+      }
     } else if (!isEditing) {
       // Reset form when not editing
       setFormData({
@@ -65,11 +93,17 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
         therapeutic_category: "",
         generic_name: "",
         route_of_administration: "",
-        pack_size: "",
-        strength: "",
         range: "",
         agency: ""
       });
+      setVariants([{
+        id: null,
+        strength: "",
+        pack_size: "",
+        sampling_price: "",
+        stocking_price: "",
+        detailed_price: ""
+      }]);
     }
   }, [initialData, isEditing]);
 
@@ -88,8 +122,9 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
   }, [formData.range, agencies]);
 
   const canSubmit = useMemo(() => {
-    return formData.name && formData.therapeutic_category && formData.generic_name;
-  }, [formData]);
+    return formData.name && formData.therapeutic_category && formData.generic_name &&
+           variants.length > 0 && variants.some(v => v.strength || v.pack_size);
+  }, [formData, variants]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -114,10 +149,18 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
     if (formData.therapeutic_category.trim()) payload.therapeutic_category = formData.therapeutic_category.trim();
     if (formData.generic_name.trim()) payload.generic_name = formData.generic_name.trim();
     if (formData.route_of_administration.trim()) payload.route_of_administration = formData.route_of_administration.trim();
-    if (formData.pack_size.trim()) payload.pack_size = formData.pack_size.trim();
-    if (formData.strength.trim()) payload.strength = formData.strength.trim();
     if (formData.range.trim()) payload.range = formData.range.trim();
     if (formData.agency.trim()) payload.agency = formData.agency.trim();
+
+    // Add variants
+    payload.variants = variants.filter(v => v.strength || v.pack_size).map(variant => ({
+      id: variant.id,
+      strength: variant.strength.trim(),
+      pack_size: variant.pack_size.trim(),
+      sampling_price: variant.sampling_price ? parseFloat(variant.sampling_price) : null,
+      stocking_price: variant.stocking_price ? parseFloat(variant.stocking_price) : null,
+      detailed_price: variant.detailed_price ? parseFloat(variant.detailed_price) : null,
+    }));
 
     onSubmit && onSubmit(payload, formData);
 
@@ -128,12 +171,41 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
         therapeutic_category: "",
         generic_name: "",
         route_of_administration: "",
-        pack_size: "",
-        strength: "",
         range: "",
         agency: ""
       });
+      setVariants([{
+        id: null,
+        strength: "",
+        pack_size: "",
+        sampling_price: "",
+        stocking_price: "",
+        detailed_price: ""
+      }]);
     }
+  };
+
+  const addVariant = () => {
+    setVariants([...variants, {
+      id: null,
+      strength: "",
+      pack_size: "",
+      sampling_price: "",
+      stocking_price: "",
+      detailed_price: ""
+    }]);
+  };
+
+  const removeVariant = (index) => {
+    if (variants.length > 1) {
+      setVariants(variants.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateVariant = (index, field, value) => {
+    const updatedVariants = [...variants];
+    updatedVariants[index][field] = value;
+    setVariants(updatedVariants);
   };
 
   return (
@@ -197,30 +269,100 @@ export default function ProductForm({ onSubmit, initialData, isEditing, onCancel
         />
       </div>
 
-      {/* Pack Size */}
-      <div>
-        <label className="block text-gray-700 mb-1">Pack Size</label>
-        <input
-          type="text"
-          name="pack_size"
-          value={formData.pack_size}
-          onChange={handleChange}
-          placeholder="Enter pack size"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      {/* Product Variants */}
+      <div className="border-t pt-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Product Variants</h3>
+          <button
+            type="button"
+            onClick={addVariant}
+            className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm"
+          >
+            Add Variant
+          </button>
+        </div>
 
-      {/* Strength */}
-      <div>
-        <label className="block text-gray-700 mb-1">Strength</label>
-        <input
-          type="text"
-          name="strength"
-          value={formData.strength}
-          onChange={handleChange}
-          placeholder="Enter strength"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        {variants.map((variant, index) => (
+          <div key={index} className="border rounded-lg p-4 mb-4 bg-gray-50">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="font-medium">Variant {index + 1}</h4>
+              {variants.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeVariant(index)}
+                  className="bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-sm"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Strength */}
+              <div>
+                <label className="block text-gray-700 mb-1">Strength</label>
+                <input
+                  type="text"
+                  value={variant.strength}
+                  onChange={(e) => updateVariant(index, 'strength', e.target.value)}
+                  placeholder="e.g., 10mg, 20mg"
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Pack Size */}
+              <div>
+                <label className="block text-gray-700 mb-1">Pack Size</label>
+                <input
+                  type="text"
+                  value={variant.pack_size}
+                  onChange={(e) => updateVariant(index, 'pack_size', e.target.value)}
+                  placeholder="e.g., 10 tablets"
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Sampling Price */}
+              <div>
+                <label className="block text-gray-700 mb-1">Sampling Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={variant.sampling_price}
+                  onChange={(e) => updateVariant(index, 'sampling_price', e.target.value)}
+                  placeholder="0.00"
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Stocking Price */}
+              <div>
+                <label className="block text-gray-700 mb-1">Stocking Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={variant.stocking_price}
+                  onChange={(e) => updateVariant(index, 'stocking_price', e.target.value)}
+                  placeholder="0.00"
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Detailed Price */}
+              <div className="md:col-span-2">
+                <label className="block text-gray-700 mb-1">Detailed Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={variant.detailed_price}
+                  onChange={(e) => updateVariant(index, 'detailed_price', e.target.value)}
+                  placeholder="0.00"
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Range (Sector) */}

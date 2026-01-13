@@ -6,16 +6,34 @@ import { useConfirm } from "../components/ConfirmDialog";
 
 // Edit Product Modal Component
 function EditProductModal({ product, onClose, onSave }) {
-  const [formData, setFormData] = useState({
-    name: product?.name || '',
-    therapeutic_category: product?.therapeutic_category || '',
-    generic_name: product?.generic_name || '',
-    route_of_administration: product?.route_of_administration || '',
-    pack_size: product?.pack_size || '',
-    strength: product?.strength || '',
-    range: product?.range || '',
-    agency: product?.agency || ''
-  });
+   const [formData, setFormData] = useState({
+     name: product?.name || '',
+     therapeutic_category: product?.therapeutic_category || '',
+     generic_name: product?.generic_name || '',
+     route_of_administration: product?.route_of_administration || '',
+     range: product?.range || '',
+     agency: product?.agency || ''
+   });
+
+   const [variants, setVariants] = useState(
+     product?.variants && product.variants.length > 0
+       ? product.variants.map(variant => ({
+           id: variant.id,
+           strength: variant.strength || '',
+           pack_size: variant.pack_size || '',
+           sampling_price: variant.sampling_price || '',
+           stocking_price: variant.stocking_price || '',
+           detailed_price: variant.detailed_price || ''
+         }))
+       : [{
+           id: null,
+           strength: '',
+           pack_size: '',
+           sampling_price: '',
+           stocking_price: '',
+           detailed_price: ''
+         }]
+   );
   
   // Add agencies state
   const [agencies, setAgencies] = useState([]);
@@ -80,11 +98,52 @@ function EditProductModal({ product, onClose, onSave }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const addVariant = () => {
+    setVariants([...variants, {
+      id: null,
+      strength: "",
+      pack_size: "",
+      sampling_price: "",
+      stocking_price: "",
+      detailed_price: ""
+    }]);
+  };
+
+  const removeVariant = (index) => {
+    if (variants.length > 1) {
+      setVariants(variants.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateVariant = (index, field, value) => {
+    const updatedVariants = [...variants];
+    updatedVariants[index][field] = value;
+    setVariants(updatedVariants);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(formData);
+      const updateData = {};
+      if (formData.name.trim()) updateData.name = formData.name.trim();
+      if (formData.therapeutic_category.trim()) updateData.therapeutic_category = formData.therapeutic_category.trim();
+      if (formData.generic_name.trim()) updateData.generic_name = formData.generic_name.trim();
+      if (formData.route_of_administration.trim()) updateData.route_of_administration = formData.route_of_administration.trim();
+      if (formData.range.trim()) updateData.range = formData.range.trim();
+      if (formData.agency.trim()) updateData.agency = formData.agency.trim();
+
+      // Add variants
+      updateData.variants = variants.filter(v => v.strength || v.pack_size).map(variant => ({
+        id: variant.id,
+        strength: variant.strength.trim(),
+        pack_size: variant.pack_size.trim(),
+        sampling_price: variant.sampling_price ? parseFloat(variant.sampling_price) : null,
+        stocking_price: variant.stocking_price ? parseFloat(variant.stocking_price) : null,
+        detailed_price: variant.detailed_price ? parseFloat(variant.detailed_price) : null,
+      }));
+
+      await onSave(updateData, formData);
       onClose();
     } catch (error) {
       // Error handled in parent
@@ -213,6 +272,102 @@ function EditProductModal({ product, onClose, onSave }) {
             )}
           </div>
 
+          {/* Product Variants */}
+          <div className="border-t pt-4 col-span-2">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Product Variants</h3>
+              <button
+                type="button"
+                onClick={addVariant}
+                className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm"
+              >
+                Add Variant
+              </button>
+            </div>
+
+            {variants.map((variant, index) => (
+              <div key={index} className="border rounded-lg p-4 mb-4 bg-gray-50">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium">Variant {index + 1}</h4>
+                  {variants.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(index)}
+                      className="bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Strength */}
+                  <div>
+                    <label className="block text-gray-700 mb-1">Strength</label>
+                    <input
+                      type="text"
+                      value={variant.strength}
+                      onChange={(e) => updateVariant(index, 'strength', e.target.value)}
+                      placeholder="e.g., 10mg, 20mg"
+                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Pack Size */}
+                  <div>
+                    <label className="block text-gray-700 mb-1">Pack Size</label>
+                    <input
+                      type="text"
+                      value={variant.pack_size}
+                      onChange={(e) => updateVariant(index, 'pack_size', e.target.value)}
+                      placeholder="e.g., 10 tablets"
+                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Sampling Price */}
+                  <div>
+                    <label className="block text-gray-700 mb-1">Sampling Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={variant.sampling_price}
+                      onChange={(e) => updateVariant(index, 'sampling_price', e.target.value)}
+                      placeholder="0.00"
+                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Stocking Price */}
+                  <div>
+                    <label className="block text-gray-700 mb-1">Stocking Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={variant.stocking_price}
+                      onChange={(e) => updateVariant(index, 'stocking_price', e.target.value)}
+                      placeholder="0.00"
+                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Detailed Price */}
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-700 mb-1">Detailed Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={variant.detailed_price}
+                      onChange={(e) => updateVariant(index, 'detailed_price', e.target.value)}
+                      placeholder="0.00"
+                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
@@ -274,10 +429,9 @@ export default function ManageProducts() {
         therapeutic_category: created.therapeutic_category,
         generic_name: created.generic_name,
         route_of_administration: created.route_of_administration,
-        pack_size: created.pack_size,
-        strength: created.strength,
         range: created.range || rawForm.range,
-        agency: created.agency || rawForm.agency
+        agency: created.agency || rawForm.agency,
+        variants: created.variants || []
       };
       setProducts((list) => [newRow, ...list]);
       showNotification(`Product ${payload.name} added successfully!`, 'success');
@@ -290,19 +444,10 @@ export default function ManageProducts() {
     setEditingProduct(product);
   };
 
-  const handleSaveEdit = async (formData) => {
+  const handleSaveEdit = async (updateData, formData) => {
     try {
-      const updateData = {};
-      if (formData.name.trim()) updateData.name = formData.name.trim();
-      if (formData.therapeutic_category.trim()) updateData.therapeutic_category = formData.therapeutic_category.trim();
-      if (formData.generic_name.trim()) updateData.generic_name = formData.generic_name.trim();
-      if (formData.route_of_administration.trim()) updateData.route_of_administration = formData.route_of_administration.trim();
-      if (formData.pack_size.trim()) updateData.pack_size = formData.pack_size.trim();
-      if (formData.strength.trim()) updateData.strength = formData.strength.trim();
-      if (formData.range.trim()) updateData.range = formData.range.trim();
-      if (formData.agency.trim()) updateData.agency = formData.agency.trim();
-
-      await api.put(`/admin/products/${editingProduct.id}`, updateData);
+      const response = await api.put(`/admin/products/${editingProduct.id}`, updateData);
+      const updatedProduct = response?.data?.data;
 
       setProducts((list) =>
         list.map((prod) =>
@@ -313,10 +458,9 @@ export default function ManageProducts() {
                 therapeutic_category: formData.therapeutic_category,
                 generic_name: formData.generic_name,
                 route_of_administration: formData.route_of_administration,
-                pack_size: formData.pack_size,
-                strength: formData.strength,
                 range: formData.range,
-                agency: formData.agency
+                agency: formData.agency,
+                variants: updatedProduct?.variants || []
               }
             : prod
         )
@@ -388,8 +532,11 @@ export default function ManageProducts() {
                   <th className="py-2 px-4 text-center">Therapeutic Category</th>
                   <th className="py-2 px-4 text-center">Generic Name</th>
                   <th className="py-2 px-4 text-center">Route of Administration</th>
-                  <th className="py-2 px-4 text-center">Pack Size</th>
                   <th className="py-2 px-4 text-center">Strength</th>
+                  <th className="py-2 px-4 text-center">Pack Size</th>
+                  <th className="py-2 px-4 text-center">Sampling Price</th>
+                  <th className="py-2 px-4 text-center">Stocking Price</th>
+                  <th className="py-2 px-4 text-center">Detailed Price</th>
                   <th className="py-2 px-4 text-center">Range</th>
                   <th className="py-2 px-4 text-center">Agency</th>
                   <th className="py-2 px-4 text-center">Actions</th>
@@ -398,39 +545,88 @@ export default function ManageProducts() {
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center py-4 text-gray-500">No products added yet</td>
+                    <td colSpan="12" className="text-center py-4 text-gray-500">No products added yet</td>
                   </tr>
                 ) : (
-                  products.map((prod) => (
-                    <tr key={prod.id} className="border-b hover:bg-gray-50 text-center">
-                      <td className="py-2 px-4">{prod.name}</td>
-                      <td className="py-2 px-4">{prod.therapeutic_category || "-"}</td>
-                      <td className="py-2 px-4">{prod.generic_name || "-"}</td>
-                      <td className="py-2 px-4">{prod.route_of_administration || "-"}</td>
-                      <td className="py-2 px-4">{prod.pack_size || "-"}</td>
-                      <td className="py-2 px-4">{prod.strength || "-"}</td>
-                      <td className="py-2 px-4">{prod.range || "-"}</td>
-                      <td className="py-2 px-4">{prod.agency || "-"}</td>
-                      <td className="py-2 px-4">
-                        <div className="flex justify-center space-x-2">
-                          <button
-                            onClick={() => handleEditProduct(prod)}
-                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
-                            title="Edit Product"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(prod)}
-                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
-                            title="Delete Product"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  products.flatMap((prod) => {
+                    if (!prod.variants || prod.variants.length === 0) {
+                      return [
+                        <tr key={prod.id} className="border-b hover:bg-gray-50 text-center">
+                          <td className="py-2 px-4">{prod.name}</td>
+                          <td className="py-2 px-4">{prod.therapeutic_category || "-"}</td>
+                          <td className="py-2 px-4">{prod.generic_name || "-"}</td>
+                          <td className="py-2 px-4">{prod.route_of_administration || "-"}</td>
+                          <td className="py-2 px-4 text-gray-500">No variants</td>
+                          <td className="py-2 px-4 text-gray-500">-</td>
+                          <td className="py-2 px-4 text-gray-500">-</td>
+                          <td className="py-2 px-4 text-gray-500">-</td>
+                          <td className="py-2 px-4 text-gray-500">-</td>
+                          <td className="py-2 px-4">{prod.range || "-"}</td>
+                          <td className="py-2 px-4">{prod.agency || "-"}</td>
+                          <td className="py-2 px-4">
+                            <div className="flex justify-center space-x-2">
+                              <button
+                                onClick={() => handleEditProduct(prod)}
+                                className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                                title="Edit Product"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(prod)}
+                                className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                                title="Delete Product"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ];
+                    }
+
+                    return prod.variants.map((variant, index) => (
+                      <tr key={`${prod.id}-${variant.id}`} className="border-b hover:bg-gray-50 text-center">
+                        {index === 0 && (
+                          <>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.name}</td>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.therapeutic_category || "-"}</td>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.generic_name || "-"}</td>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.route_of_administration || "-"}</td>
+                          </>
+                        )}
+                        <td className="py-2 px-4">{variant.strength || "-"}</td>
+                        <td className="py-2 px-4">{variant.pack_size || "-"}</td>
+                        <td className="py-2 px-4">{variant.sampling_price ? `$${variant.sampling_price}` : "-"}</td>
+                        <td className="py-2 px-4">{variant.stocking_price ? `$${variant.stocking_price}` : "-"}</td>
+                        <td className="py-2 px-4">{variant.detailed_price ? `$${variant.detailed_price}` : "-"}</td>
+                        {index === 0 && (
+                          <>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.range || "-"}</td>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.agency || "-"}</td>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>
+                              <div className="flex justify-center space-x-2">
+                                <button
+                                  onClick={() => handleEditProduct(prod)}
+                                  className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                                  title="Edit Product"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(prod)}
+                                  className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"
+                                  title="Delete Product"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ));
+                  })
                 )}
               </tbody>
             </table>
