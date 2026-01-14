@@ -136,24 +136,15 @@ async function getAllUsers(req, res) {
         designation: true,
         join_date: true,
         birthday: true,
-        distributor_code: true,
-        agency: { select: { id: true, name: true } },
-        range: { select: { id: true, name: true } },
+        sector: { select: { id: true, agency: true, range: true } },
         team: { select: { id: true, name: true } },
-        distributor: {
-          select: {
-            distributor_code: true,
-            name: true,
-            coverage_town: true,
-            route: true,
-            area: { select: { name: true } },
-            range: { select: { name: true } },
-            agency: { select: { name: true } }
+        distributors: {
+          include: {
+            distributor: { select: { distributor_code: true, name: true } }
           }
-        },
-        createdAt: true
+        }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { dateAdded: 'desc' }
     });
 
     res.json({ users });

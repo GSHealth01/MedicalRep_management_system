@@ -25,7 +25,6 @@ const transformProductsToCategories = (products) => {
   return categories;
 };
 
-const managers = ['Manager A', 'Manager B', 'Manager C'];
 
 
 
@@ -207,6 +206,8 @@ export default function RepdetailsReport() {
   const [townDisabled, setTownDisabled] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [doctorsLoading, setDoctorsLoading] = useState(true);
+  const [managers, setManagers] = useState([]);
+  const [managersLoading, setManagersLoading] = useState(true);
 
   // Step 2 State
   const [selectedProductTab, setSelectedProductTab] = useState("");
@@ -335,6 +336,29 @@ export default function RepdetailsReport() {
     fetchDoctors();
   }, []);
 
+  // Fetch managers on component mount
+  useEffect(() => {
+    const fetchManagers = async () => {
+      try {
+        setManagersLoading(true);
+        const response = await api.get('/users');
+        const usersData = response.data.users || [];
+        // Filter out medical reps (MR) and system admins (ADMIN), format as "Name - Designation"
+        const filteredManagers = usersData
+          .filter(user => user.designation !== 'MR' && user.designation !== 'ADMIN')
+          .map(user => `${user.name} - ${user.designation}`);
+        setManagers(filteredManagers);
+      } catch (error) {
+        console.error('Error fetching managers:', error);
+        setManagers([]);
+      } finally {
+        setManagersLoading(false);
+      }
+    };
+
+    fetchManagers();
+  }, []);
+
   // Fetch itinerary for selected date
   useEffect(() => {
     const fetchItineraryForDate = async () => {
@@ -394,7 +418,7 @@ export default function RepdetailsReport() {
     
   // --- Step 2 Functions ---
   useEffect(() => {
-    if (step === 2) {
+    if (step === 2 && managers.length > 0) {
       const doctorsInTable = tableData.map(d => d.doctor);
       const doctorsMatch = selectedDoctors.length === doctorsInTable.length && selectedDoctors.every(doc => doctorsInTable.includes(doc));
 
@@ -402,7 +426,10 @@ export default function RepdetailsReport() {
         const newTableData = selectedDoctors.map((doctor) => ({
           doctor,
           jointVisit: false,
-          jointVisitManagers: { 'Manager A': false, 'Manager B': false, 'Manager C': false },
+          jointVisitManagers: managers.reduce((acc, manager) => {
+            acc[manager] = false;
+            return acc;
+          }, {}),
           productData: Object.keys(productCategories).reduce((acc, category) => {
             acc[category] = productCategories[category].map(product => ({
               name: product.name, // Only copy name
@@ -416,7 +443,7 @@ export default function RepdetailsReport() {
         setTableData(newTableData);
       }
     }
-  }, [step, selectedDoctors, tableData, productCategories]);
+  }, [step, selectedDoctors, tableData, productCategories, managers]);
 
   const updateCell = (docIdx, productIdx, field, value) => {
     setTableData(old => 
@@ -450,7 +477,10 @@ export default function RepdetailsReport() {
           ? { ...doc,
               jointVisit: !doc.jointVisit,
               jointVisitManagers: doc.jointVisit
-                ? { 'Manager A': false, 'Manager B': false, 'Manager C': false }
+                ? managers.reduce((acc, manager) => {
+                    acc[manager] = false;
+                    return acc;
+                  }, {})
                 : doc.jointVisitManagers
             }
           : doc
@@ -552,7 +582,7 @@ export default function RepdetailsReport() {
   }
 
 
-  const FROZEN = { no: 40, doctor: 180, joint: 150 }; 
+  const FROZEN = { no: 40, doctor: 180, joint: 200 };
   const LEFTS = { no: 0, doctor: FROZEN.no, joint: FROZEN.no + FROZEN.doctor };
   const stickyBase = {
     position: 'sticky',
