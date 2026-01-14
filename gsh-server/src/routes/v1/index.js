@@ -11,6 +11,7 @@ router.use("/itineraries", require("./itinerary.routes"));
 router.use("/products", require("./product.routes"));
 // router.use("/distributors", require("./distributor.routes"));
 router.use("/users", require("./user.routes"));
+router.use("/dcrs", require("./dcr.routes"));
 router.use("/admin/users", require("./admin/users.routes"));
 router.use("/admin/products", require("./admin/products.routes"));
 router.use("/admin/doctors", require("./admin/doctors.routes"));

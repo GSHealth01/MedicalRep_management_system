@@ -15,6 +15,13 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan("dev"));
 
+// Serve static files for uploads
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res, path) => {
+    res.set('Access-Control-Allow-Origin', '*');
+  }
+}));
+
 app.get("/health", (_req, res) => res.json({ success: true, message: "OK" }));
 
 app.use("/api/v1", v1Routes);

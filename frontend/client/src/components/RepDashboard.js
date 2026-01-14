@@ -73,7 +73,7 @@ export default function RepDashboard() {
           <ul>
             <li className={activeTab === 'Overview' ? 'active' : ''} onClick={() => setActiveTab('Overview')}>Overview</li>
             <li className={activeTab === 'Itinerary' ? 'active' : ''} onClick={() => navigate('/itineraries')}>Itinerary</li>
-            <li className={activeTab === 'Reports' ? 'active' : ''} onClick={() => navigate('/DCR_report')}>Reports</li>
+            <li className={activeTab === 'Reports' ? 'active' : ''} onClick={() => navigate('/dcr-reports')}>Reports</li>
             <li className={activeTab === 'Settings' ? 'active' : ''} onClick={() => setActiveTab('Settings')}>Settings</li>
           </ul>
         </nav>

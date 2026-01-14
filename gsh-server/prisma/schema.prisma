@@ -121,6 +121,7 @@ model user {
   work_areas   UserWorkAreas[]
   doctors      UserDoctors[]
   itineraries  itinerary[]
+  dcrs         dcr[]
 }
 
 // ===============================
@@ -283,4 +284,29 @@ model itineraryEntry {
   itinerary    itinerary @relation(fields: [itinerary_id], references: [id], onDelete: Cascade)
 
   @@map("itinerary_entries")
+}
+
+// ===============================
+model dcr {
+  id             Int      @id @default(autoincrement())
+  date           String
+  range          String?
+  agency         String?
+  repName        String?
+  empNo          String?
+  distributor    String?
+  area           String?
+  town           String?
+  callReport     Json?    // Array of doctor call reports
+  dailyExpenses  Json?    // { bata: boolean, nightOut: boolean, fuel: boolean }
+  otherBills     Json?    // { details: { parking: {checked, amount}, ...}, images: [] }
+  remarks        String?
+  orderFormImages Json?   // Array of image file names
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user_id        Int
+  user           user     @relation(fields: [user_id], references: [id])
+
+  @@map("dcrs")
 }

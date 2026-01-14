@@ -508,21 +508,47 @@ export default function RepdetailsReport() {
     });
   };
 
-  const handleSubmit = () => {
-    const submissionData = {
-      date, range, agency, repName, empNo, distributor, area, town,
-      callReport: tableData,
-      dailyExpenses: expenses,
-      otherBills: {
-          details: otherBills,
-          images: otherBillImages.map(f => f.name) 
-      },
-     
-      remarks,
-      orderFormImages: orderFormImages.map(f => f.name)
-    };
-    console.log("Submitting Data:", submissionData);
-    alert("Submitted!"); 
+  const handleSubmit = async () => {
+    try {
+      const formData = new FormData();
+
+      // Add basic fields
+      formData.append('date', date);
+      formData.append('range', range);
+      formData.append('agency', agency);
+      formData.append('repName', repName);
+      formData.append('empNo', empNo);
+      formData.append('distributor', distributor);
+      formData.append('area', area);
+      formData.append('town', town);
+
+      // Add complex data as JSON strings
+      formData.append('callReport', JSON.stringify(tableData));
+      formData.append('dailyExpenses', JSON.stringify(expenses));
+      formData.append('otherBills', JSON.stringify(otherBills));
+      formData.append('remarks', remarks);
+
+      // Add image files
+      otherBillImages.forEach((file, index) => {
+        formData.append('otherBillImages', file);
+      });
+
+      orderFormImages.forEach((file, index) => {
+        formData.append('orderFormImages', file);
+      });
+
+      const response = await api.post('/dcrs', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      alert("DCR submitted successfully!");
+      navigate('/dcr-reports'); // Redirect to dashboard
+    } catch (error) {
+      console.error('Error submitting DCR:', error);
+      alert("Failed to submit DCR. Please try again.");
+    }
   }
 
 

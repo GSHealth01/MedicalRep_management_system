@@ -259,7 +259,7 @@ function EditProductModal({ product, onClose, onSave }) {
                   : "Select agency"}
               </option>
               {filteredAgencies.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option key={a.id} value={a.name}>
                   {a.name}
                 </option>
               ))}
@@ -390,6 +390,23 @@ function EditProductModal({ product, onClose, onSave }) {
   );
 }
 
+const showAgency = (a) => {
+  // If agency is an object with name property, show the name
+  if (typeof a === "object" && a?.name) {
+    return a.name;
+  }
+  // If agency is an object with _id property, show the _id
+  if (typeof a === "object" && a?._id) {
+    return a._id;
+  }
+  // If agency is a string/number, show it as is
+  if (typeof a === "string" || typeof a === "number") {
+    return a;
+  }
+  // Default fallback
+  return "";
+};
+
 export default function ManageProducts() {
   const { showNotification, NotificationComponent } = useNotification();
   const { showConfirm, ConfirmDialogComponent } = useConfirm();
@@ -409,7 +426,16 @@ export default function ManageProducts() {
         const res = await api.get("/admin/products", { params: { limit: 200 } });
         const payload = res?.data?.data ?? res?.data ?? {};
         const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
-        if (mounted) setProducts(items);
+
+        // Normalize the data to ensure agency displays correctly
+        const normalizedItems = items.map(item => ({
+          ...item,
+          agency: typeof item.agency === 'string' && !isNaN(item.agency)
+            ? item.agency // Keep as string if it's already a name
+            : item.agency // Otherwise keep as is
+        }));
+
+        if (mounted) setProducts(normalizedItems);
       } catch (e) {
         if (mounted) setErr(e?.response?.data?.message || "Failed to load products");
       } finally {
@@ -562,7 +588,7 @@ export default function ManageProducts() {
                           <td className="py-2 px-4 text-gray-500">-</td>
                           <td className="py-2 px-4 text-gray-500">-</td>
                           <td className="py-2 px-4">{prod.range || "-"}</td>
-                          <td className="py-2 px-4">{prod.agency || "-"}</td>
+                          <td className="py-2 px-4">{showAgency(prod.agency) || "-"}</td>
                           <td className="py-2 px-4">
                             <div className="flex justify-center space-x-2">
                               <button
@@ -603,7 +629,7 @@ export default function ManageProducts() {
                         {index === 0 && (
                           <>
                             <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.range || "-"}</td>
-                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.agency || "-"}</td>
+                            <td className="py-2 px-4" rowSpan={prod.variants.length}>{showAgency(prod.agency) || "-"}</td>
                             <td className="py-2 px-4" rowSpan={prod.variants.length}>
                               <div className="flex justify-center space-x-2">
                                 <button

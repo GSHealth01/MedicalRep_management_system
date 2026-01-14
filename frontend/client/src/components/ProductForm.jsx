@@ -1,8 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { api } from '../services/api';
 
-const ProductForm = ({ product, onSave, onCancel }) => {
-  const [productName, setProductName] = useState(product?.name || '');
+const ProductForm = ({ product, onSubmit, onCancel }) => {
+  const [formData, setFormData] = useState({
+    name: product?.name || '',
+    therapeutic_category: product?.therapeutic_category || '',
+    generic_name: product?.generic_name || '',
+    route_of_administration: product?.route_of_administration || '',
+    range: product?.range || '',
+    agency: product?.agency || ''
+  });
+
   const [variants, setVariants] = useState(product?.variants || [{ strength: '', pack_size: '', sampling_price: '', stocking_price: '', detailed_price: '' }]);
+
+  // Add agencies state
+  const [agencies, setAgencies] = useState([]);
+  const [loadingAgencies, setLoadingAgencies] = useState(true);
+  const [agencyError, setAgencyError] = useState("");
+
+  // Load sectors as agencies from API
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingAgencies(true);
+      setAgencyError("");
+      try {
+        const res = await api.get("/admin/sectors");
+        const payload = res?.data?.data?.items || [];
+        // Map sectors to agency format
+        const agencyList = payload.map(sector => ({
+          id: sector.id,
+          name: sector.agency
+        }));
+        if (mounted) setAgencies(agencyList);
+      } catch (err) {
+        if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load sectors");
+      } finally {
+        if (mounted) setLoadingAgencies(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Hardcoded ranges
+  const ranges = useMemo(() => [
+    { id: 'A', name: 'A' },
+    { id: 'B', name: 'B' }
+  ], []);
+
+  const [filteredAgencies, setFilteredAgencies] = useState([]);
+
+  // when range changes, filter agencies based on the selected range
+  useEffect(() => {
+    if (!formData.range) {
+      setFilteredAgencies([]);
+      return;
+    }
+    // Filter agencies based on the selected range
+    const filtered = agencies.filter(agency => {
+      // Check if agency name starts with the selected range (A or B)
+      return agency.name && agency.name.startsWith(formData.range);
+    });
+    setFilteredAgencies(filtered);
+  }, [formData.range, agencies]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    // clear dependent agency when range changes
+    if (name === "range") {
+      setFormData((s) => ({ ...s, range: value, agency: "" }));
+      return;
+    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const addVariant = () => {
     setVariants([...variants, { strength: '', pack_size: '', sampling_price: '', stocking_price: '', detailed_price: '' }]);
@@ -22,20 +92,121 @@ const ProductForm = ({ product, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ name: productName, variants });
+    const updateData = {};
+    if (formData.name.trim()) updateData.name = formData.name.trim();
+    if (formData.therapeutic_category.trim()) updateData.therapeutic_category = formData.therapeutic_category.trim();
+    if (formData.generic_name.trim()) updateData.generic_name = formData.generic_name.trim();
+    if (formData.route_of_administration.trim()) updateData.route_of_administration = formData.route_of_administration.trim();
+    if (formData.range.trim()) updateData.range = formData.range.trim();
+    if (formData.agency.trim()) updateData.agency = formData.agency.trim();
+
+    // Add variants
+    updateData.variants = variants.filter(v => v.strength || v.pack_size).map(variant => ({
+      strength: variant.strength.trim(),
+      pack_size: variant.pack_size.trim(),
+      sampling_price: variant.sampling_price ? parseFloat(variant.sampling_price) : null,
+      stocking_price: variant.stocking_price ? parseFloat(variant.stocking_price) : null,
+      detailed_price: variant.detailed_price ? parseFloat(variant.detailed_price) : null,
+    }));
+
+    onSubmit(updateData, formData);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
         <input
           type="text"
-          value={productName}
-          onChange={(e) => setProductName(e.target.value)}
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Therapeutic Category *</label>
+        <input
+          type="text"
+          name="therapeutic_category"
+          value={formData.therapeutic_category}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Generic Name *</label>
+        <input
+          type="text"
+          name="generic_name"
+          value={formData.generic_name}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Route of Administration</label>
+        <input
+          type="text"
+          name="route_of_administration"
+          value={formData.route_of_administration}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Range (Sector) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Range (Sector)</label>
+        <select
+          name="range"
+          value={formData.range}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select range</option>
+          {ranges.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Agency (Sub-sector) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Agency (Sub-sector)</label>
+        <select
+          name="agency"
+          value={formData.agency}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={!formData.range || loadingAgencies}
+        >
+          <option value="">
+            {!formData.range
+              ? "Select range first"
+              : loadingAgencies
+              ? "Loading agencies..."
+              : agencyError
+              ? "Error loading agencies"
+              : "Select agency"}
+          </option>
+          {filteredAgencies.map((a) => (
+            <option key={a.id} value={a.name}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        {agencyError && (
+          <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+        )}
+        {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.range && (
+          <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
+        )}
       </div>
 
       <div>
