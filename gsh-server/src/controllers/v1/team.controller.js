@@ -18,33 +18,25 @@ function buildDesignation(role, status) {
 
 async function createTeam(req, res) {
   try {
-    const { name, range_id, agency_id } = req.body;
+    const { name, sector_id } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: 'Name is required' });
     }
 
     const teamData = { name };
-    if (range_id) {
-      teamData.range_id = parseInt(range_id);
-    }
-    if (agency_id) {
-      teamData.agency_id = parseInt(agency_id);
+    if (sector_id) {
+      teamData.sector_id = parseInt(sector_id);
     }
 
     const newTeam = await prisma.team.create({
       data: teamData,
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true
-          }
-        },
-        agency: {
-          select: {
-            id: true,
-            name: true
+            agency: true,
+            range: true
           }
         },
         _count: {
@@ -61,7 +53,7 @@ async function createTeam(req, res) {
     console.error('Error creating team:', error);
 
     if (error.code === 'P2003') {
-      return res.status(400).json({ message: 'Invalid range_id or agency_id provided' });
+      return res.status(400).json({ message: 'Invalid sector_id provided' });
     }
 
     res.status(500).json({ message: 'Failed to create team' });
@@ -72,16 +64,11 @@ async function getAllTeams(req, res) {
   try {
     const teams = await prisma.team.findMany({
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true
-          }
-        },
-        agency: {
-          select: {
-            id: true,
-            name: true
+            agency: true,
+            range: true
           }
         },
         _count: {
@@ -104,16 +91,11 @@ async function getOneTeam(req, res) {
     const team = await prisma.team.findUnique({
       where: { id: parseInt(id) },
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true
-          }
-        },
-        agency: {
-          select: {
-            id: true,
-            name: true
+            agency: true,
+            range: true
           }
         },
         users: {
@@ -163,34 +145,26 @@ async function getOneTeam(req, res) {
 async function updateTeam(req, res) {
   try {
     const { id } = req.params;
-    const { name, range_id, agency_id } = req.body;
+    const { name, sector_id } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: 'Name is required' });
     }
 
     const updateData = { name };
-    if (range_id !== undefined) {
-      updateData.range_id = range_id ? parseInt(range_id) : null;
-    }
-    if (agency_id !== undefined) {
-      updateData.agency_id = agency_id ? parseInt(agency_id) : null;
+    if (sector_id !== undefined) {
+      updateData.sector_id = sector_id ? parseInt(sector_id) : null;
     }
 
     const updatedTeam = await prisma.team.update({
       where: { id: parseInt(id) },
       data: updateData,
       include: {
-        range: {
+        sector: {
           select: {
             id: true,
-            name: true
-          }
-        },
-        agency: {
-          select: {
-            id: true,
-            name: true
+            agency: true,
+            range: true
           }
         },
         _count: {
@@ -207,7 +181,7 @@ async function updateTeam(req, res) {
     console.error('Error updating team:', error);
 
     if (error.code === 'P2003') {
-      return res.status(400).json({ message: 'Invalid range_id or agency_id provided' });
+      return res.status(400).json({ message: 'Invalid sector_id provided' });
     }
 
     if (error.code === 'P2025') {
@@ -244,23 +218,16 @@ async function deleteTeam(req, res) {
 
 async function getFormData(req, res) {
   try {
-    const ranges = await prisma.range.findMany({
+    const sectors = await prisma.sector.findMany({
       select: {
         id: true,
-        name: true
+        agency: true,
+        range: true
       },
-      orderBy: { name: 'asc' }
+      orderBy: { agency: 'asc' }
     });
 
-    const agencies = await prisma.agency.findMany({
-      select: {
-        id: true,
-        name: true
-      },
-      orderBy: { name: 'asc' }
-    });
-
-    return ApiResponse.ok(res, "Form data fetched", { ranges, agencies });
+    return ApiResponse.ok(res, "Form data fetched", { sectors });
   } catch (error) {
     console.error('Error fetching form data:', error);
     return ApiResponse.error(res, "Failed to fetch form data");

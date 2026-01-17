@@ -222,6 +222,25 @@ export default function DCRReportsDashboard() {
     navigate('/DCR_report');
   };
 
+  const handleEditDCR = (dcrId) => {
+    // For now, just navigate to the form. In a full implementation, you'd pass the DCR data
+    navigate('/DCR_report');
+  };
+
+  const handleDeleteDCR = async (dcrId) => {
+    if (window.confirm('Are you sure you want to delete this DCR report? This action cannot be undone.')) {
+      try {
+        await api.delete(`/dcrs/${dcrId}`);
+        // Refresh the DCRs list
+        fetchDCRs();
+        alert('DCR report deleted successfully');
+      } catch (error) {
+        console.error('Error deleting DCR:', error);
+        alert('Failed to delete DCR report');
+      }
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       day: '2-digit',
@@ -408,7 +427,15 @@ export default function DCRReportsDashboard() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">DCR Reports Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/rep-dashboard')}
+            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            ← Back to Dashboard
+          </button>
+          <h1 className="text-3xl font-bold text-gray-800">DCR Reports Dashboard</h1>
+        </div>
         <button
           onClick={handleAddDCR}
           className="px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -435,14 +462,32 @@ export default function DCRReportsDashboard() {
               {monthDcrs.map((dcr) => (
                 <div
                   key={dcr.id}
-                  className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  onClick={() => handleViewDCR(dcr.id)}
+                  className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50"
                 >
-                  <div>
+                  <div className="flex-1 cursor-pointer" onClick={() => handleViewDCR(dcr.id)}>
                     <span className="font-semibold">{formatDate(dcr.date)}</span>
                     <span className="ml-4 text-gray-600">Rep: {dcr.repName}</span>
                   </div>
-                  <span className="text-blue-500 hover:text-blue-700">View</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleViewDCR(dcr.id)}
+                      className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleEditDCR(dcr.id)}
+                      className="px-3 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDCR(dcr.id)}
+                      className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

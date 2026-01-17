@@ -71,8 +71,15 @@ exports.create = async (req, res) => {
       let existingArea = await prisma.area.findFirst({
         where: { name: { equals: area, mode: 'insensitive' } }
       });
-      
+
       if (existingArea) {
+        // Check if this area is already assigned to a distributor
+        const existingDistributor = await prisma.distributor.findUnique({
+          where: { area_id: existingArea.id }
+        });
+        if (existingDistributor) {
+          return ApiResponse.error(res, `Area "${area}" is already assigned to distributor "${existingDistributor.name}" (${existingDistributor.distributor_code}). Each area can only have one distributor.`, 409);
+        }
         areaIdToUse = existingArea.id;
       } else {
         // Create new area if it doesn't exist
@@ -106,7 +113,8 @@ exports.create = async (req, res) => {
   } catch (error) {
     console.error('Error creating distributor:', error);
     if (error.code === 'P2002') {
-      return ApiResponse.error(res, "Distributor code or name already exists", 409);
+      console.log('P2002 error meta:', error.meta); // Log which field caused the conflict
+      return ApiResponse.error(res, `Duplicate entry: ${error.meta?.target?.join(', ') || 'unknown field'} already exists`, 409);
     }
     if (error.code === 'P2003') {
       return ApiResponse.error(res, "Invalid agency or area reference", 400);

@@ -166,9 +166,109 @@ async function getDCRById(req, res) {
   }
 }
 
+async function updateDCR(req, res) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const {
+      date,
+      range,
+      agency,
+      repName,
+      empNo,
+      distributor,
+      area,
+      town,
+      callReport,
+      dailyExpenses,
+      otherBills,
+      remarks,
+      orderFormImages
+    } = req.body;
+
+    // Check if DCR exists and belongs to user
+    const existingDCR = await prisma.dcr.findFirst({
+      where: {
+        id: parseInt(id),
+        user_id: userId
+      }
+    });
+
+    if (!existingDCR) {
+      return res.status(404).json({ message: 'DCR not found' });
+    }
+
+    // Handle file uploads
+    const otherBillImages = req.files?.otherBillImages || [];
+    const orderFormImageFiles = req.files?.orderFormImages || [];
+
+    // Update DCR record
+    const updatedDCR = await prisma.dcr.update({
+      where: { id: parseInt(id) },
+      data: {
+        date,
+        range,
+        agency,
+        repName,
+        empNo,
+        distributor,
+        area,
+        town,
+        callReport: callReport ? JSON.parse(callReport) : existingDCR.callReport,
+        dailyExpenses: dailyExpenses ? JSON.parse(dailyExpenses) : existingDCR.dailyExpenses,
+        otherBills: otherBills ? {
+          details: JSON.parse(otherBills),
+          images: otherBillImages.map(file => file.filename)
+        } : existingDCR.otherBills,
+        remarks,
+        orderFormImages: orderFormImageFiles.length > 0 ? orderFormImageFiles.map(file => file.filename) : existingDCR.orderFormImages
+      }
+    });
+
+    res.status(200).json({
+      message: 'DCR updated successfully',
+      dcr: updatedDCR
+    });
+  } catch (error) {
+    console.error('Error updating DCR:', error);
+    res.status(500).json({ message: 'Failed to update DCR' });
+  }
+}
+
+async function deleteDCR(req, res) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    // Check if DCR exists and belongs to user
+    const existingDCR = await prisma.dcr.findFirst({
+      where: {
+        id: parseInt(id),
+        user_id: userId
+      }
+    });
+
+    if (!existingDCR) {
+      return res.status(404).json({ message: 'DCR not found' });
+    }
+
+    // Delete DCR record
+    await prisma.dcr.delete({
+      where: { id: parseInt(id) }
+    });
+
+    res.status(200).json({ message: 'DCR deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting DCR:', error);
+    res.status(500).json({ message: 'Failed to delete DCR' });
+  }
+}
+
 module.exports = {
   createDCR,
   getUserDCRs,
   getDCRById,
+  updateDCR,
+  deleteDCR,
   upload
 };

@@ -18,4 +18,13 @@ router.get('/', ctrl.getUserDCRs);
 // GET /api/v1/dcrs/:id - Get specific DCR by ID
 router.get('/:id', ctrl.getDCRById);
 
+// PUT /api/v1/dcrs/:id - Update specific DCR by ID
+router.put('/:id', ctrl.upload.fields([
+  { name: 'otherBillImages', maxCount: 10 },
+  { name: 'orderFormImages', maxCount: 10 }
+]), ctrl.updateDCR);
+
+// DELETE /api/v1/dcrs/:id - Delete specific DCR by ID
+router.delete('/:id', ctrl.deleteDCR);
+
 module.exports = router;

@@ -5,6 +5,7 @@ export default function TeamForm({ onSubmit }) {
   const [formData, setFormData] = useState({
     sector: "",        // sector ID
     teamName: "",
+    operationsManagers: [], // array of selected employee IDs
     medicalReps: [],   // array of selected employee IDs
     fieldCoordinators: [],
     juniorExecutives: [],
@@ -106,6 +107,7 @@ export default function TeamForm({ onSubmit }) {
   // Group employees by designation
   const employeesByDesignation = useMemo(() => {
     const groups = {
+      'Operations Manager': [],
       'Medical Rep': [],
       'Field Coordinator': [],
       'Junior Executive': [],
@@ -116,6 +118,9 @@ export default function TeamForm({ onSubmit }) {
 
     // Map database designations to display names
     const designationMap = {
+      'OM': 'Operations Manager',
+      'OPERATIONS MANAGER': 'Operations Manager',
+      'OPERATIONS_MANAGER': 'Operations Manager',
       'MR': 'Medical Rep',
       'MEDICAL REP': 'Medical Rep',
       'MEDICAL_REP': 'Medical Rep',
@@ -169,6 +174,7 @@ export default function TeamForm({ onSubmit }) {
 
   const handleEmployeeSelection = (designation, employeeId, checked) => {
     const fieldName = {
+      'Operations Manager': 'operationsManagers',
       'Medical Rep': 'medicalReps',
       'Field Coordinator': 'fieldCoordinators',
       'Junior Executive': 'juniorExecutives',
@@ -194,6 +200,7 @@ export default function TeamForm({ onSubmit }) {
     const payload = {
       name: formData.teamName,
       sector_id: parseInt(formData.sector),
+      ops: formData.operationsManagers,
       mrs: formData.medicalReps,
       fcs: formData.fieldCoordinators,
       jes: formData.juniorExecutives,
@@ -208,6 +215,7 @@ export default function TeamForm({ onSubmit }) {
     setFormData({
       sector: "",
       teamName: "",
+      operationsManagers: [],
       medicalReps: [],
       fieldCoordinators: [],
       juniorExecutives: [],
@@ -308,6 +316,7 @@ export default function TeamForm({ onSubmit }) {
       {/* Employee Selection Dropdowns */}
       {formData.sector && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {renderEmployeeDropdown("Operations Managers", "Operations Manager", "operationsManagers")}
           {renderEmployeeDropdown("Medical Reps", "Medical Rep", "medicalReps")}
           {renderEmployeeDropdown("Field Coordinators", "Field Coordinator", "fieldCoordinators")}
           {renderEmployeeDropdown("Junior Executives", "Junior Executive", "juniorExecutives")}

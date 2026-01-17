@@ -232,7 +232,7 @@ export default function ManageDistributors() {
         // Ensure all nested objects are properly handled
         const safeItems = items.map(item => ({
           ...item,
-          agency: typeof item.agency === 'object' ? item.agency?.name || 'Unknown' : item.agency || 'Unknown',
+          agency: item.sector?.agency || 'Unknown',
           area: typeof item.area === 'object' ? item.area?.name || 'Unknown' : item.area || 'Unknown',
           coverage_town: item.coverage_town || item.town || 'Unknown',
         }));
@@ -265,8 +265,8 @@ export default function ManageDistributors() {
         area: created.area?.name || payload.area, // Use area name from response
         town: created.coverage_town,
         route: created.route,
-        agency: created.agency?.name || 'Unknown', // Use agency name from response
-        sector: created.agency?.name || 'Unknown', // For backward compatibility
+        agency: created.sector?.agency || 'Unknown', // Use agency name from response
+        sector: created.sector?.agency || 'Unknown', // For backward compatibility
       };
       setDistributors((list) => [newRow, ...list]);
       showNotification(`Distributor ${payload.name} added successfully!`, 'success');
@@ -425,7 +425,9 @@ export default function ManageDistributors() {
                       <td className="py-2 px-4">
                         {String(dist.route || '-')}
                       </td>
-                      <td className="py-2 px-4">-</td>
+                      <td className="py-2 px-4">
+                        {dist.dateAdded ? new Date(dist.dateAdded).toLocaleDateString() : '-'}
+                      </td>
                       <td className="py-2 px-4 text-center">
                         <div className="flex justify-center space-x-2">
                           <button

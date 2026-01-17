@@ -12,7 +12,7 @@ function EditTeamModal({ team, onClose, onSave }) {
     // - Team Name
     // - Range
     name: team?.name || "",
-    range: team?.range?.name || "",
+    range: team?.sector?.range || "",
   });
   const [loading, setLoading] = useState(false);
   const [ranges, setRanges] = useState([]);
@@ -537,6 +537,7 @@ export default function ManageTeams() {
               <thead className="bg-gradient-to-r from-red-600 to-red-700 text-white">
                 <tr>
                   <th className="py-2 px-4 text-center">Team Name</th>
+                  <th className="py-2 px-4 text-center">Agency</th>
                   <th className="py-2 px-4 text-center">Range</th>
                   <th className="py-2 px-4 text-center">Users</th>
                   <th className="py-2 px-4 text-center">Actions</th>
@@ -546,7 +547,7 @@ export default function ManageTeams() {
                 {teams.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="4"
+                      colSpan="5"
                       className="text-center py-4 text-gray-500"
                     >
                       No teams created yet
@@ -560,7 +561,10 @@ export default function ManageTeams() {
                     >
                       <td className="py-2 px-4">{team.name}</td>
                       <td className="py-2 px-4">
-                        {team.range?.name || "-"}
+                        {team.sector?.agency || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.sector?.range || "-"}
                       </td>
                       <td className="py-2 px-4">
                         {team._count?.users || 0}

@@ -21,69 +21,16 @@ exports.list = async (req, res) => {
       orderBy,
       include: {
         sector: true,
-        users: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            emp_no: true,
-            designation: true
-          }
-        }
+        _count: true
       }
     });
 
     console.log(`Found ${teams.length} teams`); // Debug log
 
-    // Group users by designation for display
-    const formattedTeams = teams.map(team => {
-      // Map designation codes to bucket keys
-      const designationToBucket = {
-        'OM': 'ops', 'OPERATIONS_MANAGER': 'ops', 'TERRITORY_MANAGER': 'ops',
-        'SE': 'sms', 'SENIOR_EXECUTIVE': 'sms', 'SENIOR_MANAGER': 'sms',
-        'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
-        'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
-        'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
-        'FC': 'fcs', 'FIELD_COORDINATOR': 'fcs',
-        'MR': 'mrs', 'MEDICAL_REP': 'mrs', 'MEDICAL_REPRESENTATIVE': 'mrs'
-      };
-
-      const groupedUsers = {
-        ops: [],
-        sms: [],
-        pms: [],
-        tms: [],
-        ses: [],
-        jes: [],
-        fcs: [],
-        mrs: []
-      };
-
-      team.users.forEach(user => {
-        const normalizedDesignation = String(user.designation || '').toUpperCase().trim();
-        const bucket = designationToBucket[normalizedDesignation];
-        if (bucket) {
-          groupedUsers[bucket].push(`${user.name} (${user.emp_no})`);
-        }
-      });
-
-      return {
-        ...team,
-        ops: groupedUsers.ops,
-        sms: groupedUsers.sms,
-        pms: groupedUsers.pms,
-        tms: groupedUsers.tms,
-        ses: groupedUsers.ses,
-        jes: groupedUsers.jes,
-        fcs: groupedUsers.fcs,
-        mrs: groupedUsers.mrs
-      };
-    });
-
     const total = await prisma.team.count();
 
     return ApiResponse.ok(res, "Teams fetched", {
-      items: formattedTeams,
+      items: teams,
       page: Number(page),
       limit: Number(limit),
       total,
