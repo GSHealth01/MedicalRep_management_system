@@ -52,7 +52,14 @@ async function createDoctor(req, res) {
 
 async function getAllDoctors(req, res) {
   try {
+    const { range } = req.query;
+    let where = {};
+    if (range) {
+      where.sector = { range };
+    }
+
     const doctors = await prisma.doctor.findMany({
+      where,
       include: {
         sector: {
           select: {

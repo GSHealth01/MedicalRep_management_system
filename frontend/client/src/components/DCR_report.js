@@ -227,6 +227,20 @@ export default function RepdetailsReport() {
   const [remarks, setRemarks] = useState("");
   const [orderFormImages, setOrderFormImages] = useState([]);
 
+  // Step 3 Mileage State
+  const [mileage, setMileage] = useState({
+    scheduleMileage: '',
+    openingMileage: '',
+    closingMileage: '',
+    privateMileage: '',
+    fuelPumped: '',
+    cost: ''
+  });
+
+  // Step 3 File States
+  const [odometerReadingFile, setOdometerReadingFile] = useState(null);
+  const [fuelBillFile, setFuelBillFile] = useState(null);
+
   // Fetch user profile data on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -286,7 +300,7 @@ export default function RepdetailsReport() {
     const fetchProducts = async () => {
       try {
         setProductsLoading(true);
-        const response = await api.get('/products', { params: { limit: 500 } });
+        const response = await api.get('/products', { params: { limit: 500, range: userProfile?.range?.name } });
         const productsData = response.data.data?.items || [];
         setProducts(productsData);
 
@@ -308,16 +322,16 @@ export default function RepdetailsReport() {
       }
     };
 
-    if (user && user.email) {
+    if (user && user.email && userProfile) {
       fetchProducts();
     }
-  }, [user]);
+  }, [user, userProfile]);
 
   // Fetch doctors on component mount
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const response = await api.get('/doctors');
+        const response = await api.get('/doctors', { params: { range: userProfile?.range?.name } });
         const doctorsData = response.data.doctors;
         // Format doctor names: "Name - Specialty" if specialty exists
         const formattedDoctors = doctorsData.map(doctor =>
@@ -333,20 +347,36 @@ export default function RepdetailsReport() {
       }
     };
 
-    fetchDoctors();
-  }, []);
+    if (userProfile) {
+      fetchDoctors();
+    }
+  }, [userProfile]);
 
   // Fetch managers on component mount
   useEffect(() => {
     const fetchManagers = async () => {
       try {
         setManagersLoading(true);
-        const response = await api.get('/users');
+        const response = await api.get('/users', { params: { range: userProfile?.range?.name } });
         const usersData = response.data.users || [];
-        // Filter out medical reps (MR) and system admins (ADMIN), format as "Name - Designation"
+        // Map abbreviations to full designations
+        const designationMap = {
+          'SE': 'Sales Executive',
+          'TM': 'Territory Manager',
+          'PM': 'Product Manager',
+          'JE': 'Junior Executive',
+          'FC': 'Field Coordinator',
+          'ASM': 'Area Sales Manager',
+          'RSM': 'Regional Sales Manager',
+          'NSM': 'National Sales Manager',
+          'OM': 'Operations Manager',
+          'MR': 'Medical Representative',
+          'ADMIN': 'Administrator'
+        };
+        // Filter out medical reps (MR) and system admins (ADMIN), format as "Name - Full Designation"
         const filteredManagers = usersData
           .filter(user => user.designation !== 'MR' && user.designation !== 'ADMIN')
-          .map(user => `${user.name} - ${user.designation}`);
+          .map(user => `${user.name} - ${designationMap[user.designation] || user.designation}`);
         setManagers(filteredManagers);
       } catch (error) {
         console.error('Error fetching managers:', error);
@@ -356,8 +386,10 @@ export default function RepdetailsReport() {
       }
     };
 
-    fetchManagers();
-  }, []);
+    if (userProfile) {
+      fetchManagers();
+    }
+  }, [userProfile]);
 
   // Fetch itinerary for selected date
   useEffect(() => {
@@ -511,6 +543,18 @@ export default function RepdetailsReport() {
     return summary.reduce((acc, doc) => acc + doc.total, 0);
   };
 
+  const calculateExpensesTotal = () => {
+    let total = 0;
+    if (expenses.bata) total += 50;
+    if (expenses.nightOut) total += 50;
+    if (expenses.fuel) total += 50;
+    total += parseFloat(otherBills.parking.amount || 0);
+    total += parseFloat(otherBills.highway.amount || 0);
+    total += parseFloat(otherBills.other.amount || 0);
+    total += parseFloat(mileage.cost || 0);
+    return total;
+  };
+
 
   // --- Step 3 Functions ---
   const toggleOtherBillItem = (key) => {
@@ -556,7 +600,12 @@ export default function RepdetailsReport() {
       formData.append('callReport', JSON.stringify(tableData));
       formData.append('dailyExpenses', JSON.stringify(expenses));
       formData.append('otherBills', JSON.stringify(otherBills));
+      formData.append('mileage', JSON.stringify(mileage));
       formData.append('remarks', remarks);
+
+      // Add file uploads
+      if (odometerReadingFile) formData.append('odometerReading', odometerReadingFile);
+      if (fuelBillFile) formData.append('fuelBill', fuelBillFile);
 
       // Add image files
       otherBillImages.forEach((file, index) => {
@@ -582,7 +631,7 @@ export default function RepdetailsReport() {
   }
 
 
-  const FROZEN = { no: 40, doctor: 180, joint: 200 };
+  const FROZEN = { no: 40, doctor: 180, joint: 300 };
   const LEFTS = { no: 0, doctor: FROZEN.no, joint: FROZEN.no + FROZEN.doctor };
   const stickyBase = {
     position: 'sticky',
@@ -924,14 +973,14 @@ export default function RepdetailsReport() {
           </caption>
           <tbody>
             {[
-              { label: "Schedule mileage", input: <input type="text" placeholder="1000 km" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Opening mileage", input: <input type="text" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Closing mileage", input: <input type="text" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Private mileage", input: <input type="text" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Odometer Reading", input: <input type="file" accept="image/*" className="w-full text-sm" /> },
-              { label: "Fuel Pumped", input: <input type="text" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Cost", input: <input type="text" placeholder="Rs." className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Fuel Bill", input: <input type="file" accept="image/*" className="w-full text-sm" /> }
+              { label: "Schedule mileage", input: <input type="text" value={mileage.scheduleMileage} onChange={(e) => setMileage(prev => ({ ...prev, scheduleMileage: e.target.value }))} placeholder="1000 km" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Opening mileage", input: <input type="text" value={mileage.openingMileage} onChange={(e) => setMileage(prev => ({ ...prev, openingMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Closing mileage", input: <input type="text" value={mileage.closingMileage} onChange={(e) => setMileage(prev => ({ ...prev, closingMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Private mileage", input: <input type="text" value={mileage.privateMileage} onChange={(e) => setMileage(prev => ({ ...prev, privateMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Odometer Reading", input: <input type="file" accept="image/*" onChange={(e) => setOdometerReadingFile(e.target.files[0])} className="w-full text-sm" /> },
+              { label: "Fuel Pumped", input: <input type="text" value={mileage.fuelPumped} onChange={(e) => setMileage(prev => ({ ...prev, fuelPumped: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Cost", input: <input type="text" value={mileage.cost} onChange={(e) => setMileage(prev => ({ ...prev, cost: e.target.value }))} placeholder="Rs." className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Fuel Bill", input: <input type="file" accept="image/*" onChange={(e) => setFuelBillFile(e.target.files[0])} className="w-full text-sm" /> }
             ].map((row, i) => (
               <tr key={i}>
                 <td className="px-3 py-2 border-b border-gray-200 text-sm w-1/3">{row.label}</td> {/* Adjusted width */}
@@ -973,6 +1022,11 @@ export default function RepdetailsReport() {
           )}
         </div>
 
+        {/* Expenses Total */}
+        <div className="mt-6 p-4 bg-gray-800 text-white rounded-lg flex justify-between items-center">
+          <span className="text-xl font-bold">Expenses Total:</span>
+          <span className="text-2xl font-bold">Rs. {calculateExpensesTotal().toFixed(2)}</span>
+        </div>
 
       {/* Buttons */}
       <div className="mt-8 flex gap-4 justify-center">

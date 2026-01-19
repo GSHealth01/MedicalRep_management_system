@@ -103,6 +103,24 @@ const generateSummaryData = (tableData, productCategories) => {
   return summary;
 };
 
+const calculateExpensesTotal = (dcr) => {
+  let total = 0;
+  if (dcr.dailyExpenses) {
+    if (dcr.dailyExpenses.bata) total += 50;
+    if (dcr.dailyExpenses.nightOut) total += 50;
+    if (dcr.dailyExpenses.fuel) total += 50;
+  }
+  if (dcr.otherBills && dcr.otherBills.details) {
+    total += parseFloat(dcr.otherBills.details.parking?.amount || 0);
+    total += parseFloat(dcr.otherBills.details.highway?.amount || 0);
+    total += parseFloat(dcr.otherBills.details.other?.amount || 0);
+  }
+  if (dcr.mileage) {
+    total += parseFloat(dcr.mileage.cost || 0);
+  }
+  return total;
+};
+
 /**
  * Summary Table Component (Shows prices, totals, and managers for selected items)
  */
@@ -357,9 +375,9 @@ export default function DCRReportsDashboard() {
                 <tr>
                   <td className="px-3 py-2 border-b border-gray-200 text-sm w-1/3">Odometer Reading</td>
                   <td className="px-3 py-2 border-b border-gray-200">
-                    {selectedDCR.odometerReading && selectedDCR.odometerReading.length > 0 ? (
+                    {selectedDCR.odometerReading ? (
                       <img
-                        src={`http://localhost:5001/uploads/dcr/${selectedDCR.odometerReading[0]}`}
+                        src={`http://localhost:5001/uploads/dcr/${selectedDCR.odometerReading}`}
                         alt="Odometer Reading"
                         className="w-full h-32 object-cover rounded border"
                       />
@@ -377,9 +395,9 @@ export default function DCRReportsDashboard() {
                 <tr>
                   <td className="px-3 py-2 border-b border-gray-200 text-sm w-1/3">Fuel Bill</td>
                   <td className="px-3 py-2 border-b border-gray-200">
-                    {selectedDCR.fuelBill && selectedDCR.fuelBill.length > 0 ? (
+                    {selectedDCR.fuelBill ? (
                       <img
-                        src={`http://localhost:5001/uploads/dcr/${selectedDCR.fuelBill[0]}`}
+                        src={`http://localhost:5001/uploads/dcr/${selectedDCR.fuelBill}`}
                         alt="Fuel Bill"
                         className="w-full h-32 object-cover rounded border"
                       />
@@ -414,10 +432,21 @@ export default function DCRReportsDashboard() {
               </div>
             </div>
           )}
-          {/* Grand Total */}
-          <div className="mt-6 p-4 bg-gray-800 text-white rounded-lg flex justify-between items-center">
-            <span className="text-xl font-bold">Grand Total:</span>
-            <span className="text-2xl font-bold">Rs. {generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0).toFixed(2)}</span>
+
+          {/* Totals */}
+          <div className="mt-6 space-y-4">
+            <div className="p-4 bg-blue-800 text-white rounded-lg flex justify-between items-center">
+              <span className="text-xl font-bold">Total (Products):</span>
+              <span className="text-2xl font-bold">Rs. {generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0).toFixed(2)}</span>
+            </div>
+            <div className="p-4 bg-green-800 text-white rounded-lg flex justify-between items-center">
+              <span className="text-xl font-bold">Total (Expenses):</span>
+              <span className="text-2xl font-bold">Rs. {calculateExpensesTotal(selectedDCR).toFixed(2)}</span>
+            </div>
+            <div className="p-4 bg-gray-800 text-white rounded-lg flex justify-between items-center">
+              <span className="text-xl font-bold">Grand Total:</span>
+              <span className="text-2xl font-bold">Rs. {(generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0) + calculateExpensesTotal(selectedDCR)).toFixed(2)}</span>
+            </div>
           </div>
         </div>
       </div>

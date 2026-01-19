@@ -127,7 +127,14 @@ async function createUser(req, res) {
 
 async function getAllUsers(req, res) {
   try {
+    const { range } = req.query;
+    let where = {};
+    if (range) {
+      where.sector = { range };
+    }
+
     const users = await prisma.user.findMany({
+      where,
       select: {
         id: true,
         email: true,

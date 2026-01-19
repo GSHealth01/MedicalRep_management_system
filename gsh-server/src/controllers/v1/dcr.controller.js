@@ -40,6 +40,7 @@ async function createDCR(req, res) {
       callReport,
       dailyExpenses,
       otherBills,
+      mileage,
       remarks,
       orderFormImages
     } = req.body;
@@ -47,6 +48,8 @@ async function createDCR(req, res) {
     // Handle file uploads
     const otherBillImages = req.files?.otherBillImages || [];
     const orderFormImageFiles = req.files?.orderFormImages || [];
+    const odometerReading = req.files?.odometerReading || [];
+    const fuelBill = req.files?.fuelBill || [];
 
     // Create DCR record
     const newDCR = await prisma.dcr.create({
@@ -65,6 +68,9 @@ async function createDCR(req, res) {
           details: otherBills ? JSON.parse(otherBills) : null,
           images: otherBillImages.map(file => file.filename)
         },
+        mileage: mileage ? JSON.parse(mileage) : null,
+        odometerReading: odometerReading.length > 0 ? odometerReading[0].filename : null,
+        fuelBill: fuelBill.length > 0 ? fuelBill[0].filename : null,
         remarks,
         orderFormImages: orderFormImageFiles.map(file => file.filename),
         user_id: userId
@@ -101,6 +107,9 @@ async function getUserDCRs(req, res) {
         callReport: true,
         dailyExpenses: true,
         otherBills: true,
+        mileage: true,
+        odometerReading: true,
+        fuelBill: true,
         remarks: true,
         orderFormImages: true,
         createdAt: true
@@ -149,6 +158,9 @@ async function getDCRById(req, res) {
         callReport: true,
         dailyExpenses: true,
         otherBills: true,
+        mileage: true,
+        odometerReading: true,
+        fuelBill: true,
         remarks: true,
         orderFormImages: true,
         createdAt: true
@@ -182,6 +194,7 @@ async function updateDCR(req, res) {
       callReport,
       dailyExpenses,
       otherBills,
+      mileage,
       remarks,
       orderFormImages
     } = req.body;
@@ -201,6 +214,8 @@ async function updateDCR(req, res) {
     // Handle file uploads
     const otherBillImages = req.files?.otherBillImages || [];
     const orderFormImageFiles = req.files?.orderFormImages || [];
+    const odometerReading = req.files?.odometerReading || [];
+    const fuelBill = req.files?.fuelBill || [];
 
     // Update DCR record
     const updatedDCR = await prisma.dcr.update({
@@ -220,6 +235,9 @@ async function updateDCR(req, res) {
           details: JSON.parse(otherBills),
           images: otherBillImages.map(file => file.filename)
         } : existingDCR.otherBills,
+        mileage: mileage ? JSON.parse(mileage) : existingDCR.mileage,
+        odometerReading: odometerReading.length > 0 ? odometerReading[0].filename : existingDCR.odometerReading,
+        fuelBill: fuelBill.length > 0 ? fuelBill[0].filename : existingDCR.fuelBill,
         remarks,
         orderFormImages: orderFormImageFiles.length > 0 ? orderFormImageFiles.map(file => file.filename) : existingDCR.orderFormImages
       }
