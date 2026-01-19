@@ -18,7 +18,10 @@ app.use(morgan("dev"));
 // Serve static files for uploads
 app.use('/uploads', express.static('uploads', {
   setHeaders: (res, path) => {
-    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.set('Access-Control-Allow-Methods', 'GET');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }));
 

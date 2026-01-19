@@ -196,7 +196,9 @@ async function updateDCR(req, res) {
       otherBills,
       mileage,
       remarks,
-      orderFormImages
+      orderFormImages,
+      existingOtherBillImages,
+      existingOrderFormImages
     } = req.body;
 
     // Check if DCR exists and belongs to user
@@ -217,6 +219,10 @@ async function updateDCR(req, res) {
     const odometerReading = req.files?.odometerReading || [];
     const fuelBill = req.files?.fuelBill || [];
 
+    // Parse existing images
+    const existingOtherBillImagesParsed = existingOtherBillImages ? JSON.parse(existingOtherBillImages) : [];
+    const existingOrderFormImagesParsed = existingOrderFormImages ? JSON.parse(existingOrderFormImages) : [];
+
     // Update DCR record
     const updatedDCR = await prisma.dcr.update({
       where: { id: parseInt(id) },
@@ -233,13 +239,13 @@ async function updateDCR(req, res) {
         dailyExpenses: dailyExpenses ? JSON.parse(dailyExpenses) : existingDCR.dailyExpenses,
         otherBills: otherBills ? {
           details: JSON.parse(otherBills),
-          images: otherBillImages.map(file => file.filename)
+          images: [...existingOtherBillImagesParsed, ...otherBillImages.map(file => file.filename)]
         } : existingDCR.otherBills,
         mileage: mileage ? JSON.parse(mileage) : existingDCR.mileage,
         odometerReading: odometerReading.length > 0 ? odometerReading[0].filename : existingDCR.odometerReading,
         fuelBill: fuelBill.length > 0 ? fuelBill[0].filename : existingDCR.fuelBill,
         remarks,
-        orderFormImages: orderFormImageFiles.length > 0 ? orderFormImageFiles.map(file => file.filename) : existingDCR.orderFormImages
+        orderFormImages: [...existingOrderFormImagesParsed, ...orderFormImageFiles.map(file => file.filename)]
       }
     });
 

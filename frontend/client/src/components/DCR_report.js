@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 
@@ -66,7 +66,7 @@ const generateSummaryData = (tableData, productCategories) => {
       managersSelected: (doc.jointVisit && doc.jointVisitManagers)
         ? Object.entries(doc.jointVisitManagers)
             .filter(([key, value]) => value === true)
-            .map(([key, value]) => key)
+            .map(([key, value]) => key.split(' - ')[1] || key)
         : []
     };
 
@@ -185,13 +185,17 @@ const LiveSummaryTable = ({ tableData, productCategories }) => {
 export default function RepdetailsReport() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1);
+  const [isEdit, setIsEdit] = useState(false);
+  const editId = location.state?.editId;
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [productCategories, setProductCategories] = useState({});
 
   // Step 1 State
   const [date, setDate] = useState("");
+  const [dateError, setDateError] = useState("");
   const [range, setRange] = useState("");
   const [agency, setAgency] = useState("");
   const [repName, setRepName] = useState("");
@@ -208,6 +212,7 @@ export default function RepdetailsReport() {
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [managers, setManagers] = useState([]);
   const [managersLoading, setManagersLoading] = useState(true);
+  const [allDcrs, setAllDcrs] = useState([]);
 
   // Step 2 State
   const [selectedProductTab, setSelectedProductTab] = useState("");
@@ -222,10 +227,14 @@ export default function RepdetailsReport() {
     highway: { checked: false, amount: "" },
     other: { checked: false, amount: "" }
   });
-  const [otherBillImages, setOtherBillImages] = useState([]);
+  const [existingOtherBillImages, setExistingOtherBillImages] = useState([]);
+  const [newOtherBillImages, setNewOtherBillImages] = useState([]);
+  const otherBillImages = [...existingOtherBillImages, ...newOtherBillImages];
   const [expenses, setExpenses] = useState({ bata: false, nightOut: false, fuel: false });
   const [remarks, setRemarks] = useState("");
-  const [orderFormImages, setOrderFormImages] = useState([]);
+  const [existingOrderFormImages, setExistingOrderFormImages] = useState([]);
+  const [newOrderFormImages, setNewOrderFormImages] = useState([]);
+  const orderFormImages = [...existingOrderFormImages, ...newOrderFormImages];
 
   // Step 3 Mileage State
   const [mileage, setMileage] = useState({
@@ -241,6 +250,44 @@ export default function RepdetailsReport() {
   const [odometerReadingFile, setOdometerReadingFile] = useState(null);
   const [fuelBillFile, setFuelBillFile] = useState(null);
 
+  // Handle edit mode
+  useEffect(() => {
+    if (editId) {
+      setIsEdit(true);
+      const fetchDCR = async () => {
+        try {
+          const response = await api.get(`/dcrs/${editId}`);
+          const dcr = response.data.dcr;
+          setDate(dcr.date);
+          setRange(dcr.range);
+          setAgency(dcr.agency);
+          setRepName(dcr.repName);
+          setEmpNo(dcr.empNo);
+          setDistributor(dcr.distributor);
+          setArea(dcr.area);
+          setTown(dcr.town);
+          setSelectedDoctors(dcr.callReport.map(d => d.doctor));
+          setTableData(dcr.callReport);
+          setExpenses(dcr.dailyExpenses || {});
+          setOtherBills(dcr.otherBills?.details || { parking: { checked: false, amount: "" }, highway: { checked: false, amount: "" }, other: { checked: false, amount: "" } });
+          setExistingOtherBillImages(dcr.otherBills?.images || []);
+          setNewOtherBillImages([]);
+          setMileage(dcr.mileage || {});
+          setRemarks(dcr.remarks || "");
+          setExistingOrderFormImages(dcr.orderFormImages || []);
+          setNewOrderFormImages([]);
+          setOdometerReadingFile(dcr.odometerReading || null);
+          setFuelBillFile(dcr.fuelBill || null);
+          // Set step to 2 for editing
+          setStep(2);
+        } catch (error) {
+          console.error('Error fetching DCR for edit:', error);
+        }
+      };
+      fetchDCR();
+    }
+  }, [editId]);
+
   // Fetch user profile data on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -248,16 +295,16 @@ export default function RepdetailsReport() {
         const response = await api.get('/users/profile');
         const profile = response.data.user;
         setUserProfile(profile);
-        
-        console.log('DCR: Fetched user profile:', profile); 
-        
+
+        console.log('DCR: Fetched user profile:', profile);
+
         // Auto-populate form fields with user profile data
         if (profile) {
           setRepName(profile.name || "");
           setEmpNo(profile.emp_no || "");
           setAgency(profile.agency?.name || "");
           setRange(profile.range?.name || "");
-          
+
           // Handle both single distributor (for backward compatibility) and multiple distributors
           if (profile.distributor) {
             // Single distributor (backward compatibility)
@@ -292,6 +339,23 @@ export default function RepdetailsReport() {
     } else if (!user) {
       // If no user, stop loading
       setLoading(false);
+    }
+  }, [user]);
+
+  // Fetch all DCRs on component mount for date validation
+  useEffect(() => {
+    const fetchAllDcrs = async () => {
+      try {
+        const response = await api.get('/dcrs');
+        const flattened = Object.values(response.data.dcrs).flat();
+        setAllDcrs(flattened);
+      } catch (error) {
+        console.error('Error fetching DCRs for validation:', error);
+      }
+    };
+
+    if (user && user.email) {
+      fetchAllDcrs();
     }
   }, [user]);
 
@@ -391,14 +455,23 @@ export default function RepdetailsReport() {
     }
   }, [userProfile]);
 
-  // Fetch itinerary for selected date
+  // Fetch itinerary for selected date and check for existing DCR
   useEffect(() => {
     const fetchItineraryForDate = async () => {
       if (!date) {
         setItineraryMessage("");
         setAreaDisabled(false);
         setTownDisabled(false);
+        setDateError("");
         return;
+      }
+
+      // Check for existing DCR
+      const existingDcr = allDcrs.find(dcr => dcr.date === date);
+      if (existingDcr && (!isEdit || existingDcr.id !== editId)) {
+        setDateError("A report has already been submitted for this date.");
+      } else {
+        setDateError("");
       }
 
       try {
@@ -427,7 +500,7 @@ export default function RepdetailsReport() {
     };
 
     fetchItineraryForDate();
-  }, [date]);
+  }, [date, allDcrs, isEdit, editId]);
 
   // --- Step 1 Functions ---
   const toggleDoctor = (doc) => {
@@ -446,7 +519,7 @@ export default function RepdetailsReport() {
   }, [showDoctorDropdown]);
 
   const step1Valid =
-    date && selectedDoctors.length > 0;
+    date && selectedDoctors.length > 0 && !dateError;
     
   // --- Step 2 Functions ---
   useEffect(() => {
@@ -570,7 +643,7 @@ export default function RepdetailsReport() {
     setOtherBills(prev => ({ ...prev, [key]: { ...prev[key], amount: value } }));
   };
   const onOtherBillFilesChange = (e) => {
-    setOtherBillImages(prev => [...prev, ...Array.from(e.target.files)]);
+    setNewOtherBillImages(prev => [...prev, ...Array.from(e.target.files)]);
   };
 
   const handleExpenseChange = (key) => {
@@ -580,6 +653,24 @@ export default function RepdetailsReport() {
       if (key === "nightOut" && newVal) return { ...prev, bata: false, nightOut: true };
       return { ...prev, [key]: newVal };
     });
+  };
+
+  const deleteOtherBillImage = (index) => {
+    if (index < existingOtherBillImages.length) {
+      setExistingOtherBillImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      const newIndex = index - existingOtherBillImages.length;
+      setNewOtherBillImages(prev => prev.filter((_, i) => i !== newIndex));
+    }
+  };
+
+  const deleteOrderFormImage = (index) => {
+    if (index < existingOrderFormImages.length) {
+      setExistingOrderFormImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      const newIndex = index - existingOrderFormImages.length;
+      setNewOrderFormImages(prev => prev.filter((_, i) => i !== newIndex));
+    }
   };
 
   const handleSubmit = async () => {
@@ -603,26 +694,33 @@ export default function RepdetailsReport() {
       formData.append('mileage', JSON.stringify(mileage));
       formData.append('remarks', remarks);
 
-      // Add file uploads
-      if (odometerReadingFile) formData.append('odometerReading', odometerReadingFile);
-      if (fuelBillFile) formData.append('fuelBill', fuelBillFile);
+      // Add existing images as JSON
+      formData.append('existingOtherBillImages', JSON.stringify(existingOtherBillImages));
+      formData.append('existingOrderFormImages', JSON.stringify(existingOrderFormImages));
 
-      // Add image files
-      otherBillImages.forEach((file, index) => {
+      // Add file uploads
+      if (odometerReadingFile && typeof odometerReadingFile === 'object') formData.append('odometerReading', odometerReadingFile);
+      if (fuelBillFile && typeof fuelBillFile === 'object') formData.append('fuelBill', fuelBillFile);
+
+      // Add new image files only
+      newOtherBillImages.forEach((file, index) => {
         formData.append('otherBillImages', file);
       });
 
-      orderFormImages.forEach((file, index) => {
+      newOrderFormImages.forEach((file, index) => {
         formData.append('orderFormImages', file);
       });
 
-      const response = await api.post('/dcrs', formData, {
+      const url = isEdit ? `/dcrs/${editId}` : '/dcrs';
+      const method = isEdit ? api.put : api.post;
+
+      const response = await method(url, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      alert("DCR submitted successfully!");
+      alert(isEdit ? "DCR updated successfully!" : "DCR submitted successfully!");
       navigate('/dcr-reports'); // Redirect to dashboard
     } catch (error) {
       console.error('Error submitting DCR:', error);
@@ -631,7 +729,7 @@ export default function RepdetailsReport() {
   }
 
 
-  const FROZEN = { no: 40, doctor: 180, joint: 300 };
+  const FROZEN = { no: 40, doctor: 180, joint: 400 };
   const LEFTS = { no: 0, doctor: FROZEN.no, joint: FROZEN.no + FROZEN.doctor };
   const stickyBase = {
     position: 'sticky',
@@ -664,7 +762,10 @@ export default function RepdetailsReport() {
       {/* Date */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Date</label>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={isEdit} className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${isEdit ? 'bg-gray-100' : 'bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`} />
+        {dateError && (
+          <p className="mt-2 text-sm text-red-600">{dateError}</p>
+        )}
         {itineraryMessage && (
           <p className="mt-2 text-sm text-orange-600">{itineraryMessage}</p>
         )}
@@ -952,9 +1053,27 @@ export default function RepdetailsReport() {
                       <label className="block mb-1 text-xs">Upload Receipts:</label>
                       <input type="file" multiple accept="image/*" onChange={onOtherBillFilesChange} className="text-xs" />
                       {otherBillImages.length > 0 && (
-                        <ul className="mt-2 text-xs">
-                          {otherBillImages.map((f, i) => <li key={i}>{f.name}</li>)}
-                        </ul>
+                        <div className="mt-2">
+                          <p className="text-xs font-semibold mb-1">Existing Images:</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {otherBillImages.map((img, i) => (
+                              <div key={i} className="relative">
+                                <img
+                                  src={typeof img === 'string' ? `http://localhost:5001/uploads/dcr/${img}` : URL.createObjectURL(img)}
+                                  alt={`Receipt ${i + 1}`}
+                                  className="w-full h-16 object-cover rounded border"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => deleteOtherBillImage(i)}
+                                  className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -977,10 +1096,50 @@ export default function RepdetailsReport() {
               { label: "Opening mileage", input: <input type="text" value={mileage.openingMileage} onChange={(e) => setMileage(prev => ({ ...prev, openingMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
               { label: "Closing mileage", input: <input type="text" value={mileage.closingMileage} onChange={(e) => setMileage(prev => ({ ...prev, closingMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
               { label: "Private mileage", input: <input type="text" value={mileage.privateMileage} onChange={(e) => setMileage(prev => ({ ...prev, privateMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Odometer Reading", input: <input type="file" accept="image/*" onChange={(e) => setOdometerReadingFile(e.target.files[0])} className="w-full text-sm" /> },
+              { label: "Odometer Reading", input: (
+                <div>
+                  {odometerReadingFile && (
+                    <div className="mb-2">
+                      <img
+                        src={typeof odometerReadingFile === 'string' ? `http://localhost:5001/uploads/dcr/${odometerReadingFile}` : URL.createObjectURL(odometerReadingFile)}
+                        alt="Odometer Reading"
+                        className="w-16 h-16 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setOdometerReadingFile(null)}
+                        className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" onChange={(e) => setOdometerReadingFile(e.target.files[0])} className="w-full text-sm" />
+                </div>
+              ) },
               { label: "Fuel Pumped", input: <input type="text" value={mileage.fuelPumped} onChange={(e) => setMileage(prev => ({ ...prev, fuelPumped: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
               { label: "Cost", input: <input type="text" value={mileage.cost} onChange={(e) => setMileage(prev => ({ ...prev, cost: e.target.value }))} placeholder="Rs." className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Fuel Bill", input: <input type="file" accept="image/*" onChange={(e) => setFuelBillFile(e.target.files[0])} className="w-full text-sm" /> }
+              { label: "Fuel Bill", input: (
+                <div>
+                  {fuelBillFile && (
+                    <div className="mb-2">
+                      <img
+                        src={typeof fuelBillFile === 'string' ? `http://localhost:5001/uploads/dcr/${fuelBillFile}` : URL.createObjectURL(fuelBillFile)}
+                        alt="Fuel Bill"
+                        className="w-16 h-16 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFuelBillFile(null)}
+                        className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" onChange={(e) => setFuelBillFile(e.target.files[0])} className="w-full text-sm" />
+                </div>
+              ) }
             ].map((row, i) => (
               <tr key={i}>
                 <td className="px-3 py-2 border-b border-gray-200 text-sm w-1/3">{row.label}</td> {/* Adjusted width */}
@@ -1006,7 +1165,7 @@ export default function RepdetailsReport() {
               type="file"
               multiple
               accept="image/*"
-              onChange={(e) => setOrderFormImages(prev => [...prev, ...Array.from(e.target.files)])}
+              onChange={(e) => setNewOrderFormImages(prev => [...prev, ...Array.from(e.target.files)])}
               className="text-sm cursor-pointer border border-gray-300 rounded-md bg-gray-50 hover:bg-gray-100
                          file:mr-4 file:py-2 file:px-4
                          file:rounded-l-md file:border-0
@@ -1016,9 +1175,27 @@ export default function RepdetailsReport() {
             />
           </div>
           {orderFormImages.length > 0 && (
-            <ul className="mt-2 text-xs">
-              {orderFormImages.map((f, i) => <li key={i}>{f.name}</li>)}
-            </ul>
+            <div className="mt-2">
+              <p className="text-xs font-semibold mb-1">Existing Images:</p>
+              <div className="grid grid-cols-3 gap-2">
+                {orderFormImages.map((img, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={typeof img === 'string' ? `http://localhost:5001/uploads/dcr/${img}` : URL.createObjectURL(img)}
+                      alt={`Order Form ${i + 1}`}
+                      className="w-full h-16 object-cover rounded border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => deleteOrderFormImage(i)}
+                      className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

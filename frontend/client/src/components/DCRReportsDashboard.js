@@ -241,8 +241,7 @@ export default function DCRReportsDashboard() {
   };
 
   const handleEditDCR = (dcrId) => {
-    // For now, just navigate to the form. In a full implementation, you'd pass the DCR data
-    navigate('/DCR_report');
+    navigate('/DCR_report', { state: { editId: dcrId } });
   };
 
   const handleDeleteDCR = async (dcrId) => {
