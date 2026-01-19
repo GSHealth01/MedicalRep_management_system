@@ -5,11 +5,30 @@ import { useNotification } from "../components/NotificationPopup";
 import { useConfirm } from "../components/ConfirmDialog";
 
 function EditEmployeeModal({ employee, onClose, onSave }) {
+  const designationMap = {
+    'MR': 'Medical Rep',
+    'FC': 'Field Coordinator',
+    'JE': 'Junior Executive',
+    'SE': 'Senior Executive',
+    'TM': 'Territory Manager',
+    'PM': 'Product Manager',
+    'OM': 'Operations Manager',
+    'ADMIN': 'Admin',
+    'Medical Rep': 'Medical Rep',
+    'Field Coordinator': 'Field Coordinator',
+    'Junior Executive': 'Junior Executive',
+    'Senior Executive': 'Senior Executive',
+    'Territory Manager': 'Territory Manager',
+    'Product Manager': 'Product Manager',
+    'Operations Manager': 'Operations Manager',
+    'Admin': 'Admin'
+  };
+
   const [formData, setFormData] = useState({
     name: employee?.name || '',
     email: employee?.email || '',
     empNo: employee?.emp_no || employee?.empNo || '',
-    designation: employee?.designation ? employee.designation.toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : '',
+    designation: employee?.designation ? designationMap[employee.designation] || employee.designation : '',
     range: employee?.range?.name || employee?.range || '',
     agency: employee?.agency?.name || employee?.agency || '',
     distributor: employee?.distributor || '',
@@ -152,6 +171,7 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               <option value="Senior Executive">Senior Executive</option>
               <option value="Territory Manager">Territory Manager</option>
               <option value="Product Manager">Product Manager</option>
+              <option value="Operations Manager">Operations Manager</option>
               <option value="Admin">Admin</option>
             </select>
           </div>
@@ -295,6 +315,27 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
   );
 }
 
+const designationMap = {
+  'MR': 'Medical Rep',
+  'FC': 'Field Coordinator',
+  'JE': 'Junior Executive',
+  'SE': 'Senior Executive',
+  'TM': 'Territory Manager',
+  'PM': 'Product Manager',
+  'OM': 'Operations Manager',
+  'ADMIN': 'Admin',
+  'Medical Rep': 'Medical Rep',
+  'Field Coordinator': 'Field Coordinator',
+  'Junior Executive': 'Junior Executive',
+  'Senior Executive': 'Senior Executive',
+  'Territory Manager': 'Territory Manager',
+  'Product Manager': 'Product Manager',
+  'Operations Manager': 'Operations Manager',
+  'Admin': 'Admin'
+};
+
+const showDesignation = (d) => designationMap[d] || d || "-";
+
 export default function ManageEmployees() {
   const { showNotification, NotificationComponent } = useNotification();
   const { showConfirm, ConfirmDialogComponent } = useConfirm();
@@ -397,6 +438,7 @@ export default function ManageEmployees() {
     // Default fallback
     return "";
   };
+
 
   const handleEditEmployee = (employee) => {
     setEditingEmployee(employee);
@@ -524,7 +566,7 @@ export default function ManageEmployees() {
                       <td className="py-2 px-4">{emp.email || emp.username}</td>
                       <td className="py-2 px-4">{emp.emp_no || "-"}</td>
                       <td className="py-2 px-4">{emp.name || "-"}</td>
-                      <td className="py-2 px-4">{emp.designation || "-"}</td>
+                      <td className="py-2 px-4">{showDesignation(emp.designation)}</td>
                       <td className="py-2 px-4">{fmtDate(emp.birthday)}</td>
                       <td className="py-2 px-4">{fmtDate(emp.joinDate || emp.join_date)}</td>
                       <td className="py-2 px-4">{showRange(emp.range)}</td>

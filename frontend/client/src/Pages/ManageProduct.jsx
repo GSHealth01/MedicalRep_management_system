@@ -164,6 +164,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
+              placeholder="Enter product name"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
@@ -175,6 +176,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="therapeutic_category"
               value={formData.therapeutic_category}
               onChange={handleChange}
+              placeholder="e.g., Cardiovascular, Antibiotics"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
@@ -186,6 +188,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="generic_name"
               value={formData.generic_name}
               onChange={handleChange}
+              placeholder="e.g., Paracetamol, Amoxicillin"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
@@ -197,26 +200,7 @@ function EditProductModal({ product, onClose, onSave }) {
               name="route_of_administration"
               value={formData.route_of_administration}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Pack Size</label>
-            <input
-              type="text"
-              name="pack_size"
-              value={formData.pack_size}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Strength</label>
-            <input
-              type="text"
-              name="strength"
-              value={formData.strength}
-              onChange={handleChange}
+              placeholder="e.g., Oral, Intravenous, Topical"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
@@ -623,9 +607,9 @@ export default function ManageProducts() {
                         )}
                         <td className="py-2 px-4">{variant.strength || "-"}</td>
                         <td className="py-2 px-4">{variant.pack_size || "-"}</td>
-                        <td className="py-2 px-4">{variant.sampling_price ? `$${variant.sampling_price}` : "-"}</td>
-                        <td className="py-2 px-4">{variant.stocking_price ? `$${variant.stocking_price}` : "-"}</td>
-                        <td className="py-2 px-4">{variant.detailed_price ? `$${variant.detailed_price}` : "-"}</td>
+                        <td className="py-2 px-4">{variant.sampling_price ? `Rs ${variant.sampling_price}` : "-"}</td>
+                        <td className="py-2 px-4">{variant.stocking_price ? `Rs ${variant.stocking_price}` : "-"}</td>
+                        <td className="py-2 px-4">{variant.detailed_price ? `Rs ${variant.detailed_price}` : "-"}</td>
                         {index === 0 && (
                           <>
                             <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.range || "-"}</td>

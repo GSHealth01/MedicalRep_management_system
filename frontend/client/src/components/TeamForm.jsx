@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../services/api"; // uses your existing axios instance with auth
 
-export default function TeamForm({ onSubmit }) {
+export default function TeamForm({ onSubmit, team }) {
   const [formData, setFormData] = useState({
     sector: "",        // sector ID
     teamName: "",
@@ -20,6 +20,52 @@ export default function TeamForm({ onSubmit }) {
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [errSectors, setErrSectors] = useState("");
   const [errEmployees, setErrEmployees] = useState("");
+
+  // Initialize form data with team data if editing
+  useEffect(() => {
+    if (team) {
+      const groupedUsers = {
+        ops: [],
+        sms: [],
+        pms: [],
+        tms: [],
+        ses: [],
+        jes: [],
+        fcs: [],
+        mrs: []
+      };
+
+      const designationToBucket = {
+        'OM': 'ops', 'OPERATIONS_MANAGER': 'ops',
+        'SE': 'sms', 'SENIOR_EXECUTIVE': 'sms', 'SENIOR_MANAGER': 'sms',
+        'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
+        'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
+        'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
+        'FC': 'fcs', 'FIELD_COORDINATOR': 'fcs',
+        'MR': 'mrs', 'MEDICAL_REP': 'mrs', 'MEDICAL_REPRESENTATIVE': 'mrs'
+      };
+
+      team.users.forEach(user => {
+        const normalizedDesignation = String(user.designation || '').toUpperCase().trim();
+        const bucket = designationToBucket[normalizedDesignation];
+        if (bucket) {
+          groupedUsers[bucket].push(user.id);
+        }
+      });
+
+      setFormData({
+        sector: team.sector?.id || "",
+        teamName: team.name || "",
+        operationsManagers: groupedUsers.ops,
+        medicalReps: groupedUsers.mrs,
+        fieldCoordinators: groupedUsers.fcs,
+        juniorExecutives: groupedUsers.jes,
+        seniorExecutives: groupedUsers.ses,
+        territoryManagers: groupedUsers.tms,
+        productManagers: groupedUsers.pms
+      });
+    }
+  }, [team]);
 
   // Helpers
   const normalizeItems = (res) => {
@@ -209,20 +255,22 @@ export default function TeamForm({ onSubmit }) {
       pms: formData.productManagers
     };
 
-    onSubmit && onSubmit(payload, formData);
+    onSubmit && onSubmit(payload, formData, team);
 
-    // reset
-    setFormData({
-      sector: "",
-      teamName: "",
-      operationsManagers: [],
-      medicalReps: [],
-      fieldCoordinators: [],
-      juniorExecutives: [],
-      seniorExecutives: [],
-      territoryManagers: [],
-      productManagers: []
-    });
+    // reset only if not editing
+    if (!team) {
+      setFormData({
+        sector: "",
+        teamName: "",
+        operationsManagers: [],
+        medicalReps: [],
+        fieldCoordinators: [],
+        juniorExecutives: [],
+        seniorExecutives: [],
+        territoryManagers: [],
+        productManagers: []
+      });
+    }
   };
 
   const renderEmployeeDropdown = (title, designation, fieldName) => {
@@ -284,7 +332,7 @@ export default function TeamForm({ onSubmit }) {
           onChange={handleChange}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
           required
-          disabled={loadingSectors || !!errSectors}
+          disabled={loadingSectors || !!errSectors || !!team}
         >
           <option value="">
             {loadingSectors ? "Loading sectors..." : "Select sector"}
@@ -309,6 +357,7 @@ export default function TeamForm({ onSubmit }) {
           placeholder="Enter team name"
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
           required
+          disabled={!!team}
         />
       </div>
 
@@ -327,7 +376,7 @@ export default function TeamForm({ onSubmit }) {
       )}
 
       <button type="submit" disabled={!canSubmit} className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-2 rounded-md hover:from-red-700 hover:to-red-800 transition disabled:opacity-50 shadow-lg">
-        Add Team
+        {team ? "Update Team" : "Add Team"}
       </button>
     </form>
   );

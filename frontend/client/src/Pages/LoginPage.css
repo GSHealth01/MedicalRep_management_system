@@ -79,3 +79,37 @@
   font-weight: 500;
   line-height: 1.4;
 }
+
+.password-row {
+  position: relative;
+}
+
+.password-row input {
+  padding-right: 40px;
+}
+
+.password-row button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-row button svg {
+  width: 16px;
+  height: 16px;
+  fill: #666;
+}
+
+.password-row button:hover svg {
+  fill: #333;
+}

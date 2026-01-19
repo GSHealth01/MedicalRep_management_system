@@ -9,12 +9,14 @@ function normEmail(v) {
 
 exports.list = async (req, res) => {
   try {
-    const { range, agency, limit } = req.query;
+    const { range, agency, sector_id, limit } = req.query;
 
     // Build where clause for filtering
     const where = {};
 
-    if (range || agency) {
+    if (sector_id) {
+      where.sector_id = parseInt(sector_id);
+    } else if (range || agency) {
       where.sector = {};
       if (range) {
         where.sector.range = range;

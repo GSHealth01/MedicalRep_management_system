@@ -104,6 +104,8 @@ model user {
   name        String?
   emp_no      String    @unique
   designation String?
+  team_role   String?   @default("NORMAL") // NORMAL or LEADER
+  team_status String?   @default("ACTIVE") // ACTIVE or INACTIVE
   join_date   DateTime?
   birthday    DateTime?
   dateAdded   DateTime? @default(now())

@@ -115,6 +115,36 @@ export default function DistributorForm({ onSubmit }) {
       onSubmit={handleSubmit}
       className="max-w-2xl bg-white shadow-lg rounded-lg p-6 space-y-4"
     >
+      {/* Distributor Name */}
+      <div>
+        <label className="block text-gray-700 mb-1">Distributor Name</label>
+        <input
+          type="text"
+          name="distributorName"
+          value={formData.distributorName}
+          onChange={handleChange}
+          placeholder="Enter distributor name"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          required
+        />
+      </div>
+
+      {/* Distributor Code */}
+      <div>
+        <label className="block text-gray-700 mb-1">Distributor Code *</label>
+        <input
+          type="text"
+          name="distributorCode"
+          value={formData.distributorCode}
+          onChange={handleChange}
+          placeholder="Enter distributor code (e.g., DIS036)"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          required
+          pattern="[A-Z]{3}[0-9]{3}"
+          title="Code should be in format DIS036"
+        />
+      </div>
+
       {/* Range (Sector) */}
       <div>
         <label className="block text-gray-700 mb-1">Range (Sector)</label>
@@ -166,36 +196,6 @@ export default function DistributorForm({ onSubmit }) {
         {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.sector && (
           <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
         )}
-      </div>
-
-      {/* Distributor Name */}
-      <div>
-        <label className="block text-gray-700 mb-1">Distributor Name</label>
-        <input
-          type="text"
-          name="distributorName"
-          value={formData.distributorName}
-          onChange={handleChange}
-          placeholder="Enter distributor name"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
-          required
-        />
-      </div>
-
-      {/* Distributor Code */}
-      <div>
-        <label className="block text-gray-700 mb-1">Distributor Code *</label>
-        <input
-          type="text"
-          name="distributorCode"
-          value={formData.distributorCode}
-          onChange={handleChange}
-          placeholder="Enter distributor code (e.g., DIS036)"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
-          required
-          pattern="[A-Z]{3}[0-9]{3}"
-          title="Code should be in format DIS036"
-        />
       </div>
 
       {/* Area */}

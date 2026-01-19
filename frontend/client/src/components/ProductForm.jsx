@@ -121,6 +121,7 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
           name="name"
           value={formData.name}
           onChange={handleChange}
+          placeholder="Enter product name"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
@@ -132,6 +133,7 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
           name="therapeutic_category"
           value={formData.therapeutic_category}
           onChange={handleChange}
+          placeholder="e.g., Cardiovascular, Antibiotics"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
@@ -143,6 +145,7 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
           name="generic_name"
           value={formData.generic_name}
           onChange={handleChange}
+          placeholder="e.g., Paracetamol, Amoxicillin"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
@@ -154,6 +157,7 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
           name="route_of_administration"
           value={formData.route_of_administration}
           onChange={handleChange}
+          placeholder="e.g., Oral, Intravenous, Topical"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -217,9 +221,9 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
               <tr>
                 <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Strength</th>
                 <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Pack Size</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Sampling Price</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Stocking Price</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Detailed Price</th>
+                <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Sampling Price (Rs.)</th>
+                <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Stocking Price (Rs.)</th>
+                <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Detailed Price (Rs.)</th>
                 <th className="px-4 py-2 border border-gray-300 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>

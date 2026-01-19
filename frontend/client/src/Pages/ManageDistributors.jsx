@@ -12,6 +12,7 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
     area: '',
     town: '',
     route: '',
+    range: '',
     agency: ''
   });
   
@@ -53,18 +54,18 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
   const [filteredAgencies, setFilteredAgencies] = useState([]);
 
   // when range changes, filter agencies based on the selected range
-  useEffect(() => {
-    if (!formData.sector) {
-      setFilteredAgencies([]);
-      return;
-    }
-    // Filter agencies based on the selected range
-    const filtered = agencies.filter(agency => {
-      // Check if agency name starts with the selected range (A or B)
-      return agency.name && agency.name.startsWith(formData.sector);
-    });
-    setFilteredAgencies(filtered);
-  }, [formData.sector, agencies]);
+   useEffect(() => {
+     if (!formData.range) {
+       setFilteredAgencies([]);
+       return;
+     }
+     // Filter agencies based on the selected range
+     const filtered = agencies.filter(agency => {
+       // Check if agency name starts with the selected range (A or B)
+       return agency.name && agency.name.startsWith(formData.range);
+     });
+     setFilteredAgencies(filtered);
+   }, [formData.range, agencies]);
 
   const [loading, setLoading] = useState(false);
 
@@ -77,6 +78,7 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
         area: typeof distributor?.area === 'object' ? distributor?.area?.name || '' : distributor?.area || '',
         town: distributor?.coverage_town || distributor?.town || '',
         route: distributor?.route || '',
+        range: distributor?.sector?.range || '',
         agency: typeof distributor?.agency === 'object' ? distributor?.agency?.name || '' : distributor?.agency || ''
       });
     }
@@ -84,6 +86,11 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // clear dependent agency when range changes
+    if (name === "range") {
+      setFormData((s) => ({ ...s, range: value, agency: "" }));
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -154,14 +161,33 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Route</label>
-            <input
-              type="text"
+            <select
               name="route"
               value={formData.route}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
-              placeholder="Enter route"
-            />
+            >
+              <option value="">Select route</option>
+              <option value="Route A">Route A</option>
+              <option value="Route B">Route B</option>
+              <option value="Route C">Route C</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Range</label>
+            <select
+              name="range"
+              value={formData.range}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
+            >
+              <option value="">Select Range</option>
+              {ranges.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Agency</label>
@@ -170,14 +196,29 @@ function EditDistributorModal({ distributor, onClose, onSave }) {
               value={formData.agency}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200"
+              disabled={!formData.range || loadingAgencies}
             >
-              <option value="">Select Agency</option>
-              {agencies.map((a) => (
+              <option value="">
+                {!formData.range
+                  ? "Select range first"
+                  : loadingAgencies
+                  ? "Loading agencies..."
+                  : agencyError
+                  ? "Error loading agencies"
+                  : "Select agency"}
+              </option>
+              {filteredAgencies.map((a) => (
                 <option key={a.id} value={a.name}>
                   {a.name}
                 </option>
               ))}
             </select>
+            {agencyError && (
+              <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+            )}
+            {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.range && (
+              <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
+            )}
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <button
@@ -232,6 +273,7 @@ export default function ManageDistributors() {
         // Ensure all nested objects are properly handled
         const safeItems = items.map(item => ({
           ...item,
+          range: item.sector?.range || 'Unknown',
           agency: item.sector?.agency || 'Unknown',
           area: typeof item.area === 'object' ? item.area?.name || 'Unknown' : item.area || 'Unknown',
           coverage_town: item.coverage_town || item.town || 'Unknown',
@@ -287,8 +329,9 @@ export default function ManageDistributors() {
       if (formData.town.trim()) updateData.coverage_town = formData.town.trim();
       if (formData.route.trim()) updateData.route = formData.route.trim();
       
-      // For agency and area, we need to find the IDs or handle them properly
+      // For range, agency and area, we need to find the IDs or handle them properly
       // Since these are complex relationships, let's update them as strings for now
+      if (formData.range) updateData.range = formData.range;
       if (formData.agency) updateData.agency = formData.agency;
       if (formData.area) updateData.area = formData.area;
 
@@ -384,6 +427,7 @@ export default function ManageDistributors() {
               <tr>
                 <th className="py-2 px-4 text-center">Distributor Code</th>
                 <th className="py-2 px-4 text-center">Distributor Name</th>
+                <th className="py-2 px-4 text-center">Range</th>
                 <th className="py-2 px-4 text-center">Agency</th>
                 <th className="py-2 px-4 text-center">Area</th>
                 <th className="py-2 px-4 text-center">Town</th>
@@ -395,7 +439,7 @@ export default function ManageDistributors() {
             <tbody>
               {distributors.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-4 text-gray-500">
+                  <td colSpan="9" className="text-center py-4 text-gray-500">
                     No distributors added yet
                   </td>
                 </tr>
@@ -414,6 +458,9 @@ export default function ManageDistributors() {
                         {String(dist.name || dist.distributorName || 'Unknown')}
                       </td>
                       <td className="py-2 px-4">
+                        {String(dist.range || 'Unknown')}
+                      </td>
+                      <td className="py-2 px-4">
                         {String(dist.agency || 'Unknown')}
                       </td>
                       <td className="py-2 px-4">
@@ -426,7 +473,7 @@ export default function ManageDistributors() {
                         {String(dist.route || '-')}
                       </td>
                       <td className="py-2 px-4">
-                        {dist.dateAdded ? new Date(dist.dateAdded).toLocaleDateString() : '-'}
+                        {dist.dateAdded ? new Date(dist.dateAdded).toISOString().slice(0, 10) : '-'}
                       </td>
                       <td className="py-2 px-4 text-center">
                         <div className="flex justify-center space-x-2">

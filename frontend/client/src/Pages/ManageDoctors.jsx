@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import DoctorForm from "../components/DoctorForm";
 import { api } from "../services/api";
 import { useNotification } from "../components/NotificationPopup";
@@ -6,19 +6,81 @@ import { useConfirm } from "../components/ConfirmDialog";
 
 // Edit Doctor Modal Component
 function EditDoctorModal({ doctor, onClose, onSave }) {
-  const [formData, setFormData] = useState({
-    name: doctor?.name || '',
-    contactNumber: doctor?.contactNumber || '',
-    email: doctor?.email || '',
-    specialty: doctor?.specialty || doctor?.speciality || '',
-    categorization: doctor?.categorization || '',
-    sector: doctor?.sector?.range || '',
-    dateAdded: doctor?.date ? new Date(doctor.date).toISOString().slice(0, 10) : ''
-  });
-  const [loading, setLoading] = useState(false);
+   const [formData, setFormData] = useState({
+     name: doctor?.name || '',
+     contactNumber: doctor?.contactNumber || '',
+     email: doctor?.email || '',
+     specialty: doctor?.specialty || doctor?.speciality || '',
+     categorization: doctor?.categorization || '',
+     sector: doctor?.sector?.range || '',
+     agency: doctor?.sector?.agency || '',
+     dateAdded: doctor?.dateAdded
+       ? new Date(doctor.dateAdded).toISOString().slice(0, 10)
+       : doctor?.date
+       ? new Date(doctor.date).toISOString().slice(0, 10)
+       : ''
+   });
+
+   // Add agencies state
+   const [agencies, setAgencies] = useState([]);
+   const [loadingAgencies, setLoadingAgencies] = useState(true);
+   const [agencyError, setAgencyError] = useState("");
+
+   // Load sectors as agencies from API
+   useEffect(() => {
+     let mounted = true;
+     (async () => {
+       setLoadingAgencies(true);
+       setAgencyError("");
+       try {
+         const res = await api.get("/admin/sectors");
+         const payload = res?.data?.data?.items || [];
+         // Map sectors to agency format
+         const agencyList = payload.map(sector => ({
+           id: sector.id,
+           name: sector.agency
+         }));
+         if (mounted) setAgencies(agencyList);
+       } catch (err) {
+         if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load sectors");
+       } finally {
+         if (mounted) setLoadingAgencies(false);
+       }
+     })();
+     return () => { mounted = false; };
+   }, []);
+
+   // Hardcoded ranges
+   const ranges = useMemo(() => [
+     { id: 'A', name: 'A' },
+     { id: 'B', name: 'B' }
+   ], []);
+
+   const [filteredAgencies, setFilteredAgencies] = useState([]);
+
+   // when range changes, filter agencies based on the selected range
+   useEffect(() => {
+     if (!formData.sector) {
+       setFilteredAgencies([]);
+       return;
+     }
+     // Filter agencies based on the selected range
+     const filtered = agencies.filter(agency => {
+       // Check if agency name starts with the selected range (A or B)
+       return agency.name && agency.name.startsWith(formData.sector);
+     });
+     setFilteredAgencies(filtered);
+   }, [formData.sector, agencies]);
+
+   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // clear dependent agency when sector changes
+    if (name === "sector") {
+      setFormData((s) => ({ ...s, sector: value, agency: "" }));
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -83,17 +145,14 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Categorization</label>
-            <select
+            <input
+              type="text"
               name="categorization"
               value={formData.categorization}
               onChange={handleChange}
+              placeholder="Enter categorization"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              <option value="">Select Categorization</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-            </select>
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sector (Range)</label>
@@ -104,9 +163,45 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               <option value="">Select Sector</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
+              {ranges.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
             </select>
+          </div>
+
+          {/* Agency (Sub-sector) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Agency (Sub-sector)</label>
+            <select
+              name="agency"
+              value={formData.agency}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              disabled={!formData.sector || loadingAgencies}
+            >
+              <option value="">
+                {!formData.sector
+                  ? "Select sector first"
+                  : loadingAgencies
+                  ? "Loading agencies..."
+                  : agencyError
+                  ? "Error loading agencies"
+                  : "Select agency"}
+              </option>
+              {filteredAgencies.map((a) => (
+                <option key={a.id} value={a.name}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            {agencyError && (
+              <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+            )}
+            {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.sector && (
+              <p className="text-sm text-gray-500 mt-1">No agencies found for this sector</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
@@ -140,69 +235,6 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
   );
 }
 
-// View Doctor Modal Component
-function ViewDoctorModal({ doctor, onClose }) {
-  if (!doctor) return null;
-
-  const sectorName = doctor.sector?.range || "";
-  const agencyName = doctor.sector?.agency || "";
-  const displayDate = doctor.dateAdded
-    ? new Date(doctor.dateAdded).toISOString().slice(0, 10)
-    : doctor.date
-    ? new Date(doctor.date).toISOString().slice(0, 10)
-    : "";
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">View Doctor Details</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.name || doctor.doctorName}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Agency</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{agencyName}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Range (Sector)</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{sectorName}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.contactNumber}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.email || "-"}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.specialty || doctor.speciality || "-"}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categorization</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{doctor.categorization || "-"}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
-            <p className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">{displayDate}</p>
-          </div>
-        </div>
-        <div className="flex justify-end space-x-3 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ManageDoctors() {
   const { showNotification, NotificationComponent } = useNotification();
@@ -211,7 +243,6 @@ export default function ManageDoctors() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [editingDoctor, setEditingDoctor] = useState(null);
-  const [viewingDoctor, setViewingDoctor] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
   // Load existing doctors
@@ -319,20 +350,6 @@ export default function ManageDoctors() {
     }
   };
 
-  const handleViewDoctor = (doctor) => {
-    setViewingDoctor(doctor);
-  };
-
-  const handleDownloadDoctor = (doctor) => {
-    const data = `Name: ${doctor.name}\nContact: ${doctor.contactNumber}\nEmail: ${doctor.email}\nSpecialty: ${doctor.specialty}\nCategorization: ${doctor.categorization}\nDate Added: ${doctor.dateAdded}`;
-    const blob = new Blob([data], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${doctor.name}_details.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div>
@@ -355,13 +372,6 @@ export default function ManageDoctors() {
         />
       )}
 
-      {/* View Doctor Modal */}
-      {viewingDoctor && (
-        <ViewDoctorModal
-          doctor={viewingDoctor}
-          onClose={() => setViewingDoctor(null)}
-        />
-      )}
 
       {/* Add Doctor Form - Display after list */}
       {showForm && <DoctorForm onSubmit={handleAddDoctor} />}
@@ -418,20 +428,6 @@ export default function ManageDoctors() {
                       <td className="py-2 px-4">{displayDate}</td>
                       <td className="py-2 px-4 text-center">
                         <div className="flex justify-center space-x-2">
-                          <button
-                            onClick={() => handleViewDoctor(doc)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 text-sm transition-colors"
-                            title="View Doctor"
-                          >
-                            View
-                          </button>
-                          <button
-                            onClick={() => handleDownloadDoctor(doc)}
-                            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 text-sm transition-colors"
-                            title="Download Doctor"
-                          >
-                            Download
-                          </button>
                           <button
                             onClick={() => handleEditDoctor(doc)}
                             className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-sm transition-colors"

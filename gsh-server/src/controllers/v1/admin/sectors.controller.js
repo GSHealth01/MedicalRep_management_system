@@ -20,7 +20,17 @@ exports.list = async (req, res) => {
       where: filter,
       orderBy,
       skip,
-      take: Number(limit)
+      take: Number(limit),
+      include: {
+        _count: {
+          select: {
+            users: true,
+            teams: true,
+            doctors: true,
+            distributors: true
+          }
+        }
+      }
     }),
     prisma.sector.count({ where: filter })
   ]);

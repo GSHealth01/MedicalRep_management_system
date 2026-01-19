@@ -103,7 +103,9 @@ async function getOneTeam(req, res) {
             id: true,
             name: true,
             emp_no: true,
-            designation: true
+            designation: true,
+            team_role: true,
+            team_status: true
           }
         }
       }
@@ -113,10 +115,11 @@ async function getOneTeam(req, res) {
       return ApiResponse.error(res, "Team not found", 404);
     }
 
-    // Parse designations and find leader
+    // Find leader
     let leader = null;
     const usersWithRoles = team.users.map(user => {
-      const { role, status } = parseDesignation(user.designation);
+      const role = user.team_role || 'NORMAL';
+      const status = user.team_status || 'ACTIVE';
       if (role === 'LEADER') {
         leader = { id: user.id, name: user.name };
       }
@@ -278,27 +281,22 @@ async function assignUser(req, res) {
 
     // If assigning as LEADER, demote current leader
     if (role === 'LEADER') {
-      const currentLeader = await prisma.user.findFirst({
+      await prisma.user.updateMany({
         where: {
           team_id: teamIdInt,
-          designation: { startsWith: 'LEADER_' }
-        }
+          team_role: 'LEADER'
+        },
+        data: { team_role: 'NORMAL' }
       });
-      if (currentLeader) {
-        const { status: currentStatus } = parseDesignation(currentLeader.designation);
-        await prisma.user.update({
-          where: { id: currentLeader.id },
-          data: { designation: buildDesignation('NORMAL', currentStatus) }
-        });
-      }
     }
 
-    // Assign user to team with specified designation
+    // Assign user to team with specified role and status
     const updatedUser = await prisma.user.update({
       where: { id: userIdInt },
       data: {
         team_id: teamIdInt,
-        designation: buildDesignation(role, status)
+        team_role: role,
+        team_status: status
       },
       include: {
         team: { select: { id: true, name: true } }
@@ -341,20 +339,16 @@ async function updateUserStatus(req, res) {
       return ApiResponse.error(res, "User not found in this team", 404);
     }
 
-    // Parse current designation and update status
-    const { role } = parseDesignation(user.designation);
-    const newDesignation = buildDesignation(role, status);
-
     const updatedUser = await prisma.user.update({
       where: { id: userIdInt },
-      data: { designation: newDesignation }
+      data: { team_status: status }
     });
 
     return ApiResponse.ok(res, "User status updated", {
       user: {
         id: updatedUser.id,
         designation: updatedUser.designation,
-        role,
+        role: updatedUser.team_role || 'NORMAL',
         status
       }
     });
@@ -387,28 +381,19 @@ async function updateUserRole(req, res) {
 
     // If setting to LEADER, demote current leader
     if (role === 'LEADER') {
-      const currentLeader = await prisma.user.findFirst({
+      await prisma.user.updateMany({
         where: {
           team_id: teamIdInt,
-          designation: { startsWith: 'LEADER_' }
-        }
+          team_role: 'LEADER'
+        },
+        data: { team_role: 'NORMAL' }
       });
-      if (currentLeader) {
-        const { status } = parseDesignation(currentLeader.designation);
-        await prisma.user.update({
-          where: { id: currentLeader.id },
-          data: { designation: buildDesignation('NORMAL', status) }
-        });
-      }
     }
 
-    // Update user's role
-    const { status } = parseDesignation(user.designation);
-    const newDesignation = buildDesignation(role, status);
-
+    // Update user role
     const updatedUser = await prisma.user.update({
       where: { id: userIdInt },
-      data: { designation: newDesignation }
+      data: { team_role: role }
     });
 
     return ApiResponse.ok(res, "User role updated", {
@@ -416,7 +401,7 @@ async function updateUserRole(req, res) {
         id: updatedUser.id,
         designation: updatedUser.designation,
         role,
-        status
+        status: updatedUser.team_status || 'ACTIVE'
       }
     });
   } catch (error) {

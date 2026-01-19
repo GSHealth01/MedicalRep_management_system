@@ -3,195 +3,19 @@ import TeamForm from "../components/TeamForm";
 import { api } from "../services/api";
 import { useNotification } from "../components/NotificationPopup";
 
-// =====================
-// Edit Team Modal
-// =====================
-function EditTeamModal({ team, onClose, onSave }) {
-  const [formData, setFormData] = useState({
-    // FRONTEND FIELDS FOR TEAM:
-    // - Team Name
-    // - Range
-    name: team?.name || "",
-    range: team?.sector?.range || "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [ranges, setRanges] = useState([]);
-
-  useEffect(() => {
-    const fetchRanges = async () => {
-      try {
-        const res = await api.get("/ranges");
-        setRanges(res?.data?.data || []);
-      } catch (e) {
-        console.error("Failed to fetch ranges", e);
-      }
-    };
-    fetchRanges();
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await onSave(formData);
-      onClose();
-    } catch {
-      // error handled in parent
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Edit Team</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Team Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Team Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          {/* Range */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Range
-            </label>
-            <select
-              name="range"
-              value={formData.range}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select Range</option>
-              {ranges.map((range) => (
-                <option key={range.id} value={range.name}>
-                  {range.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-
 function UserManagementModal({
   team,
   users,
-  availableUsers,
   onClose,
-  onAssign,
   onUpdateStatus,
   onUpdateRole,
   onRemove,
 }) {
 
-  const [selectedUser, setSelectedUser] = useState("");
-  const [assignStatus, setAssignStatus] = useState("ACTIVE"); 
-  const [assignRole, setAssignRole] = useState("NORMAL"); 
-
-  const handleAssign = () => {
-    if (!selectedUser) return;
-    
-    onAssign(parseInt(selectedUser, 10), assignStatus, assignRole);
-    setSelectedUser("");
-    setAssignStatus("ACTIVE");
-    setAssignRole("NORMAL");
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Manage Users - {team.name}</h2>
-
-        {/* Assign User Section */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">Assign User to Team</h3>
-          <div className="flex flex-col md:flex-row gap-2 md:items-center">
-            {/* User select */}
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select a user</option>
-              {availableUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.emp_no})
-                </option>
-              ))}
-            </select>
-
-            {/* Member Type (type) select */}
-            <select
-              value={assignRole}
-              onChange={(e) => setAssignRole(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            >
-              <option value="NORMAL">Member</option>
-              <option value="LEADER">Leader</option>
-            </select>
-
-            {/* Status select */}
-            <select
-              value={assignStatus}
-              onChange={(e) => setAssignStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            >
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
-
-            {/* Assign button */}
-            <button
-              onClick={handleAssign}
-              disabled={!selectedUser}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              Assign
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-gray-500">
-            Note: Only one <strong>Leader</strong> is allowed per team. When
-            assigning a new leader, the previous leader will be changed to
-            Member.
-          </p>
-        </div>
 
         {/* Users List */}
         <div className="mb-4">
@@ -268,7 +92,6 @@ export default function ManageTeams() {
   const [editingTeam, setEditingTeam] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [managingTeam, setManagingTeam] = useState(null);
-  const [availableUsers, setAvailableUsers] = useState([]);
   const [teamUsers, setTeamUsers] = useState([]);
 
   // Load teams on mount
@@ -323,36 +146,28 @@ export default function ManageTeams() {
   };
 
   // Edit
-  const handleEditTeam = (team) => {
-    setEditingTeam(team);
+  const handleEditTeam = async (team) => {
+    try {
+      const teamRes = await api.get(`/teams/${team.id}`);
+      const teamData = teamRes?.data?.data || {};
+      setEditingTeam(teamData);
+    } catch (e) {
+      console.error("Failed to load team for editing", e);
+      showNotification("Failed to load team data", "error");
+    }
   };
 
-  const handleSaveEdit = async (formData) => {
+  const handleSaveEdit = async (payload, formData, team) => {
     try {
-      const updateData = { name: formData.name };
-      if (formData.range) {
-        const rangesRes = await api.get("/ranges");
-        const ranges = rangesRes?.data?.data || [];
-        const range = ranges.find((r) => r.name === formData.range);
-        if (range) updateData.range_id = range.id;
-      }
+      await api.put(`/admin/teams/${team.id}`, payload);
 
-      await api.put(`/admin/teams/${editingTeam.id}`, updateData);
-
-      setTeams((list) =>
-        list.map((team) =>
-          team.id === editingTeam.id
-            ? {
-                ...team,
-                name: formData.name,
-                range: formData.range ? { name: formData.range } : team.range,
-              }
-            : team
-        )
-      );
+      // Refresh the teams list
+      const res = await api.get("/admin/teams");
+      const items = res?.data?.data?.items || [];
+      setTeams(items);
 
       showNotification(
-        `Team ${formData.name} updated successfully!`,
+        `Team ${payload.name} updated successfully!`,
         "success"
       );
     } catch (e) {
@@ -387,40 +202,12 @@ export default function ManageTeams() {
       const teamRes = await api.get(`/teams/${team.id}`);
       const teamData = teamRes?.data?.data || {};
       setTeamUsers(teamData.users || []);
-
-      const usersRes = await api.get("/admin/users", { params: { limit: 500 } });
-      const users = usersRes?.data?.data?.items || [];
-      const available = users.filter((u) => !u.team_id);
-      setAvailableUsers(available);
     } catch (e) {
       console.error("Failed to load team users", e);
       showNotification("Failed to load team users", "error");
     }
   };
 
-  // Assign User with status + type
-  const handleAssignUser = async (userId, status, role) => {
-    try {
-      await api.post(`/teams/${managingTeam.id}/assign-user`, {
-        userId,
-        status,
-        role, // backend can treat this as 'type'
-      });
-
-      const teamRes = await api.get(`/teams/${managingTeam.id}`);
-      const teamData = teamRes?.data?.data || {};
-      setTeamUsers(teamData.users || []);
-
-      setAvailableUsers((prev) => prev.filter((u) => u.id !== userId));
-      showNotification("User assigned to team", "success");
-    } catch (e) {
-      console.error("Failed to assign user", e);
-      showNotification(
-        e?.response?.data?.message || "Failed to assign user",
-        "error"
-      );
-    }
-  };
 
   // Update Status
   const handleUpdateStatus = async (userId, status) => {
@@ -467,14 +254,7 @@ export default function ManageTeams() {
     try {
       await api.delete(`/teams/${managingTeam.id}/user/${userId}`);
 
-      const removedUser = teamUsers.find((u) => u.id === userId);
       setTeamUsers((prev) => prev.filter((u) => u.id !== userId));
-      if (removedUser) {
-        setAvailableUsers((prev) => [
-          ...prev,
-          { ...removedUser, team_id: null },
-        ]);
-      }
 
       showNotification("User removed from team", "success");
     } catch (e) {
@@ -501,11 +281,24 @@ export default function ManageTeams() {
 
       {/* Edit Team Modal */}
       {editingTeam && (
-        <EditTeamModal
-          team={editingTeam}
-          onClose={() => setEditingTeam(null)}
-          onSave={handleSaveEdit}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Edit Team</h2>
+            <TeamForm
+              team={editingTeam}
+              onSubmit={(payload, formData, team) => {
+                handleSaveEdit(payload, formData, team);
+                setEditingTeam(null);
+              }}
+            />
+            <button
+              onClick={() => setEditingTeam(null)}
+              className="mt-4 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* User Management Modal */}
@@ -513,9 +306,7 @@ export default function ManageTeams() {
         <UserManagementModal
           team={managingTeam}
           users={teamUsers}
-          availableUsers={availableUsers}
           onClose={() => setManagingTeam(null)}
-          onAssign={handleAssignUser}
           onUpdateStatus={handleUpdateStatus}
           onUpdateRole={handleUpdateRole}
           onRemove={handleRemoveUser}
@@ -539,6 +330,14 @@ export default function ManageTeams() {
                   <th className="py-2 px-4 text-center">Team Name</th>
                   <th className="py-2 px-4 text-center">Agency</th>
                   <th className="py-2 px-4 text-center">Range</th>
+                  <th className="py-2 px-4 text-center">Operations Manager</th>
+                  <th className="py-2 px-4 text-center">Senior Manager</th>
+                  <th className="py-2 px-4 text-center">Territory Managers</th>
+                  <th className="py-2 px-4 text-center">Product Managers</th>
+                  <th className="py-2 px-4 text-center">Senior Executives</th>
+                  <th className="py-2 px-4 text-center">Junior Executives</th>
+                  <th className="py-2 px-4 text-center">Field Coordinators</th>
+                  <th className="py-2 px-4 text-center">Medical Representatives</th>
                   <th className="py-2 px-4 text-center">Users</th>
                   <th className="py-2 px-4 text-center">Actions</th>
                 </tr>
@@ -547,7 +346,7 @@ export default function ManageTeams() {
                 {teams.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="5"
+                      colSpan="13"
                       className="text-center py-4 text-gray-500"
                     >
                       No teams created yet
@@ -565,6 +364,30 @@ export default function ManageTeams() {
                       </td>
                       <td className="py-2 px-4">
                         {team.sector?.range || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.operations_manager || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.senior_manager || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.territory_managers || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.product_managers || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.senior_executives || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.junior_executives || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.field_coordinators || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.medical_representatives || "-"}
                       </td>
                       <td className="py-2 px-4">
                         {team._count?.users || 0}

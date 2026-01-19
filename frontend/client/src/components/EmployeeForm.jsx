@@ -5,6 +5,7 @@ export default function EmployeeForm({ onSubmit }) {
   const [formData, setFormData] = useState({
     username: "",       // used as email
     password: "",       // NEW
+    confirmPassword: "", // NEW: For validation
     name: "",           // NEW: Employee's full name
     empNo: "",
     designation: "",    // maps to role (MR/FC/JE/SE/TM/PM/ADMIN)
@@ -75,10 +76,13 @@ export default function EmployeeForm({ onSubmit }) {
   // normalize payload shape in a way BE expects
   const canSubmit = useMemo(() => {
     const hasEmail = /\S+@\S+\.\S+/.test(formData.username);
+    const passwordsMatch = formData.password === formData.confirmPassword;
     return (
       !!formData.name &&
       hasEmail &&
       !!formData.password &&
+      !!formData.confirmPassword &&
+      passwordsMatch &&
       !!formData.empNo &&
       !!formData.designation &&
       !!formData.range &&
@@ -161,6 +165,7 @@ export default function EmployeeForm({ onSubmit }) {
     setFormData({
       username: "",
       password: "",
+      confirmPassword: "",
       empNo: "",
       designation: "",
       birthday: "",
@@ -215,6 +220,24 @@ export default function EmployeeForm({ onSubmit }) {
           minLength={7}
         />
         <p className="text-xs text-gray-500 mt-1">Min 7 chars. You can enforce complexity server-side.</p>
+      </div>
+
+      {/* Confirm Password */}
+      <div>
+        <label className="block text-gray-700 mb-1">Re-enter Password</label>
+        <input
+          type="password"
+          name="confirmPassword"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          placeholder="Re-enter the password"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          required
+          minLength={7}
+        />
+        {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+          <p className="text-xs text-red-500 mt-1">Passwords do not match.</p>
+        )}
       </div>
 
 
