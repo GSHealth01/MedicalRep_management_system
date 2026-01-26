@@ -1,85 +1,9 @@
 import { useEffect, useState } from "react";
 import TeamForm from "../components/TeamForm";
+import ManageTeamModal from "../components/ManageTeamModal";
 import { api } from "../services/api";
 import { useNotification } from "../components/NotificationPopup";
 
-function UserManagementModal({
-  team,
-  users,
-  onClose,
-  onUpdateStatus,
-  onUpdateRole,
-  onRemove,
-}) {
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Manage Users - {team.name}</h2>
-
-        {/* Users List */}
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">Team Users</h3>
-          {users.length === 0 ? (
-            <p className="text-gray-500">No users assigned to this team</p>
-          ) : (
-            <div className="space-y-2">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div>
-                    <span className="font-medium">{user.name}</span> (
-                    {user.emp_no})
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Member Type (type) */}
-                    <select
-                      value={user.role} // or user.type if backend returns 'type'
-                      onChange={(e) => onUpdateRole(user.id, e.target.value)}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm"
-                    >
-                      <option value="NORMAL">Memebr</option>
-                      <option value="LEADER">Leader</option>
-                    </select>
-
-                    {/* Status */}
-                    <select
-                      value={user.status}
-                      onChange={(e) => onUpdateStatus(user.id, e.target.value)}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm"
-                    >
-                      <option value="ACTIVE">Active</option>
-                      <option value="INACTIVE">Inactive</option>
-                    </select>
-
-                    {/* Remove */}
-                    <button
-                      onClick={() => onRemove(user.id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // =====================
 // Main ManageTeams Page
@@ -92,7 +16,6 @@ export default function ManageTeams() {
   const [editingTeam, setEditingTeam] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [managingTeam, setManagingTeam] = useState(null);
-  const [teamUsers, setTeamUsers] = useState([]);
 
   // Load teams on mount
   useEffect(() => {
@@ -142,6 +65,18 @@ export default function ManageTeams() {
         e?.response?.data?.message || "Failed to create team",
         "error"
       );
+    }
+  };
+
+  // Manage
+  const handleManageTeam = async (team) => {
+    try {
+      const teamRes = await api.get(`/admin/teams/${team.id}`);
+      const teamData = teamRes?.data?.data || {};
+      setManagingTeam(teamData);
+    } catch (e) {
+      console.error("Failed to load team for managing", e);
+      showNotification("Failed to load team data", "error");
     }
   };
 
@@ -195,76 +130,8 @@ export default function ManageTeams() {
     }
   };
 
-  // Manage Users (open modal)
-  const handleManageUsers = async (team) => {
-    setManagingTeam(team);
-    try {
-      const teamRes = await api.get(`/teams/${team.id}`);
-      const teamData = teamRes?.data?.data || {};
-      setTeamUsers(teamData.users || []);
-    } catch (e) {
-      console.error("Failed to load team users", e);
-      showNotification("Failed to load team users", "error");
-    }
-  };
 
 
-  // Update Status
-  const handleUpdateStatus = async (userId, status) => {
-    try {
-      await api.patch(`/teams/${managingTeam.id}/user/${userId}/status`, {
-        status,
-      });
-      setTeamUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, status } : u))
-      );
-      showNotification("User status updated", "success");
-    } catch (e) {
-      console.error("Failed to update status", e);
-      showNotification(
-        e?.response?.data?.message || "Failed to update status",
-        "error"
-      );
-    }
-  };
-
-  // Update Member Type (role/type)
-  const handleUpdateRole = async (userId, role) => {
-    try {
-      await api.patch(`/teams/${managingTeam.id}/user/${userId}/role`, {
-        role,
-      });
-      setTeamUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role } : u))
-      );
-      showNotification("User type updated", "success");
-    } catch (e) {
-      console.error("Failed to update type", e);
-      showNotification(
-        e?.response?.data?.message || "Failed to update type",
-        "error"
-      );
-    }
-  };
-
-  // Remove User from team
-  const handleRemoveUser = async (userId) => {
-    if (!window.confirm("Remove user from team?")) return;
-
-    try {
-      await api.delete(`/teams/${managingTeam.id}/user/${userId}`);
-
-      setTeamUsers((prev) => prev.filter((u) => u.id !== userId));
-
-      showNotification("User removed from team", "success");
-    } catch (e) {
-      console.error("Failed to remove user", e);
-      showNotification(
-        e?.response?.data?.message || "Failed to remove user",
-        "error"
-      );
-    }
-  };
 
   return (
     <div>
@@ -301,17 +168,21 @@ export default function ManageTeams() {
         </div>
       )}
 
-      {/* User Management Modal */}
+      {/* Manage Team Modal */}
       {managingTeam && (
-        <UserManagementModal
+        <ManageTeamModal
           team={managingTeam}
-          users={teamUsers}
           onClose={() => setManagingTeam(null)}
-          onUpdateStatus={handleUpdateStatus}
-          onUpdateRole={handleUpdateRole}
-          onRemove={handleRemoveUser}
+          onSave={async () => {
+            // Refresh teams list
+            const res = await api.get("/admin/teams");
+            const items = res?.data?.data?.items || [];
+            setTeams(items);
+          }}
+          showNotification={showNotification}
         />
       )}
+
 
       {/* Add Team Form */}
       {showForm && <TeamForm onSubmit={handleAddTeam} />}
@@ -395,11 +266,11 @@ export default function ManageTeams() {
                       <td className="py-2 px-4 text-center">
                         <div className="flex justify-center space-x-2">
                           <button
-                            onClick={() => handleManageUsers(team)}
+                            onClick={() => handleManageTeam(team)}
                             className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 text-sm transition-colors"
-                            title="Manage Users"
+                            title="Manage Team"
                           >
-                            Manage Users
+                            Manage team
                           </button>
                           <button
                             onClick={() => handleEditTeam(team)}

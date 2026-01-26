@@ -239,9 +239,30 @@ async function getCurrentUserProfile(req, res) {
   }
 }
 
+async function getEmployees(req, res) {
+  try {
+    const employees = await prisma.user.findMany({
+      where: {
+        designation: {
+          notIn: ['ADMIN', 'OM']
+        }
+      },
+      include: {
+        sector: true,
+        team: true
+      }
+    });
+    res.json({ data: employees });
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ message: 'Failed to fetch employees' });
+  }
+}
+
 module.exports = {
   getFormData,
   createUser,
   getAllUsers,
-  getCurrentUserProfile
+  getCurrentUserProfile,
+  getEmployees
 };

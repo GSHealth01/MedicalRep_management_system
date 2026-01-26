@@ -37,7 +37,7 @@ export default function TeamForm({ onSubmit, team }) {
 
       const designationToBucket = {
         'OM': 'ops', 'OPERATIONS_MANAGER': 'ops',
-        'SE': 'sms', 'SENIOR_EXECUTIVE': 'sms', 'SENIOR_MANAGER': 'sms',
+        'SE': 'ses', 'SENIOR_EXECUTIVE': 'ses', 'SENIOR_MANAGER': 'ses',
         'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
         'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
         'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
@@ -139,7 +139,17 @@ export default function TeamForm({ onSubmit, team }) {
       try {
         const res = await api.get("/admin/users", { params: { sector_id: formData.sector, limit: 500 } });
         // For users API, the response is { success, message, data: usersArray }
-        const items = res?.data?.data || [];
+        let items = res?.data?.data || [];
+
+        // When editing, ensure team users are included in the employees list
+        if (team && team.users) {
+          const existingIds = new Set(items.map(e => e.id));
+          const missingUsers = team.users.filter(u => !existingIds.has(u.id));
+          if (missingUsers.length > 0) {
+            items = [...items, ...missingUsers];
+          }
+        }
+
         if (mounted) setEmployees(items);
       } catch (e) {
         if (mounted) setErrEmployees(e?.response?.data?.message || "Failed to load employees");
@@ -148,7 +158,7 @@ export default function TeamForm({ onSubmit, team }) {
       }
     })();
     return () => { mounted = false; };
-  }, [formData.sector]);
+  }, [formData.sector, team]);
 
   // Group employees by designation
   const employeesByDesignation = useMemo(() => {

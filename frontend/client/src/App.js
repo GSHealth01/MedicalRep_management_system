@@ -10,6 +10,8 @@ import LoginPage        from './Pages/LoginPage';
 import DcrReport        from './components/DCR_report';
 import DCRReportsDashboard from './components/DCRReportsDashboard';
 import RepDashboard     from './components/RepDashboard';
+import OMDashboard      from './components/OMDashboard';
+import EmployeeStatus   from './components/EmployeeStatus';
 import ManagerDashboard from './components/ManagerDashboard';
 import ItineraryForm    from './components/ItineraryForm';
 import ItineraryList    from './Pages/ItineraryList';
@@ -49,10 +51,12 @@ export default function App() {
         <Route path="/forgot-password/step1" element={<ForgotPasswordStep1 />} />
         <Route path="/forgot-password/step3" element={<ForgotPasswordStep3 />} />
         <Route path="/rep-dashboard" element={<RepDashboard />} />
+        <Route path="/om-dashboard" element={<OMDashboard />} />
         <Route path="/itineraries" element={<ProtectedUser><ItineraryList /></ProtectedUser>} />
         <Route path="/itineraryForm/:id?/:mode?" element={<ProtectedUser><ItineraryForm /></ProtectedUser>} />
         <Route path="/dcr-reports" element={<ProtectedUser><DCRReportsDashboard /></ProtectedUser>} />
         <Route path="/DCR_report"   element={<DcrReport />} />
+        <Route path="/employee-status/:id" element={<EmployeeStatus />} />
         <Route path="/manager-dashboard" element={<ManagerDashboard />} />
         <Route path="/summaries" element={<SummariesPage />} />
         <Route path="/summaries/stocking" element={<StockingSummary />} />

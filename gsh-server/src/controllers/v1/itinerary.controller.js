@@ -9,6 +9,7 @@ const ExcelJS = require('exceljs');
 const createItinerary = asyncHandler(async (req, res) => {
   const { repName, distributor, town, month, itinerary, status } = req.body;
   const userId = req.user.id;
+  console.log('Creating itinerary for userId:', userId, 'name:', req.user.name, 'designation:', req.user.designation);
   
   // Validate required fields
   if (!repName || !distributor || !month || !itinerary || !Array.isArray(itinerary)) {
@@ -81,30 +82,83 @@ const createItinerary = asyncHandler(async (req, res) => {
 
 // Get All Itineraries for User
 const getItineraries = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  let userId = req.user.id;
+  console.log('Original userId:', userId, 'designation:', req.user.designation);
+  if (req.query.employeeId) {
+    userId = parseInt(req.query.employeeId);
+    console.log('Switched to employeeId:', userId);
+  }
 
-  const itineraries = await prisma.itinerary.findMany({
-    where: { user_id: userId },
+  // Temporary fix: if OM and no employeeId, show all itineraries
+  if (!req.query.employeeId && req.user.designation === 'OM') {
+    console.log('OM viewing all itineraries');
+  }
+
+  console.log('Fetching itineraries for userId:', userId);
+
+  const allItineraries = await prisma.itinerary.findMany({
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          emp_no: true
+        }
+      }
+    }
+  });
+  console.log('All itineraries in DB count:', allItineraries.length);
+
+  const allItinerariesWithUser = await prisma.itinerary.findMany({
     include: {
       entries: true,
       user: {
         select: {
+          id: true,
           name: true,
           emp_no: true,
-          email: true
+          team_id: true
         }
       }
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
+    take: 10 // limit to 10
   });
 
+  console.log('All itineraries with user count:', allItinerariesWithUser.length);
+
+  let itineraries;
+  if (req.query.employeeId) {
+    userId = parseInt(req.query.employeeId);
+    itineraries = allItinerariesWithUser.filter(it => parseInt(it.user_id) === userId);
+  } else {
+    // Always show only user's own data in main dashboard
+    itineraries = allItinerariesWithUser.filter(it => parseInt(it.user_id) === req.user.id);
+  }
+
+  console.log('Filtered itineraries for userId', req.user.id, 'count:', itineraries.length);
+  if (itineraries.length > 0) {
+    console.log('Itinerary ids:', itineraries.map(it => it.id));
+  }
+  if (itineraries.length === 0 && allItinerariesWithUser.length > 0) {
+    console.log('Sample user_ids in db:', allItinerariesWithUser.slice(0, 5).map(it => it.user_id));
+  }
+
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.status(200).json(new ApiResponse(200, itineraries, 'Itineraries fetched successfully'));
 });
 
 // Get Single Itinerary
 const getItinerary = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const userId = req.user.id;
+  console.log('Getting itinerary id:', id);
+  let userId = req.user.id;
+  if (req.query.employeeId) {
+    userId = parseInt(req.query.employeeId);
+    console.log('Switched to employeeId:', userId);
+  }
 
   const itinerary = await prisma.itinerary.findFirst({
     where: {
@@ -236,8 +290,7 @@ const generatePDF = asyncHandler(async (req, res) => {
 
   const itinerary = await prisma.itinerary.findFirst({
     where: {
-      id: parseInt(id),
-      user_id: userId
+      id: id
     },
     include: {
       entries: {
@@ -279,8 +332,7 @@ const getItinerarySummary = asyncHandler(async (req, res) => {
 
   const itinerary = await prisma.itinerary.findFirst({
     where: {
-      id: parseInt(id),
-      user_id: userId
+      id: parseInt(id)
     },
     include: {
       entries: {

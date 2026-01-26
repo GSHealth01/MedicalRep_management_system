@@ -28,9 +28,11 @@ export default function LoginPage() {
       const user = await login({ email, password });
 
       // If ADMIN → admin portal
-      const designation = String(user?.designation || '').toUpperCase();
+      const designation = String(user?.designation || '');
       if (designation === 'ADMIN') {
         navigate('/admin/portal', { replace: true });
+      } else if (designation === 'OM') {
+        navigate('/om-dashboard', { replace: true });
       } else {
         // Regular users → rep dashboard
         navigate('/rep-dashboard', { replace: true });

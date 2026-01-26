@@ -1,12 +1,14 @@
 // src/components/ItineraryForm.js
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function ItineraryForm() {
   const navigate = useNavigate();
   const { id, mode } = useParams();
+  const [searchParams] = useSearchParams();
+  const employeeId = searchParams.get('employeeId');
   const isViewMode = mode === 'view';
   const isEditMode = mode === 'edit';
   const { user } = useAuth();
@@ -81,7 +83,7 @@ export default function ItineraryForm() {
     
     setLoading(true);
     try {
-      const response = await api.get(`/itineraries/${id}`);
+      const response = await api.get(`/itineraries/${id}`, { params: employeeId ? { employeeId } : {} });
       const data = response.data.data;
       
       console.log("Loading itinerary data:", data);
@@ -471,7 +473,7 @@ export default function ItineraryForm() {
           <div className="flex gap-4">
             <button
               type="button"
-              onClick={() => navigate("/itineraries")}
+              onClick={() => navigate(`/itineraries${employeeId ? `?employeeId=${employeeId}` : ''}`)}
               className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring focus:ring-gray-200"
             >
               Back

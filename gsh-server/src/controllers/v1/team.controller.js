@@ -127,6 +127,7 @@ async function getOneTeam(req, res) {
         id: user.id,
         name: user.name,
         emp_no: user.emp_no,
+        designation: user.designation,
         role,
         status
       };

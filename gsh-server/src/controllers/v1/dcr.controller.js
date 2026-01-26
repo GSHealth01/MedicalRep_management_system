@@ -89,32 +89,38 @@ async function createDCR(req, res) {
 
 async function getUserDCRs(req, res) {
   try {
-    const userId = req.user.id;
+    let userId = req.user.id;
+    if (req.query.employeeId) {
+      userId = parseInt(req.query.employeeId);
+    }
 
-    const dcrs = await prisma.dcr.findMany({
-      where: { user_id: userId },
+    const allDcrs = await prisma.dcr.findMany({
       orderBy: { date: 'desc' },
-      select: {
-        id: true,
-        date: true,
-        range: true,
-        agency: true,
-        repName: true,
-        empNo: true,
-        distributor: true,
-        area: true,
-        town: true,
-        callReport: true,
-        dailyExpenses: true,
-        otherBills: true,
-        mileage: true,
-        odometerReading: true,
-        fuelBill: true,
-        remarks: true,
-        orderFormImages: true,
-        createdAt: true
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            emp_no: true,
+            team_id: true
+          }
+        }
       }
     });
+
+    let dcrs;
+    if (req.query.employeeId) {
+      dcrs = allDcrs.filter(dcr => dcr.user.id == userId);
+      console.log('Filtered DCRs for employeeId', userId, ':', dcrs.length);
+    } else {
+      // Always show only user's own data in main dashboard
+      dcrs = allDcrs.filter(dcr => dcr.user.id == req.user.id);
+      console.log('Filtered DCRs for user', req.user.id, ':', dcrs.length);
+    }
+    console.log('All DCRs count:', allDcrs.length);
+    if (allDcrs.length > 0) {
+      console.log('Sample user_ids in DCRs:', allDcrs.slice(0, 5).map(d => d.user_id));
+    }
 
     // Group by month
     const groupedDCRs = dcrs.reduce((acc, dcr) => {
@@ -128,6 +134,9 @@ async function getUserDCRs(req, res) {
       return acc;
     }, {});
 
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.json({ dcrs: groupedDCRs });
   } catch (error) {
     console.error('Error fetching DCRs:', error);
@@ -142,8 +151,7 @@ async function getDCRById(req, res) {
 
     const dcr = await prisma.dcr.findFirst({
       where: {
-        id: parseInt(id),
-        user_id: userId
+        id: parseInt(id)
       },
       select: {
         id: true,

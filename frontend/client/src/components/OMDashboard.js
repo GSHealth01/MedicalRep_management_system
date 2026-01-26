@@ -18,6 +18,8 @@ import {
 } from 'react-icons/fa';
 import './RepDashboard.css';
 
+import EmployeeOverview from './EmployeeOverview';
+
 // Function to transform products from API to expected format
 const transformProductsToCategories = (products) => {
   const categories = {};
@@ -65,7 +67,7 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
   return total;
 };
 
-export default function RepDashboard() {
+export default function OMDashboard() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -106,7 +108,6 @@ export default function RepDashboard() {
   const handleViewItinerary = (itinerary) => {
     navigate(`/itineraryForm/${itinerary.id}/view`);
   };
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -270,6 +271,7 @@ export default function RepDashboard() {
         <nav className="sidebar-nav">
           <ul>
             <li className={activeTab === 'Overview' ? 'active' : ''} onClick={() => setActiveTab('Overview')}>Overview</li>
+            <li className={activeTab === 'Employee Overview' ? 'active' : ''} onClick={() => setActiveTab('Employee Overview')}>Employee Overview</li>
             <li className={activeTab === 'Itinerary' ? 'active' : ''} onClick={() => navigate('/itineraries')}>Itinerary</li>
             <li className={activeTab === 'Reports' ? 'active' : ''} onClick={() => navigate('/dcr-reports')}>Reports</li>
           </ul>
@@ -298,96 +300,103 @@ export default function RepDashboard() {
           </div>
         </header>
 
-        {/* Quick Stats */}
-        <section className="quick-stats">
-          {quickStats.map((stat,i) => (
-            <div key={i} className="stat-card">
-              <div className="stat-icon">{stat.icon}</div>
-              <div className="stat-text">
-                <p className="stat-value">{stat.value}</p>
-                <p className="stat-title">{stat.title}</p>
-              </div>
-            </div>
-          ))}
-        </section>
-
-        {/* Itinerary Details */}
-        <section className="details-section">
-          <h3 className="section-title"><FaRoute /> Itinerary Details</h3>
-          {Object.keys(itinerariesByMonth).length === 0 ? (
-            <p>No itineraries found.</p>
-          ) : (
-            Object.entries(itinerariesByMonth).map(([month, monthItineraries]) => (
-              <div key={month} className="detail-card">
-                <div className="detail-header">
-                  <div onClick={() => toggleItinerary(month)} style={{ flex: 1, cursor: 'pointer' }}>
-                    <h4>{new Date(month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} ({monthItineraries[0]?.status === 'completed' ? 'Completed' : 'Pending'})</h4>
-                  </div>
-                  <button
-                    onClick={() => handleViewItinerary(monthItineraries[0])}
-                    className="view-btn"
-                    title="View Itinerary"
-                  >
-                    View
-                  </button>
-                  <div onClick={() => toggleItinerary(month)} style={{ cursor: 'pointer' }}>
-                    {expandedItineraries.has(month) ? <FaChevronUp /> : <FaChevronDown />}
+        {/* Conditional rendering based on activeTab */}
+        {activeTab === 'Overview' && (
+          <>
+            {/* Quick Stats */}
+            <section className="quick-stats">
+              {quickStats.map((stat,i) => (
+                <div key={i} className="stat-card">
+                  <div className="stat-icon">{stat.icon}</div>
+                  <div className="stat-text">
+                    <p className="stat-value">{stat.value}</p>
+                    <p className="stat-title">{stat.title}</p>
                   </div>
                 </div>
-                {expandedItineraries.has(month) && (
-                  <div className="detail-content">
-                    {monthItineraries.flatMap(itinerary =>
-                      itinerary.entries.map((entry, eidx) => (
-                        <div key={`${month}-${eidx}`} className="itinerary-item">
-                          <strong>Date:</strong> {entry.date} |
-                          <strong>Area:</strong> {entry.area || 'N/A'} |
-                          <strong>Doctor Calls:</strong> {entry.doctorCalls || 0} |
-                          <strong>Chemist Calls:</strong> {entry.chemistCalls || 0} |
-                          <strong>Mileage:</strong> {entry.mileage || 0} km
-                        </div>
-                      ))
+              ))}
+            </section>
+
+            {/* Itinerary Details */}
+            <section className="details-section">
+              <h3 className="section-title"><FaRoute /> Itinerary Details</h3>
+              {Object.keys(itinerariesByMonth).length === 0 ? (
+                <p>No itineraries found.</p>
+              ) : (
+                Object.entries(itinerariesByMonth).map(([month, monthItineraries]) => (
+                  <div key={month} className="detail-card">
+                    <div className="detail-header">
+                      <div onClick={() => toggleItinerary(month)} style={{ flex: 1, cursor: 'pointer' }}>
+                        <h4>{new Date(month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} ({monthItineraries[0]?.status === 'completed' ? 'Completed' : 'Pending'})</h4>
+                      </div>
+                      <button
+                        onClick={() => handleViewItinerary(monthItineraries[0])}
+                        className="view-btn"
+                        title="View Itinerary"
+                      >
+                        View
+                      </button>
+                      <div onClick={() => toggleItinerary(month)} style={{ cursor: 'pointer' }}>
+                        {expandedItineraries.has(month) ? <FaChevronUp /> : <FaChevronDown />}
+                      </div>
+                    </div>
+                    {expandedItineraries.has(month) && (
+                      <div className="detail-content">
+                        {monthItineraries.flatMap(itinerary =>
+                          itinerary.entries.map((entry, eidx) => (
+                            <div key={`${month}-${eidx}`} className="itinerary-item">
+                              <strong>Date:</strong> {entry.date} |
+                              <strong>Area:</strong> {entry.area || 'N/A'} |
+                              <strong>Doctor Calls:</strong> {entry.doctorCalls || 0} |
+                              <strong>Chemist Calls:</strong> {entry.chemistCalls || 0} |
+                              <strong>Mileage:</strong> {entry.mileage || 0} km
+                            </div>
+                          ))
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            ))
-          )}
-        </section>
+                ))
+              )}
+            </section>
 
-        {/* DCR Details */}
-        <section className="details-section">
-          <h3 className="section-title"><FaFileAlt /> DCR Details</h3>
-          {Object.keys(dcrsByMonth).length === 0 ? (
-            <p>No DCR reports found.</p>
-          ) : (
-            Object.entries(dcrsByMonth).map(([month, monthDcrs]) => (
-              <div key={month} className="detail-card">
-                <div className="detail-header" onClick={() => toggleDcr(month)}>
-                  <h4>{month}</h4>
-                  <span>{monthDcrs.length} DCR(s)</span>
-                  {expandedDcrs.has(month) ? <FaChevronUp /> : <FaChevronDown />}
-                </div>
-                {expandedDcrs.has(month) && (
-                  <div className="detail-content">
-                    {monthDcrs.map((dcr) => {
-                      const revenue = dcr.callReport ? dcr.callReport.reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) : 0;
-                      const expenses = dcr.expenses || 0; // Assuming expenses field exists
-                      const grandTotal = revenue + expenses;
-                      return (
-                        <div key={dcr.id || dcr.date} className="dcr-summary">
-                          <h5>{new Date(dcr.date).toLocaleDateString()}</h5>
-                          <p><strong>Total (Products):</strong> Rs. {revenue.toFixed(2)}</p>
-                          <p><strong>Total (Expenses):</strong> Rs. {expenses.toFixed(2)}</p>
-                          <p><strong>Grand Total:</strong> Rs. {grandTotal.toFixed(2)}</p>
-                        </div>
-                      );
-                    })}
+            {/* DCR Details */}
+            <section className="details-section">
+              <h3 className="section-title"><FaFileAlt /> DCR Details</h3>
+              {Object.keys(dcrsByMonth).length === 0 ? (
+                <p>No DCR reports found.</p>
+              ) : (
+                Object.entries(dcrsByMonth).map(([month, monthDcrs]) => (
+                  <div key={month} className="detail-card">
+                    <div className="detail-header" onClick={() => toggleDcr(month)}>
+                      <h4>{month}</h4>
+                      <span>{monthDcrs.length} DCR(s)</span>
+                      {expandedDcrs.has(month) ? <FaChevronUp /> : <FaChevronDown />}
+                    </div>
+                    {expandedDcrs.has(month) && (
+                      <div className="detail-content">
+                        {monthDcrs.map((dcr) => {
+                          const revenue = dcr.callReport ? dcr.callReport.reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) : 0;
+                          const expenses = dcr.expenses || 0; // Assuming expenses field exists
+                          const grandTotal = revenue + expenses;
+                          return (
+                            <div key={dcr.id || dcr.date} className="dcr-summary">
+                              <h5>{new Date(dcr.date).toLocaleDateString()}</h5>
+                              <p><strong>Total (Products):</strong> Rs. {revenue.toFixed(2)}</p>
+                              <p><strong>Total (Expenses):</strong> Rs. {expenses.toFixed(2)}</p>
+                              <p><strong>Grand Total:</strong> Rs. {grandTotal.toFixed(2)}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))
-          )}
-        </section>
+                ))
+              )}
+            </section>
+          </>
+        )}
+
+        {activeTab === 'Employee Overview' && <EmployeeOverview />}
       </div>
     </div>
   );

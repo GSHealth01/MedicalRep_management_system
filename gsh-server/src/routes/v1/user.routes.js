@@ -18,4 +18,7 @@ router.get('/', ctrl.getAllUsers);
 // GET /api/v1/users/profile - Get current user's complete profile
 router.get('/profile', ctrl.getCurrentUserProfile);
 
+// GET /api/v1/users/employees - Get employees for OM
+router.get('/employees', ctrl.getEmployees);
+
 module.exports = router;

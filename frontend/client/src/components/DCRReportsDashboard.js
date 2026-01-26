@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 // Function to transform products from API to expected format
 const transformProductsToCategories = (products) => {
@@ -196,6 +197,8 @@ export default function DCRReportsDashboard() {
   const [selectedDCR, setSelectedDCR] = useState(null);
   const [productCategories, setProductCategories] = useState({});
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchDCRs();
@@ -218,7 +221,8 @@ export default function DCRReportsDashboard() {
 
   const fetchDCRs = async () => {
     try {
-      const response = await api.get('/dcrs');
+      const employeeId = searchParams.get('employeeId');
+      const response = await api.get('/dcrs', { params: { ...(employeeId ? { employeeId } : {}), _t: Date.now() } });
       setDcrs(response.data.dcrs);
     } catch (error) {
       console.error('Error fetching DCRs:', error);
@@ -226,6 +230,8 @@ export default function DCRReportsDashboard() {
       setLoading(false);
     }
   };
+
+  const employeeId = searchParams.get('employeeId');
 
   const handleViewDCR = async (dcrId) => {
     try {
@@ -455,21 +461,29 @@ export default function DCRReportsDashboard() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
+        <h1 className="text-3xl font-bold text-gray-800">DCR Reports Dashboard</h1>
+        <div className="flex gap-3">
           <button
-            onClick={() => navigate('/rep-dashboard')}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            onClick={() => employeeId ? navigate(`/employee-status/${employeeId}`) : navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}
+            className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
           >
-            ← Back to Dashboard
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Back to Dashboard
           </button>
-          <h1 className="text-3xl font-bold text-gray-800">DCR Reports Dashboard</h1>
+          {!employeeId && (
+            <button
+              onClick={handleAddDCR}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add DCR Form
+            </button>
+          )}
         </div>
-        <button
-          onClick={handleAddDCR}
-          className="px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Add DCR Form
-        </button>
       </div>
 
       {Object.keys(dcrs).length === 0 ? (
@@ -477,8 +491,11 @@ export default function DCRReportsDashboard() {
           <p className="text-gray-500 text-lg">No DCR reports found.</p>
           <button
             onClick={handleAddDCR}
-            className="mt-4 px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
             Create Your First DCR Report
           </button>
         </div>

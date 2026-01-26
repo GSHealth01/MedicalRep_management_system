@@ -27,7 +27,8 @@ exports.list = async (req, res) => {
             name: true,
             email: true,
             emp_no: true,
-            designation: true
+            designation: true,
+            team_role: true
           }
         },
         _count: true
@@ -241,7 +242,22 @@ exports.getOne = async (req, res) => {
       throw new AppError(404, "Team not found");
     }
 
-    return ApiResponse.ok(res, "Team fetched", team);
+    // Fetch users separately to ensure they are included
+    const users = await prisma.user.findMany({
+      where: { team_id: parseInt(req.params.id) },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emp_no: true,
+        designation: true,
+        team_role: true
+      }
+    });
+
+    const teamWithUsers = { ...team, users };
+
+    return ApiResponse.ok(res, "Team fetched", teamWithUsers);
   } catch (error) {
     console.error('Error fetching team:', error);
     if (error instanceof AppError) {
@@ -367,6 +383,47 @@ exports.update = async (req, res) => {
   });
 
   return transaction;
+};
+
+exports.setLeader = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      throw new AppError(400, "userId is required");
+    }
+
+    // Check if user is in the team
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) },
+      select: { id: true, team_id: true }
+    });
+
+    if (!user || user.team_id !== parseInt(id)) {
+      throw new AppError(400, "User not found in this team");
+    }
+
+    // Set all users in team to NORMAL
+    await prisma.user.updateMany({
+      where: { team_id: parseInt(id) },
+      data: { team_role: 'NORMAL' }
+    });
+
+    // Set the selected user as LEADER
+    await prisma.user.update({
+      where: { id: parseInt(userId) },
+      data: { team_role: 'LEADER' }
+    });
+
+    return ApiResponse.ok(res, "Team leader updated successfully");
+  } catch (error) {
+    console.error('Error setting team leader:', error);
+    if (error instanceof AppError) {
+      return ApiResponse.error(res, error.message, error.statusCode);
+    }
+    return ApiResponse.serverError(res, "Failed to set team leader");
+  }
 };
 
 exports.remove = async (req, res) => {
