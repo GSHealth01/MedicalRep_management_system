@@ -3,14 +3,18 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/gsh.logo.png';
+import { FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+import '../components/RepDashboard.css';
 
 export default function ItineraryList() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [itineraries, setItineraries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [employee, setEmployee] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { showConfirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => {
@@ -34,6 +38,11 @@ export default function ItineraryList() {
   };
 
   const employeeId = searchParams.get('employeeId');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
 
   const handleView = (itinerary) => {
     // Navigate to view itinerary with ID
@@ -166,34 +175,67 @@ export default function ItineraryList() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header with Add Button */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Itinerary Management</h1>
-          <div className="flex gap-3">
-            <button
-              onClick={() => employeeId ? navigate(`/employee-status/${employeeId}`) : navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}
-              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Back to Dashboard
-            </button>
-            {!employeeId && (
-              <button
-                onClick={() => navigate('/itineraryForm')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Itinerary
-              </button>
+    <div className="dashboard-wrapper">
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
+        <button
+          className="toggle-btn"
+          onClick={() => setSidebarOpen(o => !o)}
+        >
+          {sidebarOpen ? <FaTimes/> : <FaBars/>}
+        </button>
+        <img src={logo} alt="GSH Logo" className="logo" />
+        <nav className="sidebar-nav">
+          <ul>
+            <li className={user?.designation === 'OM' ? '' : ''} onClick={() => navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}>Overview</li>
+            {user?.designation === 'OM' && (
+              <li onClick={() => navigate('/om-dashboard')}>Employee Overview</li>
             )}
-          </div>
+            <li className="active">Itinerary</li>
+            <li onClick={() => navigate('/dcr-reports')}>Reports</li>
+          </ul>
+        </nav>
+        <div className="sidebar-footer">
+          <button
+            className="logout-btn-sidebar"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <FaSignOutAlt />
+            <span>Logout</span>
+          </button>
         </div>
+      </aside>
+
+      <div className="main-content">
+        <div className="min-h-screen bg-gray-100 py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            {/* Header with Add Button */}
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">Itinerary Management</h1>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => employeeId ? navigate(`/employee-status/${employeeId}`) : navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}
+                  className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  Back to Dashboard
+                </button>
+                {!employeeId && (
+                  <button
+                    onClick={() => navigate('/itineraryForm')}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Itinerary
+                  </button>
+                )}
+              </div>
+            </div>
 
         {/* Table */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -262,8 +304,13 @@ export default function ItineraryList() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleView(itinerary)}
-                            className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded text-sm font-medium border border-blue-600 hover:bg-blue-50"
+                            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 transition-colors duration-200"
+                            title="View Itinerary"
                           >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                             View
                           </button>
                           <button
@@ -297,6 +344,8 @@ export default function ItineraryList() {
         </div>
       </div>
       <ConfirmDialogComponent />
-    </div>
-  );
+     </div>
+   </div>
+ </div>
+);
 }

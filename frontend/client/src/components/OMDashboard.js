@@ -373,7 +373,7 @@ export default function OMDashboard() {
 
             {/* DCR Details */}
             <section className="details-section">
-              <h3 className="section-title"><FaFileAlt /> DCR Details</h3>
+              <h3 className="section-title"><FaFileAlt /> Daily Call Reports Details</h3>
               {Object.keys(dcrsByMonth).length === 0 ? (
                 <p>No DCR reports found.</p>
               ) : (

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import logo from '../assets/gsh.logo.png';
+import { FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
 import {
   FaPhone,
   FaClinicMedical,
@@ -12,6 +15,7 @@ import {
   FaFileAlt,
   FaRoute as FaItinerary
 } from 'react-icons/fa';
+import '../components/RepDashboard.css';
 
 // Function to transform products from API to expected format
 const transformProductsToCategories = (products) => {
@@ -63,12 +67,14 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
 export default function EmployeeStatus() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user, logout } = useAuth();
   const [employee, setEmployee] = useState(null);
   const [itineraries, setItineraries] = useState([]);
   const [dcrs, setDcrs] = useState({});
   const [productCategories, setProductCategories] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Map abbreviations to full designations
   const designationMap = {
@@ -172,6 +178,11 @@ export default function EmployeeStatus() {
     };
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
+
   const quickStatsData = computeQuickStats();
 
   const quickStats = [
@@ -180,7 +191,7 @@ export default function EmployeeStatus() {
     { title: 'Total Mileage', value: `${quickStatsData.totalMileage} km`, icon: <FaRoute />, color: 'bg-yellow-500' },
     { title: 'Revenue', value: `Rs. ${quickStatsData.totalRevenue.toFixed(2)}`, icon: <FaBoxOpen />, color: 'bg-purple-500' },
     { title: 'Itineraries', value: quickStatsData.totalItineraries, icon: <FaItinerary />, color: 'bg-indigo-500' },
-    { title: 'DCR Reports', value: quickStatsData.totalDcrs, icon: <FaFileAlt />, color: 'bg-red-500' },
+    { title: 'Daily Call Reports', value: quickStatsData.totalDcrs, icon: <FaFileAlt />, color: 'bg-red-500' },
   ];
 
   if (loading) {
@@ -214,19 +225,52 @@ export default function EmployeeStatus() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-6">
+    <div className="dashboard-wrapper">
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
+        <button
+          className="toggle-btn"
+          onClick={() => setSidebarOpen(o => !o)}
+        >
+          {sidebarOpen ? <FaTimes/> : <FaBars/>}
+        </button>
+        <img src={logo} alt="GSH Logo" className="logo" />
+        <nav className="sidebar-nav">
+          <ul>
+            <li onClick={() => navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}>Overview</li>
+            {user?.designation === 'OM' && (
+              <li onClick={() => navigate('/om-dashboard')}>Employee Overview</li>
+            )}
+            <li onClick={() => navigate('/itineraries')}>Itinerary</li>
+            <li onClick={() => navigate('/dcr-reports')}>Reports</li>
+          </ul>
+        </nav>
+        <div className="sidebar-footer">
           <button
-            onClick={() => navigate('/om-dashboard')}
-            className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
+            className="logout-btn-sidebar"
+            onClick={handleLogout}
+            title="Logout"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Back to Dashboard
+            <FaSignOutAlt />
+            <span>Logout</span>
           </button>
         </div>
+      </aside>
+
+      <div className="main-content">
+        <div className="min-h-screen bg-gray-100 py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-6">
+              <button
+                onClick={() => navigate('/om-dashboard')}
+                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Back to Dashboard
+              </button>
+            </div>
         {/* Employee Profile Header */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-8 text-white">
@@ -295,8 +339,10 @@ export default function EmployeeStatus() {
               onClick={() => navigate(`/dcr-reports?employeeId=${id}`)}
             >
               <FaFileAlt className="mr-2" />
-              View DCR Reports
+              View Daily Call Reports
             </button>
+          </div>
+        </div>
           </div>
         </div>
       </div>

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/gsh.logo.png';
+import { FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+import './RepDashboard.css';
 
 // Function to transform products from API to expected format
 const transformProductsToCategories = (products) => {
@@ -196,9 +199,10 @@ export default function DCRReportsDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedDCR, setSelectedDCR] = useState(null);
   const [productCategories, setProductCategories] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     fetchDCRs();
@@ -232,6 +236,11 @@ export default function DCRReportsDashboard() {
   };
 
   const employeeId = searchParams.get('employeeId');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
 
   const handleViewDCR = async (dcrId) => {
     try {
@@ -284,8 +293,8 @@ export default function DCRReportsDashboard() {
 
   if (selectedDCR) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="w-full p-6">
+        <div className="flex items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">DCR Report Details</h1>
           <button
             onClick={() => setSelectedDCR(null)}
@@ -460,86 +469,180 @@ export default function DCRReportsDashboard() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">DCR Reports Dashboard</h1>
-        <div className="flex gap-3">
+    <div className="dashboard-wrapper">
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
+        <button
+          className="toggle-btn"
+          onClick={() => setSidebarOpen(o => !o)}
+        >
+          {sidebarOpen ? <FaTimes/> : <FaBars/>}
+        </button>
+        <img src={logo} alt="GSH Logo" className="logo" />
+        <nav className="sidebar-nav">
+          <ul>
+            <li onClick={() => navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}>Overview</li>
+            {user?.designation === 'OM' && (
+              <li onClick={() => navigate('/om-dashboard')}>Employee Overview</li>
+            )}
+            <li onClick={() => navigate('/itineraries')}>Itinerary</li>
+            <li className="active">Reports</li>
+          </ul>
+        </nav>
+        <div className="sidebar-footer">
           <button
-            onClick={() => employeeId ? navigate(`/employee-status/${employeeId}`) : navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}
-            className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
+            className="logout-btn-sidebar"
+            onClick={handleLogout}
+            title="Logout"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Back to Dashboard
+            <FaSignOutAlt />
+            <span>Logout</span>
           </button>
-          {!employeeId && (
-            <button
-              onClick={handleAddDCR}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add DCR Form
-            </button>
-          )}
+        </div>
+      </aside>
+
+      <div className="main-content">
+        <div className="min-h-screen bg-gray-100 py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            {/* Header with Add Button */}
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">Daily Call Reports Management</h1>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => employeeId ? navigate(`/employee-status/${employeeId}`) : navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}
+                  className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  Back to Dashboard
+                </button>
+                {!employeeId && (
+                  <button
+                    onClick={handleAddDCR}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add DCR Form
+                  </button>
+                )}
+              </div>
+            </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rep Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Emp No
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Distributor
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {Object.keys(dcrs).length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p className="text-lg font-medium">No DCR reports found</p>
+                        <p className="text-sm text-gray-400 mt-1">Create your first DCR report to get started</p>
+                        {!employeeId && (
+                          <button
+                            onClick={handleAddDCR}
+                            className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Create Your First DCR Report
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  Object.entries(dcrs).map(([monthYear, monthDcrs]) => (
+                    <React.Fragment key={monthYear}>
+                      {/* Month header row */}
+                      <tr className="bg-gray-100">
+                        <td colSpan="5" className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                          {monthYear}
+                        </td>
+                      </tr>
+                      {/* DCR rows */}
+                      {monthDcrs.map((dcr) => (
+                        <tr key={dcr.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(dcr.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {dcr.repName}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {dcr.empNo}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {dcr.distributor || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleViewDCR(dcr.id)}
+                                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 transition-colors duration-200"
+                                title="View DCR Report"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                View
+                              </button>
+                              <button
+                                onClick={() => handleEditDCR(dcr.id)}
+                                className="text-orange-600 hover:text-orange-900 px-3 py-1 rounded text-sm font-medium border border-orange-600 hover:bg-orange-50"
+                                title="Edit DCR Report"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDCR(dcr.id)}
+                                className="text-red-600 hover:text-red-900 px-3 py-1 rounded text-sm font-medium border border-red-600 hover:bg-red-50"
+                                title="Delete DCR Report"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+          </div>
         </div>
       </div>
-
-      {Object.keys(dcrs).length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-gray-500 text-lg">No DCR reports found.</p>
-          <button
-            onClick={handleAddDCR}
-            className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Create Your First DCR Report
-          </button>
-        </div>
-      ) : (
-        Object.entries(dcrs).map(([monthYear, monthDcrs]) => (
-          <div key={monthYear} className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-700 mb-4">{monthYear} DCR Reports</h2>
-            <div className="space-y-2">
-              {monthDcrs.map((dcr) => (
-                <div
-                  key={dcr.id}
-                  className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex-1 cursor-pointer" onClick={() => handleViewDCR(dcr.id)}>
-                    <span className="font-semibold">{formatDate(dcr.date)}</span>
-                    <span className="ml-4 text-gray-600">Rep: {dcr.repName}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleViewDCR(dcr.id)}
-                      className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleEditDCR(dcr.id)}
-                      className="px-3 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDCR(dcr.id)}
-                      className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))
-      )}
     </div>
   );
 }
