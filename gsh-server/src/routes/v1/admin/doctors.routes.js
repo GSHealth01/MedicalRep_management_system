@@ -5,7 +5,7 @@ const ctrl = require("../../../controllers/v1/admin/doctors.controller");
 const asyncHandler = require("../../../utils/asyncHandler");
 
 // ADMIN-only
-router.use(requireAuth, requireRole("ADMIN"));
+router.use(requireAuth, requireRole("ADMIN", "OM"));
 
 router.get("/",        asyncHandler(ctrl.list));         // list/filter/paginate
 router.post("/",       asyncHandler(ctrl.create));       // create

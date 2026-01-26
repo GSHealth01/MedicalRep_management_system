@@ -156,11 +156,23 @@ export default function RepDashboard() {
 
     Object.values(dcrs).forEach(monthDcrs => {
       monthDcrs.forEach(dcr => {
-        if (dcr.callReport) {
-          dcr.callReport.forEach(doctor => {
-            totalRevenue += calculateDoctorTotal(doctor, productCategories);
-          });
+        const revenue = dcr.callReport ? dcr.callReport.reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) : 0;
+        // Calculate expenses
+        let expenses = 0;
+        if (dcr.dailyExpenses) {
+          if (dcr.dailyExpenses.bata) expenses += 50;
+          if (dcr.dailyExpenses.nightOut) expenses += 50;
+          if (dcr.dailyExpenses.fuel) expenses += 50;
         }
+        if (dcr.otherBills?.details) {
+          expenses += parseFloat(dcr.otherBills.details.parking?.amount || 0);
+          expenses += parseFloat(dcr.otherBills.details.highway?.amount || 0);
+          expenses += parseFloat(dcr.otherBills.details.other?.amount || 0);
+        }
+        if (dcr.mileage?.cost) {
+          expenses += parseFloat(dcr.mileage.cost || 0);
+        }
+        totalRevenue += revenue + expenses;
       });
     });
 
@@ -371,7 +383,21 @@ export default function RepDashboard() {
                   <div className="detail-content">
                     {monthDcrs.map((dcr) => {
                       const revenue = dcr.callReport ? dcr.callReport.reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) : 0;
-                      const expenses = dcr.expenses || 0; // Assuming expenses field exists
+                      // Calculate expenses from dailyExpenses, otherBills, and mileage
+                      let expenses = 0;
+                      if (dcr.dailyExpenses) {
+                        if (dcr.dailyExpenses.bata) expenses += 50;
+                        if (dcr.dailyExpenses.nightOut) expenses += 50;
+                        if (dcr.dailyExpenses.fuel) expenses += 50;
+                      }
+                      if (dcr.otherBills?.details) {
+                        expenses += parseFloat(dcr.otherBills.details.parking?.amount || 0);
+                        expenses += parseFloat(dcr.otherBills.details.highway?.amount || 0);
+                        expenses += parseFloat(dcr.otherBills.details.other?.amount || 0);
+                      }
+                      if (dcr.mileage?.cost) {
+                        expenses += parseFloat(dcr.mileage.cost || 0);
+                      }
                       const grandTotal = revenue + expenses;
                       return (
                         <div key={dcr.id || dcr.date} className="dcr-summary">

@@ -5,7 +5,7 @@ const ctrl = require("../../../controllers/v1/admin/products.controller");
 const asyncHandler = require("../../../utils/asyncHandler");
 
 // All product admin routes → require ADMIN
-router.use(requireAuth, requireRole("ADMIN"));
+router.use(requireAuth, requireRole("ADMIN", "OM"));
 
 router.get("/", asyncHandler(ctrl.list));                 // list + filters + pagination
 router.post("/", asyncHandler(ctrl.create));              // create

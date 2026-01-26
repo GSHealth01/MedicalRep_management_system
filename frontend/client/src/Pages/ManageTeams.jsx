@@ -202,7 +202,6 @@ export default function ManageTeams() {
                   <th className="py-2 px-4 text-center">Agency</th>
                   <th className="py-2 px-4 text-center">Range</th>
                   <th className="py-2 px-4 text-center">Operations Manager</th>
-                  <th className="py-2 px-4 text-center">Senior Manager</th>
                   <th className="py-2 px-4 text-center">Territory Managers</th>
                   <th className="py-2 px-4 text-center">Product Managers</th>
                   <th className="py-2 px-4 text-center">Senior Executives</th>
@@ -217,7 +216,7 @@ export default function ManageTeams() {
                 {teams.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="13"
+                      colSpan="12"
                       className="text-center py-4 text-gray-500"
                     >
                       No teams created yet
@@ -238,9 +237,6 @@ export default function ManageTeams() {
                       </td>
                       <td className="py-2 px-4">
                         {team.operations_manager || "-"}
-                      </td>
-                      <td className="py-2 px-4">
-                        {team.senior_manager || "-"}
                       </td>
                       <td className="py-2 px-4">
                         {team.territory_managers || "-"}

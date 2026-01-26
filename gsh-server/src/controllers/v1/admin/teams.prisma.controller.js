@@ -52,13 +52,13 @@ exports.list = async (req, res) => {
 
       // Map designation codes to bucket keys
       const designationToBucket = {
-        'OM': 'ops', 'OPERATIONS_MANAGER': 'ops', 'TERRITORY_MANAGER': 'ops',
-        'SE': 'sms', 'SENIOR_EXECUTIVE': 'sms', 'SENIOR_MANAGER': 'sms',
-        'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
-        'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
-        'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
-        'FC': 'fcs', 'FIELD_COORDINATOR': 'fcs',
-        'MR': 'mrs', 'MEDICAL_REP': 'mrs', 'MEDICAL_REPRESENTATIVE': 'mrs'
+        'OM': 'ops',
+        'SE': 'ses',
+        'PM': 'pms',
+        'TM': 'tms',
+        'JE': 'jes',
+        'FC': 'fcs',
+        'MR': 'mrs'
       };
 
       team.users.forEach(user => {
@@ -74,7 +74,6 @@ exports.list = async (req, res) => {
       return {
         ...team,
         operations_manager: groupedUsers.ops.map(u => u.name).join(', ') || '-',
-        senior_manager: groupedUsers.sms.map(u => u.name).join(', ') || '-',
         territory_managers: groupedUsers.tms.map(u => u.name).join(', ') || '-',
         product_managers: groupedUsers.pms.map(u => u.name).join(', ') || '-',
         senior_executives: groupedUsers.ses.map(u => u.name).join(', ') || '-',
@@ -181,7 +180,6 @@ exports.create = async (req, res) => {
     // Group users by their designations for better display
     const groupedUsers = {
       ops: [],
-      sms: [],
       pms: [],
       tms: [],
       ses: [],
@@ -192,13 +190,13 @@ exports.create = async (req, res) => {
 
     // Map designation codes to bucket keys
     const designationToBucket = {
-      'OM': 'ops', 'OPERATIONS_MANAGER': 'ops', 'TERRITORY_MANAGER': 'ops',
-      'SE': 'sms', 'SENIOR_EXECUTIVE': 'sms', 'SENIOR_MANAGER': 'sms',
-      'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
-      'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
-      'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
-      'FC': 'fcs', 'FIELD_COORDINATOR': 'fcs',
-      'MR': 'mrs', 'MEDICAL_REP': 'mrs', 'MEDICAL_REPRESENTATIVE': 'mrs'
+      'OM': 'ops',
+      'SE': 'ses',
+      'PM': 'pms',
+      'TM': 'tms',
+      'JE': 'jes',
+      'FC': 'fcs',
+      'MR': 'mrs'
     };
 
     teamWithUsers.users.forEach(user => {

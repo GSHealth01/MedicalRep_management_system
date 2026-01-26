@@ -239,6 +239,7 @@ export default function DCRReportsDashboard() {
       setSelectedDCR(response.data.dcr);
     } catch (error) {
       console.error('Error fetching DCR details:', error);
+      alert('DCR not found or has been deleted.');
     }
   };
 

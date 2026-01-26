@@ -70,6 +70,18 @@ export default function EmployeeStatus() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Map abbreviations to full designations
+  const designationMap = {
+    'SE': 'Senior Executive',
+    'TM': 'Territory Manager',
+    'PM': 'Product Manager',
+    'JE': 'Junior Executive',
+    'FC': 'Field Coordinator',
+    'OM': 'Operations Manager',
+    'MR': 'Medical Representative',
+    'ADMIN': 'Administrator'
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -130,11 +142,23 @@ export default function EmployeeStatus() {
 
     Object.values(dcrs).forEach(monthDcrs => {
       monthDcrs.forEach(dcr => {
-        if (dcr.callReport) {
-          dcr.callReport.forEach(doctor => {
-            totalRevenue += calculateDoctorTotal(doctor, productCategories);
-          });
+        const revenue = dcr.callReport ? dcr.callReport.reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) : 0;
+        // Calculate expenses
+        let expenses = 0;
+        if (dcr.dailyExpenses) {
+          if (dcr.dailyExpenses.bata) expenses += 50;
+          if (dcr.dailyExpenses.nightOut) expenses += 50;
+          if (dcr.dailyExpenses.fuel) expenses += 50;
         }
+        if (dcr.otherBills?.details) {
+          expenses += parseFloat(dcr.otherBills.details.parking?.amount || 0);
+          expenses += parseFloat(dcr.otherBills.details.highway?.amount || 0);
+          expenses += parseFloat(dcr.otherBills.details.other?.amount || 0);
+        }
+        if (dcr.mileage?.cost) {
+          expenses += parseFloat(dcr.mileage.cost || 0);
+        }
+        totalRevenue += revenue + expenses;
       });
     });
 
@@ -216,7 +240,7 @@ export default function EmployeeStatus() {
               </div>
               <div className="ml-6">
                 <h1 className="text-3xl font-bold">{employee.name}</h1>
-                <p className="text-blue-100 text-lg">{employee.designation}</p>
+                <p className="text-blue-100 text-lg">{designationMap[employee.designation] || employee.designation}</p>
                 <div className="flex items-center mt-2 space-x-4">
                   <div className="flex items-center">
                     <FaMapMarkerAlt className="mr-1" />

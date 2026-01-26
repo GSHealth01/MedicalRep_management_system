@@ -29,7 +29,7 @@ router.post('/signup', async (req, res) => {
       email: email,
       password: hashedPassword,
       name: name,
-      designation: email === 'admin@gsh.com' ? 'ADMIN' : 'USER'
+      designation: email === 'admin@gsh.com' ? 'ADMIN' : null
     }
   });
 

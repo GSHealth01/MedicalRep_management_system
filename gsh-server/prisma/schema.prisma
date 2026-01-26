@@ -290,25 +290,29 @@ model itineraryEntry {
 
 // ===============================
 model dcr {
-  id             Int      @id @default(autoincrement())
-  date           String
-  range          String?
-  agency         String?
-  repName        String?
-  empNo          String?
-  distributor    String?
-  area           String?
-  town           String?
-  callReport     Json?    // Array of doctor call reports
-  dailyExpenses  Json?    // { bata: boolean, nightOut: boolean, fuel: boolean }
-  otherBills     Json?    // { details: { parking: {checked, amount}, ...}, images: [] }
-  remarks        String?
-  orderFormImages Json?   // Array of image file names
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+   id             Int      @id @default(autoincrement())
+   date           String
+   range          String?
+   agency         String?
+   repName        String?
+   empNo          String?
+   distributor    String?
+   area           String?
+   town           String?
+   callReport     Json?    // Array of doctor call reports
+   dailyExpenses  Json?    // { bata: boolean, nightOut: boolean, fuel: boolean }
+   otherBills     Json?    // { details: { parking: {checked, amount}, ...}, images: [] }
+   mileage        Json?    // Mileage details
+   odometerReading String? // Odometer reading image filename
+   fuelBill       String?  // Fuel bill image filename
+   remarks        String?
+   orderFormImages Json?   // Array of image file names
+   joint_user_ids Json?    // Array of user ids for joint visits
+   createdAt      DateTime @default(now())
+   updatedAt      DateTime @updatedAt
 
-  user_id        Int
-  user           user     @relation(fields: [user_id], references: [id])
+   user_id        Int
+   user           user     @relation(fields: [user_id], references: [id])
 
-  @@map("dcrs")
+   @@map("dcrs")
 }

@@ -425,14 +425,11 @@ export default function RepdetailsReport() {
         const usersData = response.data.users || [];
         // Map abbreviations to full designations
         const designationMap = {
-          'SE': 'Sales Executive',
+          'SE': 'Senior Executive',
           'TM': 'Territory Manager',
           'PM': 'Product Manager',
           'JE': 'Junior Executive',
           'FC': 'Field Coordinator',
-          'ASM': 'Area Sales Manager',
-          'RSM': 'Regional Sales Manager',
-          'NSM': 'National Sales Manager',
           'OM': 'Operations Manager',
           'MR': 'Medical Representative',
           'ADMIN': 'Administrator'

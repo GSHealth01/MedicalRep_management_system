@@ -5,7 +5,7 @@ const ctrl = require("../../../controllers/v1/admin/users.controller");
 const asyncHandler = require("../../../utils/asyncHandler");
 
 // All below are Admin-only
-router.use(requireAuth, requireRole("ADMIN"));
+router.use(requireAuth, requireRole("ADMIN", "OM"));
 
 router.get("/", asyncHandler(ctrl.list));   
 router.get("/agency/:agencyId", ctrl.listByAgency);              // AdminController.list

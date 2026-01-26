@@ -125,7 +125,7 @@ exports.create = async (req, res) => {
       name,
       email: normalizedEmail,
       password: passwordHash,
-      designation: designation ? designation.toUpperCase() : 'USER',
+      designation: designation ? designation.toUpperCase() : null,
       emp_no: emp_no,
       join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,
       birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,

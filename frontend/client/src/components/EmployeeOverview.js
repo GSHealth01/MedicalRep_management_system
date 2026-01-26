@@ -10,6 +10,18 @@ export default function EmployeeOverview() {
   const [sortBy, setSortBy] = useState('name'); // default sort by name
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Map abbreviations to full designations
+  const designationMap = {
+    'SE': 'Senior Executive',
+    'TM': 'Territory Manager',
+    'PM': 'Product Manager',
+    'JE': 'Junior Executive',
+    'FC': 'Field Coordinator',
+    'OM': 'Operations Manager',
+    'MR': 'Medical Representative',
+    'ADMIN': 'Administrator'
+  };
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -138,7 +150,7 @@ export default function EmployeeOverview() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        {employee.designation}
+                        {designationMap[employee.designation] || employee.designation}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

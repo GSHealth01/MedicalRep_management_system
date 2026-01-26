@@ -5,7 +5,7 @@ const ctrl = require("../../../controllers/v1/admin/subsectors.controller");
 const teamCtrl = require("../../../controllers/v1/admin/teams.controller");
 const asyncHandler = require("../../../utils/asyncHandler");
 
-router.use(requireAuth, requireRole("ADMIN"));
+router.use(requireAuth, requireRole("ADMIN", "OM"));
 
 // nested under sector for create/list
 router.get("/sector/:sectorId", asyncHandler(ctrl.listBySector));
