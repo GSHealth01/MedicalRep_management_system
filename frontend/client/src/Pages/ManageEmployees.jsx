@@ -24,11 +24,20 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
     'Admin': 'Admin'
   };
 
+  // Helper to convert designation code to full name
+  const getDesignationName = (value) => {
+    if (!value) return '';
+    // If already in the map as full name, return as is
+    if (designationMap[value] === value) return value;
+    // Otherwise try to get full name from code
+    return designationMap[value] || value;
+  };
+
   const [formData, setFormData] = useState({
     name: employee?.name || '',
     email: employee?.email || '',
     empNo: employee?.emp_no || employee?.empNo || '',
-    designation: employee?.designation ? designationMap[employee.designation] || employee.designation : '',
+    designation: getDesignationName(employee?.designation),
     range: employee?.range?.name || employee?.range || '',
     agency: employee?.agency?.name || employee?.agency || '',
     distributor: employee?.distributor || '',
@@ -446,10 +455,12 @@ export default function ManageEmployees() {
 
   const handleSaveEmployee = async (formData) => {
     try {
+      // Preserve the full designation name (don't convert to uppercase code)
+      // The backend stores the full name as-is
       const updateData = {
         name: formData.name,
         empNo: formData.empNo,
-        designation: formData.designation ? formData.designation.toUpperCase() : undefined,
+        designation: formData.designation, // Send full name as-is
         agency: formData.agency,
         range: formData.range,
         birthday: formData.birthday || undefined,

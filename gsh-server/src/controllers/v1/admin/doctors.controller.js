@@ -58,7 +58,7 @@ exports.list = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const {
-      name, contactNumber, email, specialty, categorization, dateAdded, sector_id
+      name, contactNumber, email, specialty, categorization, dateAdded, sector_id, birthday, town
     } = req.body;
 
     if (!name) {
@@ -72,6 +72,8 @@ exports.create = async (req, res) => {
         email,
         specialty,
         categorization,
+        birthday: birthday ? new Date(birthday + 'T00:00:00.000Z') : undefined,
+        town,
         dateAdded: dateAdded ? new Date(dateAdded + 'T00:00:00.000Z') : undefined,
         sector_id: sector_id ? parseInt(sector_id) : undefined
       },
@@ -133,7 +135,10 @@ exports.update = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Handle date conversion if dateAdded is provided
+    // Handle date conversions
+    if (updateData.birthday) {
+      updateData.birthday = new Date(updateData.birthday + 'T00:00:00.000Z');
+    }
     if (updateData.dateAdded) {
       updateData.dateAdded = new Date(updateData.dateAdded + 'T00:00:00.000Z');
     }

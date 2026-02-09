@@ -14,6 +14,10 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
      categorization: doctor?.categorization || '',
      sector: doctor?.sector?.range || '',
      agency: doctor?.sector?.agency || '',
+     birthday: doctor?.birthday
+       ? new Date(doctor.birthday).toISOString().slice(0, 10)
+       : '',
+     town: doctor?.town || '',
      dateAdded: doctor?.dateAdded
        ? new Date(doctor.dateAdded).toISOString().slice(0, 10)
        : doctor?.date
@@ -74,166 +78,187 @@ function EditDoctorModal({ doctor, onClose, onSave }) {
 
    const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    // clear dependent agency when sector changes
-    if (name === "sector") {
-      setFormData((s) => ({ ...s, sector: value, agency: "" }));
-      return;
-    }
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+   const handleChange = (e) => {
+     const { name, value } = e.target;
+     // clear dependent agency when sector changes
+     if (name === "sector") {
+       setFormData((s) => ({ ...s, sector: value, agency: "" }));
+       return;
+     }
+     setFormData(prev => ({ ...prev, [name]: value }));
+   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await onSave(formData);
-      onClose();
-    } catch (error) {
-      // Error handled in parent
-    } finally {
-      setLoading(false);
-    }
-  };
+   const handleSubmit = async (e) => {
+     e.preventDefault();
+     setLoading(true);
+     try {
+       await onSave(formData);
+       onClose();
+     } catch (error) {
+       // Error handled in parent
+     } finally {
+       setLoading(false);
+     }
+   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Edit Doctor</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-            <input
-              type="text"
-              name="contactNumber"
-              value={formData.contactNumber}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
-            <input
-              type="text"
-              name="specialty"
-              value={formData.specialty}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categorization</label>
-            <input
-              type="text"
-              name="categorization"
-              value={formData.categorization}
-              onChange={handleChange}
-              placeholder="Enter categorization"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sector (Range)</label>
-            <select
-              name="sector"
-              value={formData.sector}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              <option value="">Select Sector</option>
-              {ranges.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </div>
+   return (
+     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+       <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+         <h2 className="text-xl font-bold mb-4">Edit Doctor</h2>
+         <form onSubmit={handleSubmit} className="space-y-4">
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+             <input
+               type="text"
+               name="name"
+               value={formData.name}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+               required
+             />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+             <input
+               type="text"
+               name="contactNumber"
+               value={formData.contactNumber}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+             <input
+               type="email"
+               name="email"
+               value={formData.email}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
+             <input
+               type="text"
+               name="specialty"
+               value={formData.specialty}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Categorization</label>
+             <input
+               type="text"
+               name="categorization"
+               value={formData.categorization}
+               onChange={handleChange}
+               placeholder="Enter categorization"
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Birthday</label>
+             <input
+               type="date"
+               name="birthday"
+               value={formData.birthday}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Town</label>
+             <input
+               type="text"
+               name="town"
+               value={formData.town}
+               onChange={handleChange}
+               placeholder="Enter town"
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Sector (Range)</label>
+             <select
+               name="sector"
+               value={formData.sector}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             >
+               <option value="">Select Sector</option>
+               {ranges.map((r) => (
+                 <option key={r.id} value={r.id}>
+                   {r.name}
+                 </option>
+               ))}
+             </select>
+           </div>
 
-          {/* Agency (Sub-sector) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Agency (Sub-sector)</label>
-            <select
-              name="agency"
-              value={formData.agency}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              disabled={!formData.sector || loadingAgencies}
-            >
-              <option value="">
-                {!formData.sector
-                  ? "Select sector first"
-                  : loadingAgencies
-                  ? "Loading agencies..."
-                  : agencyError
-                  ? "Error loading agencies"
-                  : "Select agency"}
-              </option>
-              {filteredAgencies.map((a) => (
-                <option key={a.id} value={a.name}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            {agencyError && (
-              <p className="text-sm text-red-600 mt-1">{agencyError}</p>
-            )}
-            {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.sector && (
-              <p className="text-sm text-gray-500 mt-1">No agencies found for this sector</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
-            <input
-              type="date"
-              name="dateAdded"
-              value={formData.dateAdded}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+           {/* Agency (Sub-sector) */}
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Agency (Sub-sector)</label>
+             <select
+               name="agency"
+               value={formData.agency}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+               disabled={!formData.sector || loadingAgencies}
+             >
+               <option value="">
+                 {!formData.sector
+                   ? "Select sector first"
+                   : loadingAgencies
+                   ? "Loading agencies..."
+                   : agencyError
+                   ? "Error loading agencies"
+                   : "Select agency"}
+               </option>
+               {filteredAgencies.map((a) => (
+                 <option key={a.id} value={a.name}>
+                   {a.name}
+                 </option>
+               ))}
+             </select>
+             {agencyError && (
+               <p className="text-sm text-red-600 mt-1">{agencyError}</p>
+             )}
+             {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.sector && (
+               <p className="text-sm text-gray-500 mt-1">No agencies found for this sector</p>
+             )}
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
+             <input
+               type="date"
+               name="dateAdded"
+               value={formData.dateAdded}
+               onChange={handleChange}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+             />
+           </div>
+           <div className="flex justify-end space-x-3 pt-4">
+             <button
+               type="button"
+               onClick={onClose}
+               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+             >
+               Cancel
+             </button>
+             <button
+               type="submit"
+               disabled={loading}
+               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+             >
+               {loading ? 'Saving...' : 'Save Changes'}
+             </button>
+           </div>
+         </form>
+       </div>
+     </div>
+   );
+ }
 
 
 export default function ManageDoctors() {
@@ -276,6 +301,8 @@ export default function ManageDoctors() {
         email: payload.email,
         specialty: payload.specialty,
         categorization: payload.categorization,
+        birthday: payload.birthday,
+        town: payload.town,
         dateAdded: payload.dateAdded,
         range: created.sector ? { name: created.sector.range, agency: { name: created.sector.agency } } : { id: payload.sector_id, name: 'Unknown' },
         
@@ -299,6 +326,8 @@ export default function ManageDoctors() {
       if (formData.email.trim()) updateData.email = formData.email.trim();
       if (formData.specialty.trim()) updateData.specialty = formData.specialty.trim();
       if (formData.categorization) updateData.categorization = formData.categorization;
+      if (formData.birthday) updateData.birthday = formData.birthday;
+      if (formData.town) updateData.town = formData.town;
       updateData.sector_id = editingDoctor.sector?.id;
 
       await api.put(`/admin/doctors/${editingDoctor.id || editingDoctor._id}`, updateData);
@@ -313,6 +342,8 @@ export default function ManageDoctors() {
                 email: formData.email,
                 specialty: formData.specialty,
                 categorization: formData.categorization,
+                birthday: formData.birthday,
+                town: formData.town,
                 sector: editingDoctor.sector,
                 date: formData.dateAdded ? new Date(formData.dateAdded).toISOString() : doc.date
               }
@@ -395,6 +426,8 @@ export default function ManageDoctors() {
                 <th className="py-2 px-4 text-center">Email</th>
                 <th className="py-2 px-4 text-center">Speciality</th>
                 <th className="py-2 px-4 text-center">Categorization</th>
+                <th className="py-2 px-4 text-center">Birthday</th>
+                <th className="py-2 px-4 text-center">Town</th>
                 <th className="py-2 px-4 text-center">Date Added</th>
                 <th className="py-2 px-4 text-center">Actions</th>
               </tr>
@@ -402,7 +435,7 @@ export default function ManageDoctors() {
             <tbody>
               {doctors.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-4 text-gray-500">
+                  <td colSpan="11" className="text-center py-4 text-gray-500">
                     No doctors added yet
                   </td>
                 </tr>
@@ -415,6 +448,9 @@ export default function ManageDoctors() {
                     : doc.date
                     ? new Date(doc.date).toISOString().slice(0, 10)
                     : "";
+                  const displayBirthday = doc.birthday
+                    ? new Date(doc.birthday).toISOString().slice(0, 10)
+                    : "";
 
                   return (
                     <tr key={doc._id || doc.id} className="border-b hover:bg-gray-50 text-center">
@@ -425,6 +461,8 @@ export default function ManageDoctors() {
                       <td className="py-2 px-4">{doc.email || "-"}</td>
                       <td className="py-2 px-4">{doc.specialty || doc.speciality || "-"}</td>
                       <td className="py-2 px-4">{doc.categorization || "-"}</td>
+                      <td className="py-2 px-4">{displayBirthday || "-"}</td>
+                      <td className="py-2 px-4">{doc.town || "-"}</td>
                       <td className="py-2 px-4">{displayDate}</td>
                       <td className="py-2 px-4 text-center">
                         <div className="flex justify-center space-x-2">

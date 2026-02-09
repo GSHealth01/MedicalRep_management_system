@@ -156,18 +156,53 @@ exports.update = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Convert string IDs to integers if present
-    if (updateData.agency_id) updateData.agency_id = parseInt(updateData.agency_id);
-    if (updateData.area_id) updateData.area_id = parseInt(updateData.area_id);
-    if (updateData.range_id) updateData.range_id = parseInt(updateData.range_id);
+    // Build final update object with proper field handling
+    const finalUpdate = {};
+
+    // Handle simple string fields
+    if (updateData.name) finalUpdate.name = updateData.name.trim();
+    if (updateData.coverage_town) finalUpdate.coverage_town = updateData.coverage_town.trim();
+    if (updateData.route) finalUpdate.route = updateData.route.trim();
+
+    // Handle sector_id - either directly provided or look up by range+agency
+    if (updateData.sector_id) {
+      finalUpdate.sector_id = parseInt(updateData.sector_id);
+    } else if (updateData.range && updateData.agency) {
+      // Look up sector by range and agency
+      const sector = await prisma.sector.findFirst({
+        where: {
+          range: updateData.range,
+          agency: updateData.agency
+        }
+      });
+      if (!sector) {
+        return ApiResponse.error(res, `Sector not found for range '${updateData.range}' and agency '${updateData.agency}'`, 400);
+      }
+      finalUpdate.sector_id = sector.id;
+    }
+
+    // Handle area_id - either directly provided or look up by name
+    if (updateData.area_id) {
+      finalUpdate.area_id = parseInt(updateData.area_id);
+    } else if (updateData.area) {
+      // Look up area by name
+      const area = await prisma.area.findFirst({
+        where: {
+          name: { equals: updateData.area, mode: 'insensitive' }
+        }
+      });
+      if (!area) {
+        return ApiResponse.error(res, `Area '${updateData.area}' not found`, 400);
+      }
+      finalUpdate.area_id = area.id;
+    }
 
     const distributor = await prisma.distributor.update({
       where: { distributor_code: id },
-      data: updateData,
+      data: finalUpdate,
       include: {
-        agency: { select: { id: true, name: true } },
-        area: { select: { id: true, name: true } },
-        range: { select: { id: true, name: true } }
+        sector: { select: { id: true, agency: true, range: true } },
+        area: { select: { id: true, name: true } }
       }
     });
 

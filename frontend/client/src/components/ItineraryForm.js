@@ -374,7 +374,7 @@ export default function ItineraryForm() {
                 <th className="px-3 py-2 border text-left w-36">Town</th>
                 <th className="px-3 py-2 border text-center w-32">Doctor Calls</th>
                 <th className="px-3 py-2 border text-center w-32">Chemist Calls</th>
-                <th className="px-3 py-2 border text-center w-32">Mileage (km)</th>
+                <th className="px-3 py-2 border text-center w-32">Scheduled Mileage (km)</th>
                 <th className="px-3 py-2 border text-left w-48">Night Out Area</th>
               </tr>
             </thead>

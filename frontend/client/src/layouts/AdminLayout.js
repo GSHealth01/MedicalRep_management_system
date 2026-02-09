@@ -12,6 +12,7 @@ export default function AdminLayout() {
     { name: "Employees", path: "/admin/employees" },
     { name: "Products", path: "/admin/products" },
     { name: "Doctors", path: "/admin/doctors" },
+    { name: "Chemists", path: "/admin/chemists" },
     { name: "Teams", path: "/admin/teams" },
   ];
 

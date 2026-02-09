@@ -40,6 +40,7 @@ import ManageEmployees    from './Pages/ManageEmployees';
 import ManageProducts     from './Pages/ManageProduct';
 import ManageDistributors from "./Pages/ManageDistributors";
 import ManageDoctors      from "./Pages/ManageDoctors";
+import ManageChemists      from "./Pages/ManageChemists";
 import ManageTeams        from "./Pages/ManageTeams";
 // Removed ManageRoles import
 
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="employees" element={<ManageEmployees />} />
           <Route path="products" element={<ManageProducts />} />
           <Route path="doctors" element={<ManageDoctors />} />
+          <Route path="chemists" element={<ManageChemists />} />
           <Route path="distributors" element={<ManageDistributors />} />
           <Route path="teams" element={<ManageTeams />} />
           {/* Removed roles route */}

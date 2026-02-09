@@ -21,17 +21,13 @@ function EditProductModal({ product, onClose, onSave }) {
            id: variant.id,
            strength: variant.strength || '',
            pack_size: variant.pack_size || '',
-           sampling_price: variant.sampling_price || '',
-           stocking_price: variant.stocking_price || '',
-           detailed_price: variant.detailed_price || ''
+           stocking_price: variant.stocking_price || ''
          }))
        : [{
            id: null,
            strength: '',
            pack_size: '',
-           sampling_price: '',
-           stocking_price: '',
-           detailed_price: ''
+           stocking_price: ''
          }]
    );
   
@@ -103,9 +99,7 @@ function EditProductModal({ product, onClose, onSave }) {
       id: null,
       strength: "",
       pack_size: "",
-      sampling_price: "",
-      stocking_price: "",
-      detailed_price: ""
+      stocking_price: ""
     }]);
   };
 
@@ -138,9 +132,7 @@ function EditProductModal({ product, onClose, onSave }) {
         id: variant.id,
         strength: variant.strength.trim(),
         pack_size: variant.pack_size.trim(),
-        sampling_price: variant.sampling_price ? parseFloat(variant.sampling_price) : null,
         stocking_price: variant.stocking_price ? parseFloat(variant.stocking_price) : null,
-        detailed_price: variant.detailed_price ? parseFloat(variant.detailed_price) : null,
       }));
 
       await onSave(updateData, formData);
@@ -164,33 +156,28 @@ function EditProductModal({ product, onClose, onSave }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Enter product name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Therapeutic Category *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Therapeutic Category</label>
             <input
               type="text"
               name="therapeutic_category"
               value={formData.therapeutic_category}
               onChange={handleChange}
-              placeholder="e.g., Cardiovascular, Antibiotics"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Generic Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Generic Name</label>
             <input
               type="text"
               name="generic_name"
               value={formData.generic_name}
               onChange={handleChange}
-              placeholder="e.g., Paracetamol, Amoxicillin"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -200,21 +187,18 @@ function EditProductModal({ product, onClose, onSave }) {
               name="route_of_administration"
               value={formData.route_of_administration}
               onChange={handleChange}
-              placeholder="e.g., Oral, Intravenous, Topical"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
-          {/* Range (Sector) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Range (Sector)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Range</label>
             <select
               name="range"
               value={formData.range}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select range</option>
+              <option value="">Select Range</option>
               {ranges.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -222,15 +206,13 @@ function EditProductModal({ product, onClose, onSave }) {
               ))}
             </select>
           </div>
-
-          {/* Agency (Sub-sector) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Agency (Sub-sector)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Agency</label>
             <select
               name="agency"
               value={formData.agency}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={!formData.range || loadingAgencies}
             >
               <option value="">
@@ -256,35 +238,34 @@ function EditProductModal({ product, onClose, onSave }) {
             )}
           </div>
 
-          {/* Product Variants */}
-          <div className="border-t pt-4 col-span-2">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Product Variants</h3>
+          {/* Variants Section */}
+          <div className="mt-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium text-gray-700">Product Variants</h3>
               <button
                 type="button"
                 onClick={addVariant}
-                className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm"
+                className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Add Variant
+                + Add Variant
               </button>
             </div>
 
             {variants.map((variant, index) => (
-              <div key={index} className="border rounded-lg p-4 mb-4 bg-gray-50">
+              <div key={index} className="border rounded-md p-3 mb-2">
                 <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium">Variant {index + 1}</h4>
+                  <h4 className="text-sm font-medium">Variant {index + 1}</h4>
                   {variants.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeVariant(index)}
-                      className="bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-sm"
+                      className="text-red-600 hover:text-red-800 text-sm"
                     >
                       Remove
                     </button>
                   )}
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Strength */}
                   <div>
                     <label className="block text-gray-700 mb-1">Strength</label>
@@ -309,40 +290,14 @@ function EditProductModal({ product, onClose, onSave }) {
                     />
                   </div>
 
-                  {/* Sampling Price */}
+                  {/* Wholesale Price */}
                   <div>
-                    <label className="block text-gray-700 mb-1">Sampling Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={variant.sampling_price}
-                      onChange={(e) => updateVariant(index, 'sampling_price', e.target.value)}
-                      placeholder="0.00"
-                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Stocking Price */}
-                  <div>
-                    <label className="block text-gray-700 mb-1">Stocking Price</label>
+                    <label className="block text-gray-700 mb-1">Wholesale Price</label>
                     <input
                       type="number"
                       step="0.01"
                       value={variant.stocking_price}
                       onChange={(e) => updateVariant(index, 'stocking_price', e.target.value)}
-                      placeholder="0.00"
-                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Detailed Price */}
-                  <div className="md:col-span-2">
-                    <label className="block text-gray-700 mb-1">Detailed Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={variant.detailed_price}
-                      onChange={(e) => updateVariant(index, 'detailed_price', e.target.value)}
                       placeholder="0.00"
                       className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -400,52 +355,66 @@ export default function ManageProducts() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  // Load existing products from BE
+  // Load products (optionally you can filter by sector via ?sector=)
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
       setErr("");
       try {
-        const res = await api.get("/admin/products", { params: { limit: 200 } });
+        const res = await api.get("/admin/products", {
+          params: { limit: 100 },
+        });
         const payload = res?.data?.data ?? res?.data ?? {};
-        const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+        const items = Array.isArray(payload?.items)
+          ? payload.items
+          : Array.isArray(payload)
+          ? payload
+          : [];
+        console.log('Products response:', res.data); // Debug log
+        console.log('Items:', items); // Debug log
 
-        // Normalize the data to ensure agency displays correctly
-        const normalizedItems = items.map(item => ({
+        // Ensure all nested objects are properly handled
+        const safeItems = items.map(item => ({
           ...item,
-          agency: typeof item.agency === 'string' && !isNaN(item.agency)
-            ? item.agency // Keep as string if it's already a name
-            : item.agency // Otherwise keep as is
+          range: item.range || 'Unknown',
+          agency: item.agency || 'Unknown',
         }));
 
-        if (mounted) setProducts(normalizedItems);
+        if (mounted) setProducts(safeItems);
       } catch (e) {
-        if (mounted) setErr(e?.response?.data?.message || "Failed to load products");
+        if (mounted)
+          setErr(e?.response?.data?.message || "Failed to load products");
       } finally {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleAddProduct = async (payload, rawForm) => {
     try {
       const res = await api.post("/admin/products", payload);
-      const created = res?.data?.data || {};
+      console.log('Response:', res.data); // Debug log
+
+      const created = res?.data?.data || res?.data || {};
       const newRow = {
         id: created.id,
         name: created.name,
         therapeutic_category: created.therapeutic_category,
         generic_name: created.generic_name,
         route_of_administration: created.route_of_administration,
-        range: created.range || rawForm.range,
-        agency: created.agency || rawForm.agency,
-        variants: created.variants || []
+        range: created.sector?.range || payload.range,
+        agency: created.sector?.agency || payload.agency,
+        variants: created.variants || [],
+        dateAdded: new Date()
       };
       setProducts((list) => [newRow, ...list]);
       showNotification(`Product ${payload.name} added successfully!`, 'success');
     } catch (e) {
+      console.error('Error adding product:', e); // Debug log
       showNotification(e?.response?.data?.message || "Failed to add product", 'error');
     }
   };
@@ -454,23 +423,32 @@ export default function ManageProducts() {
     setEditingProduct(product);
   };
 
-  const handleSaveEdit = async (updateData, formData) => {
+  const handleSaveEdit = async (formData) => {
     try {
-      const response = await api.put(`/admin/products/${editingProduct.id}`, updateData);
-      const updatedProduct = response?.data?.data;
+      const updateData = {};
+      if (formData.name.trim()) updateData.name = formData.name.trim();
+      if (formData.therapeutic_category.trim()) updateData.therapeutic_category = formData.therapeutic_category.trim();
+      if (formData.generic_name.trim()) updateData.generic_name = formData.generic_name.trim();
+      if (formData.route_of_administration.trim()) updateData.route_of_administration = formData.route_of_administration.trim();
+      if (formData.range.trim()) updateData.range = formData.range.trim();
+      if (formData.agency.trim()) updateData.agency = formData.agency.trim();
+      if (formData.variants) updateData.variants = formData.variants;
+
+      const productId = editingProduct.id;
+      console.log('Updating product with id:', productId);
+      console.log('Update data:', updateData);
+
+      const response = await api.put(`/admin/products/${productId}`, updateData);
+      console.log('Update response:', response.data);
 
       setProducts((list) =>
         list.map((prod) =>
-          prod.id === editingProduct.id
+          prod.id === productId
             ? {
                 ...prod,
-                name: formData.name,
-                therapeutic_category: formData.therapeutic_category,
-                generic_name: formData.generic_name,
-                route_of_administration: formData.route_of_administration,
-                range: formData.range,
-                agency: formData.agency,
-                variants: updatedProduct?.variants || []
+                ...updateData,
+                range: updateData.range || prod.range,
+                agency: updateData.agency || prod.agency,
               }
             : prod
         )
@@ -478,6 +456,7 @@ export default function ManageProducts() {
 
       showNotification(`Product ${formData.name} updated successfully!`, 'success');
     } catch (e) {
+      console.error('Error updating product:', e);
       throw new Error(e?.response?.data?.message || "Failed to update product");
     }
   };
@@ -494,8 +473,9 @@ export default function ManageProducts() {
     if (!confirmed) return;
 
     try {
-      await api.delete(`/admin/products/${product.id}`);
-      setProducts((list) => list.filter((prod) => prod.id !== product.id));
+      const productId = product.id;
+      await api.delete(`/admin/products/${productId}`);
+      setProducts((list) => list.filter((prod) => prod.id !== productId));
       showNotification(`Product ${product.name} deleted successfully!`, 'success');
     } catch (e) {
       showNotification(e?.response?.data?.message || "Failed to delete product", 'error');
@@ -508,7 +488,7 @@ export default function ManageProducts() {
         <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {showForm ? 'Hide Form' : 'Add Product'}
         </button>
@@ -544,9 +524,7 @@ export default function ManageProducts() {
                   <th className="py-2 px-4 text-center">Route of Administration</th>
                   <th className="py-2 px-4 text-center">Strength</th>
                   <th className="py-2 px-4 text-center">Pack Size</th>
-                  <th className="py-2 px-4 text-center">Sampling Price</th>
-                  <th className="py-2 px-4 text-center">Stocking Price</th>
-                  <th className="py-2 px-4 text-center">Detailed Price</th>
+                  <th className="py-2 px-4 text-center">Wholesale Price</th>
                   <th className="py-2 px-4 text-center">Range</th>
                   <th className="py-2 px-4 text-center">Agency</th>
                   <th className="py-2 px-4 text-center">Actions</th>
@@ -555,7 +533,7 @@ export default function ManageProducts() {
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="12" className="text-center py-4 text-gray-500">No products added yet</td>
+                    <td colSpan="10" className="text-center py-4 text-gray-500">No products added yet</td>
                   </tr>
                 ) : (
                   products.flatMap((prod) => {
@@ -567,8 +545,6 @@ export default function ManageProducts() {
                           <td className="py-2 px-4">{prod.generic_name || "-"}</td>
                           <td className="py-2 px-4">{prod.route_of_administration || "-"}</td>
                           <td className="py-2 px-4 text-gray-500">No variants</td>
-                          <td className="py-2 px-4 text-gray-500">-</td>
-                          <td className="py-2 px-4 text-gray-500">-</td>
                           <td className="py-2 px-4 text-gray-500">-</td>
                           <td className="py-2 px-4 text-gray-500">-</td>
                           <td className="py-2 px-4">{prod.range || "-"}</td>
@@ -607,9 +583,7 @@ export default function ManageProducts() {
                         )}
                         <td className="py-2 px-4">{variant.strength || "-"}</td>
                         <td className="py-2 px-4">{variant.pack_size || "-"}</td>
-                        <td className="py-2 px-4">{variant.sampling_price ? `Rs ${variant.sampling_price}` : "-"}</td>
                         <td className="py-2 px-4">{variant.stocking_price ? `Rs ${variant.stocking_price}` : "-"}</td>
-                        <td className="py-2 px-4">{variant.detailed_price ? `Rs ${variant.detailed_price}` : "-"}</td>
                         {index === 0 && (
                           <>
                             <td className="py-2 px-4" rowSpan={prod.variants.length}>{prod.range || "-"}</td>
@@ -643,12 +617,8 @@ export default function ManageProducts() {
           )}
         </div>
       )}
-      
-      {/* Notification Component */}
-      <NotificationComponent />
-      
-      {/* Confirmation Dialog Component */}
-      <ConfirmDialogComponent />
+      {NotificationComponent}
+      {ConfirmDialogComponent}
     </div>
   );
 }

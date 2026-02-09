@@ -275,7 +275,7 @@ exports.updateRole = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, empNo, designation, agency, range, distributor_ids, distributor } = req.body;
+    const { name, empNo, designation, agency, range, distributor_ids, distributor, birthday, joinDate } = req.body;
 
     const userId = parseInt(id);
 
@@ -293,20 +293,27 @@ exports.updateProfile = async (req, res) => {
 
     if (name !== undefined) updateData.name = name;
     if (empNo !== undefined) updateData.emp_no = empNo;
-    if (designation !== undefined) updateData.designation = designation.toUpperCase();
+    // Preserve designation as-is (full name)
+    if (designation !== undefined) updateData.designation = designation;
+    if (birthday !== undefined) updateData.birthday = birthday ? new Date(birthday + 'T00:00:00.000Z') : null;
+    if (joinDate !== undefined) updateData.join_date = joinDate ? new Date(joinDate + 'T00:00:00.000Z') : null;
 
-    // Handle agency and range updates
+    // Handle sector updates - look up sector by agency and range
     if (agency !== undefined || range !== undefined) {
       if (agency && range) {
-        // Validate that agency and range exist
-        const agencyExists = await prisma.agency.findFirst({ where: { name: agency } });
-        const rangeExists = await prisma.range.findFirst({ where: { name: range } });
+        // Validate that sector exists with given agency and range
+        const sector = await prisma.sector.findFirst({
+          where: { 
+            agency: agency,
+            range: range
+          }
+        });
 
-        if (!agencyExists) return ApiResponse.error(res, "Agency not found", 404);
-        if (!rangeExists) return ApiResponse.error(res, "Range not found", 404);
+        if (!sector) {
+          return ApiResponse.error(res, `Sector not found for agency '${agency}' and range '${range}'`, 404);
+        }
 
-        updateData.agency = { connect: { id: agencyExists.id } };
-        updateData.range = { connect: { id: rangeExists.id } };
+        updateData.sector_id = sector.id;
       } else if (agency || range) {
         return ApiResponse.error(res, "Both agency and range must be provided together", 400);
       }
@@ -317,8 +324,8 @@ exports.updateProfile = async (req, res) => {
       where: { id: userId },
       data: updateData,
       include: {
-        range: { select: { id: true, name: true } },
-        agency: { select: { id: true, name: true } },
+        sector: { select: { id: true, agency: true, range: true } },
+        team: { select: { id: true, name: true } },
         distributors: {
           include: {
             distributor: { select: { distributor_code: true, name: true } }
@@ -335,8 +342,8 @@ exports.updateProfile = async (req, res) => {
       const finalUser = await prisma.user.findUnique({
         where: { id: userId },
         include: {
-          range: { select: { id: true, name: true } },
-          agency: { select: { id: true, name: true } },
+          sector: { select: { id: true, agency: true, range: true } },
+          team: { select: { id: true, name: true } },
           distributors: {
             include: {
               distributor: { select: { distributor_code: true, name: true } }

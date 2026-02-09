@@ -325,7 +325,7 @@ export default function ItineraryForm() {
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Town</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Doctor Calls</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Chemist Calls</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mileage</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Scheduled Mileage (km)</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Night Out Area</th>
                   {!isViewMode && !editingDisabled && <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>}
                 </tr>

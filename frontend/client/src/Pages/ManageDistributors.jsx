@@ -329,17 +329,14 @@ export default function ManageDistributors() {
       if (formData.town.trim()) updateData.coverage_town = formData.town.trim();
       if (formData.route.trim()) updateData.route = formData.route.trim();
       
-      // For range, agency and area, we need to find the IDs or handle them properly
-      // Since these are complex relationships, let's update them as strings for now
+      // For range, agency and area, send as strings for backend ID lookup
       if (formData.range) updateData.range = formData.range;
       if (formData.agency) updateData.agency = formData.agency;
       if (formData.area) updateData.area = formData.area;
 
       const distributorCode = editingDistributor.distributor_code || editingDistributor.distributorCode;
-      console.log('Updating distributor with code:', distributorCode);
-      console.log('Update data:', updateData);
 
-      await api.put(`/admin/distributors/${distributorCode}`, updateData);
+      const response = await api.put(`/admin/distributors/${distributorCode}`, updateData);
 
       setDistributors((list) =>
         list.map((dist) =>

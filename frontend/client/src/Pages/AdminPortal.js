@@ -39,6 +39,13 @@ const adminCards = [
     icon: "🩺",
   },
   {
+    title: "Chemists",
+    description: "Register chemist profiles with owner and purchasing officer details.",
+    button: "Manage Chemists",
+    path: "/admin/chemists",
+    icon: "💊",
+  },
+  {
     title: "Teams",
     description: "Create teams, assign leaders, and manage members.",
     button: "Manage Teams",

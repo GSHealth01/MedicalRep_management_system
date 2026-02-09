@@ -8,11 +8,14 @@ const NotificationPopup = ({
   show = false 
 }) => {
   const [isVisible, setIsVisible] = useState(show);
+  console.log('[DEBUG-Notification] Rendering with show:', show, 'message:', message, 'type:', type);
 
   useEffect(() => {
+    console.log('[DEBUG-Notification] useEffect triggered, show:', show);
     setIsVisible(show);
     if (show && duration > 0) {
       const timer = setTimeout(() => {
+        console.log('[DEBUG-Notification] Auto-hide timer triggered');
         setIsVisible(false);
         onClose && onClose();
       }, duration);
@@ -21,11 +24,17 @@ const NotificationPopup = ({
   }, [show, duration, onClose]);
 
   const handleClose = () => {
+    console.log('[DEBUG-Notification] handleClose called');
     setIsVisible(false);
     onClose && onClose();
   };
 
-  if (!isVisible) return null;
+  if (!isVisible) {
+    console.log('[DEBUG-Notification] Not visible, returning null');
+    return null;
+  }
+
+  console.log('[DEBUG-Notification] Rendering notification popup');
 
   const getTypeStyles = () => {
     switch (type) {

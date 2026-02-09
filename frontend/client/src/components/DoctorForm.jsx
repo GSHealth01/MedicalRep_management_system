@@ -10,6 +10,8 @@ export default function DoctorForm({ onSubmit }) {
     email: "",
     speciality: "",        // UI spelling; mapped to "specialty" in payload
     categorization: "",
+    birthday: "",
+    town: "",
     date: "",
   });
 
@@ -144,6 +146,8 @@ export default function DoctorForm({ onSubmit }) {
       email: formData.email || undefined,
       specialty: formData.speciality || undefined,       // map UI "speciality" -> "specialty"
       categorization: formData.categorization || undefined,
+      birthday: formData.birthday || undefined,
+      town: formData.town || undefined,
       dateAdded: formData.date || undefined,
       // Optional fields you may add later: hospital, address, city, notes
     };
@@ -159,6 +163,8 @@ export default function DoctorForm({ onSubmit }) {
       email: "",
       speciality: "",
       categorization: "",
+      birthday: "",
+      town: "",
       date: "",
     });
   };
@@ -270,6 +276,31 @@ export default function DoctorForm({ onSubmit }) {
           value={formData.categorization}
           onChange={handleChange}
           placeholder="Enter categorization"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Birthday */}
+      <div>
+        <label className="block text-gray-700 mb-1">Birthday</label>
+        <input
+          type="date"
+          name="birthday"
+          value={formData.birthday}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Town */}
+      <div>
+        <label className="block text-gray-700 mb-1">Town</label>
+        <input
+          type="text"
+          name="town"
+          value={formData.town}
+          onChange={handleChange}
+          placeholder="Enter town"
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>

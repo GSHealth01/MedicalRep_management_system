@@ -451,7 +451,7 @@ const generateExcel = asyncHandler(async (req, res) => {
   worksheet.addRow(['']);
 
   // Add table headers
-  worksheet.addRow(['Date', 'Day No', 'Area', 'Town', 'Doctor Calls', 'Chemist Calls', 'Mileage (km)', 'Night Out Area']);
+  worksheet.addRow(['Date', 'Day No', 'Area', 'Town', 'Doctor Calls', 'Chemist Calls', 'Scheduled Mileage (km)', 'Night Out Area']);
 
   // Style headers
   const headerRow = worksheet.getRow(8);
