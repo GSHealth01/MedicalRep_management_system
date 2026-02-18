@@ -1002,8 +1002,8 @@ export default function RepdetailsReport() {
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Distributor</label>
         <input type="text" value={distributor} onChange={(e) => setDistributor(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
       </div>
-      {/* Area + Town */}
-      <div className="flex gap-6 mb-6">
+      {/* Primary Working Area + Town + Actual Working Area */}
+      <div className="flex flex-col gap-6 mb-6">
         <div className="flex-1">
           <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Primary Working Area</label>
           <input
@@ -1011,7 +1011,8 @@ export default function RepdetailsReport() {
             value={area}
             onChange={(e) => setArea(e.target.value)}
             disabled={areaDisabled}
-            className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${areaDisabled ? 'bg-gray-100' : 'bg-blue-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            readOnly
+            className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${areaDisabled ? 'bg-gray-100' : 'bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
           />
         </div>
         <div className="flex-1">
@@ -1021,7 +1022,8 @@ export default function RepdetailsReport() {
             value={town}
             onChange={(e) => setTown(e.target.value)}
             disabled={townDisabled}
-            className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${townDisabled ? 'bg-gray-100' : 'bg-blue-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            readOnly
+            className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${townDisabled ? 'bg-gray-100' : 'bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
           />
         </div>
         <div className="flex-1">
