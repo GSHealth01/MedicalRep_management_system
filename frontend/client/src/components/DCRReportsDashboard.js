@@ -96,7 +96,7 @@ const generateChemistSummaryData = (tableData, products) => {
                 const qty = parseInt(productState.wholesaleQty) || 0;
                 const price = variant.stocking_price || 0;
                 chemistSummary.items.push({
-                  name: `${category} - ${productState.name}`, type: "Wholesale", qty: qty, unitPrice: price, lineTotal: qty * price
+                  name: `${category} - ${productState.name}`, type: "Stocking", qty: qty, unitPrice: price, lineTotal: qty * price
                 });
               }
             }

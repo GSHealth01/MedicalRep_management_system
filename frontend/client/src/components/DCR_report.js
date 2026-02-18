@@ -73,7 +73,7 @@ const generateSummaryData = (tableData, productCategories) => {
                         const priceInfo = productCategories[category][index];
 
                         if (productState.sampling) {
-                          const qty = 1;
+                          const qty = parseInt(productState.samplingQty) || 1;
                           docSummary.items.push({
                             name: `${category} - ${productState.name}`, type: "Sampling", qty: qty, unitPrice: 0, lineTotal: 0
                           });
@@ -88,7 +88,7 @@ const generateSummaryData = (tableData, productCategories) => {
                           const qty = parseInt(productState.stockingQty) || 0;
                           const price = priceInfo.stockingPrice || 0;
                           docSummary.items.push({
-                            name: `${category} - ${productState.name}`, type: "Wholesale", qty: qty, unitPrice: price, lineTotal: qty * price
+                            name: `${category} - ${productState.name}`, type: "Stocking", qty: qty, unitPrice: price, lineTotal: qty * price
                           });
                         }
                     }
@@ -153,7 +153,7 @@ const generateChemistSummaryData = (tableData, productCategories) => {
                           const qty = parseInt(productState.wholesaleQty) || 0;
                           const price = priceInfo.stockingPrice || 0; // Use stocking_price as wholesale price
                           chemistSummary.items.push({
-                            name: `${category} - ${productState.name}`, type: "Wholesale", qty: qty, unitPrice: price, lineTotal: qty * price
+                            name: `${category} - ${productState.name}`, type: "Stocking", qty: qty, unitPrice: price, lineTotal: qty * price
                           });
                         }
                     }
@@ -1184,6 +1184,7 @@ export default function RepdetailsReport() {
                               <label className={`flex items-center gap-2 text-sm`}>
                                 <input type="checkbox" checked={cell.sampling || false} onChange={(e) => updateDoctorCell(docIdx, productIdx, "sampling", e.target.checked)} className="scale-110 cursor-pointer" />
                                 <span className="flex-1 text-left text-xs">Sampling</span>
+                                <input type="number" min="0" value={cell.samplingQty || ""} onChange={(e) => updateDoctorCell(docIdx, productIdx, "samplingQty", e.target.value)} placeholder="QTY" className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-xs" />
                               </label>
                               <label className={`flex items-center gap-2 text-sm`}>
                                 <input type="checkbox" checked={cell.detailed || false} onChange={(e) => updateDoctorCell(docIdx, productIdx, "detailed", e.target.checked)} className="scale-110 cursor-pointer" />
@@ -1191,7 +1192,7 @@ export default function RepdetailsReport() {
                               </label>
                               <label className={`flex items-center gap-2 text-sm`}>
                                 <input type="checkbox" checked={cell.stocking || false} onChange={(e) => updateDoctorCell(docIdx, productIdx, "stocking", e.target.checked)} className="scale-110 cursor-pointer" />
-                                <span className="flex-1 text-left text-xs">Wholesale</span>
+                                <span className="flex-1 text-left text-xs">Stocking</span>
                                 <input type="number" min="0" value={cell.stockingQty || ""} onChange={(e) => updateDoctorCell(docIdx, productIdx, "stockingQty", e.target.value)} placeholder="QTY" disabled={!cell.stocking} className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-xs" />
                               </label>
                             </div>
@@ -1263,7 +1264,7 @@ export default function RepdetailsReport() {
                           <td key={productIdx} className="border border-gray-200 px-3 py-2 align-top min-w-[180px]">
                             <div className="flex flex-col gap-3">
                               <label className={`flex items-center gap-2 text-sm`}>
-                                <span className="flex-1 text-left text-xs">Wholesale Qty</span>
+                                <span className="flex-1 text-left text-xs">Qty</span>
                                 <input type="number" min="0" value={cell.wholesaleQty || ""} onChange={(e) => updateChemistCell(chemistIdx, productIdx, "wholesaleQty", e.target.value)} placeholder="QTY" className="w-20 px-2 py-1 border border-gray-300 rounded-md text-center text-xs" />
                               </label>
                             </div>
