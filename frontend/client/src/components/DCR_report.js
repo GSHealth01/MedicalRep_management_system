@@ -1309,7 +1309,7 @@ export default function RepdetailsReport() {
        {/* Total Boxes */}
        <div className="mt-6 flex gap-4">
          <div className="flex-1 p-4 bg-blue-600 text-white rounded-lg flex justify-between items-center">
-           <span className="text-lg font-bold">Total wholesale orders (Doctors):</span>
+           <span className="text-lg font-bold">Total stocking orders (Doctors):</span>
            <span className="text-xl font-bold">Rs. {calculateDoctorTotal().toFixed(2)}</span>
          </div>
          <div className="flex-1 p-4 bg-green-600 text-white rounded-lg flex justify-between items-center">

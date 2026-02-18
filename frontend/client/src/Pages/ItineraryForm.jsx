@@ -247,7 +247,7 @@ export default function ItineraryForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Town</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Town - Route</label>
                   <input
                     type="text"
                     name="town"
@@ -322,7 +322,7 @@ export default function ItineraryForm() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Day No</th>
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Area</th>
-                  <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Town</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Town - Route</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Doctor Calls</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Chemist Calls</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Scheduled Mileage (km)</th>

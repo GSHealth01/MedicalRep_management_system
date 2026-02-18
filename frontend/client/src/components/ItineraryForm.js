@@ -340,7 +340,7 @@ export default function ItineraryForm() {
           </label>
 
           <label className="flex flex-col text-sm font-medium">
-            Town
+            Town - Route
             <div
               className="mt-1 px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
               style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
@@ -371,7 +371,7 @@ export default function ItineraryForm() {
                 <th className="px-3 py-2 border text-left w-40">Date</th>
                 <th className="px-3 py-2 border text-center w-20">Day No</th>
                 <th className="px-3 py-2 border text-left w-40">Area</th>
-                <th className="px-3 py-2 border text-left w-36">Town</th>
+                <th className="px-3 py-2 border text-left w-36">Town - Route</th>
                 <th className="px-3 py-2 border text-center w-32">Doctor Calls</th>
                 <th className="px-3 py-2 border text-center w-32">Chemist Calls</th>
                 <th className="px-3 py-2 border text-center w-32">Scheduled Mileage (km)</th>
