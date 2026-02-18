@@ -444,8 +444,9 @@ export default function DCRReportsDashboard() {
             <div><strong>Range:</strong> {selectedDCR.range}</div>
             <div><strong>Agency:</strong> {selectedDCR.agency}</div>
             <div><strong>Distributor:</strong> {selectedDCR.distributor}</div>
-            <div><strong>Area:</strong> {selectedDCR.area}</div>
+            <div><strong>Primary Working Area:</strong> {selectedDCR.area}</div>
             <div><strong>Town:</strong> {selectedDCR.town}</div>
+            <div><strong>Actual Working Area:</strong> {selectedDCR.actualWorkingArea || '-'}</div>
           </div>
 
           {/* Call Report - Doctors */}

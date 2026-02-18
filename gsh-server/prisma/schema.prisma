@@ -320,8 +320,9 @@ model dcr {
    repName        String?
    empNo          String?
    distributor    String?
-   area           String?
-   town           String?
+   area               String?
+   town               String?
+   actualWorkingArea String?
    callReport     Json?    // Array of doctor call reports
    dailyExpenses  Json?    // { bata: boolean, nightOut: boolean, fuel: boolean }
    otherBills     Json?    // { details: { parking: {checked, amount}, ...}, images: [] }

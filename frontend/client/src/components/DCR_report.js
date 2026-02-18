@@ -262,6 +262,7 @@ export default function RepdetailsReport() {
   const [distributor, setDistributor] = useState("");
   const [area, setArea] = useState("");
   const [town, setTown] = useState("");
+  const [actualWorkingArea, setActualWorkingArea] = useState("");
   const [selectedDoctors, setSelectedDoctors] = useState([]);
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [itineraryMessage, setItineraryMessage] = useState("");
@@ -331,6 +332,7 @@ export default function RepdetailsReport() {
           setDistributor(dcr.distributor);
           setArea(dcr.area);
           setTown(dcr.town);
+          setActualWorkingArea(dcr.actualWorkingArea || "");
           // Handle doctor data
           const doctorCalls = dcr.callReport?.filter(d => d.doctor) || [];
           setSelectedDoctors(doctorCalls.map(d => d.doctor));
@@ -887,6 +889,7 @@ export default function RepdetailsReport() {
       formData.append('distributor', distributor);
       formData.append('area', area);
       formData.append('town', town);
+      formData.append('actualWorkingArea', actualWorkingArea);
 
       // Combine doctor and chemist call report data
       const combinedCallReport = [...doctorTableData, ...chemistTableData];
@@ -1002,7 +1005,7 @@ export default function RepdetailsReport() {
       {/* Area + Town */}
       <div className="flex gap-6 mb-6">
         <div className="flex-1">
-          <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Area</label>
+          <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Primary Working Area</label>
           <input
             type="text"
             value={area}
@@ -1019,6 +1022,15 @@ export default function RepdetailsReport() {
             onChange={(e) => setTown(e.target.value)}
             disabled={townDisabled}
             className={`w-full px-4 py-3 border-2 border-gray-200 rounded-lg ${townDisabled ? 'bg-gray-100' : 'bg-blue-50'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Actual Working Area</label>
+          <input
+            type="text"
+            value={actualWorkingArea}
+            onChange={(e) => setActualWorkingArea(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </div>
