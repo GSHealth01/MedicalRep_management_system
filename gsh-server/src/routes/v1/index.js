@@ -7,6 +7,7 @@ router.use("/agencies", require("./agency.routes"));
 router.use("/areas", require("./area.routes"));
 router.use("/teams", require("./team.routes"));
 router.use("/doctors", require("./doctor.routes"));
+router.use("/chemists", require("./chemists.routes"));
 router.use("/itineraries", require("./itinerary.routes"));
 router.use("/products", require("./product.routes"));
 // router.use("/distributors", require("./distributor.routes"));

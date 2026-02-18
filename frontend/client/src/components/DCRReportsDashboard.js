@@ -37,14 +37,9 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
       productsWithPrices.forEach((priceInfo, index) => {
         if (index < productStates.length) {
           const stateInfo = productStates[index];
-          if (stateInfo.sampling && stateInfo.samplingQty) {
-            total += (priceInfo.samplingPrice || 0) * (parseInt(stateInfo.samplingQty) || 0);
-          }
+          // Only stocking/wholeale has quantity and price
           if (stateInfo.stocking && stateInfo.stockingQty) {
             total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.stockingQty) || 0);
-          }
-          if (stateInfo.detailed) {
-            total += (priceInfo.detailedPrice || 0);
           }
         }
       });
@@ -53,9 +48,76 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
   return total;
 };
 
+const calculateChemistTotal = (chemistRow, products) => {
+  let total = 0;
+  if (!chemistRow || !chemistRow.productData) return total;
+
+  Object.keys(chemistRow.productData).forEach(category => {
+    const categoryProducts = chemistRow.productData[category];
+    categoryProducts.forEach((productState, index) => {
+      // Find the product price from the products list
+      const product = products.find(p => p.name === category);
+      if (product && product.variants && product.variants[index]) {
+        const variant = product.variants[index];
+        if (productState.wholesaleQty) {
+          total += (variant.stocking_price || 0) * (parseInt(productState.wholesaleQty) || 0);
+        }
+      }
+    });
+  });
+  return total;
+};
+
+const generateChemistSummaryData = (tableData, products) => {
+  const summary = [];
+  tableData.forEach(chemist => {
+    // Skip entries that don't have a chemist
+    if (!chemist.chemist) return;
+    
+    const chemistSummary = {
+      chemist: chemist.chemist,
+      items: [],
+      total: calculateChemistTotal(chemist, products),
+      managersSelected: (chemist.jointVisit && chemist.jointVisitManagers)
+        ? Object.entries(chemist.jointVisitManagers)
+            .filter(([key, value]) => value === true)
+            .map(([key, value]) => key)
+        : []
+    };
+
+    if (chemist.productData) {
+      Object.keys(chemist.productData).forEach(category => {
+        if (chemist.productData[category]) {
+          chemist.productData[category].forEach((productState, index) => {
+            const product = products.find(p => p.name === category);
+            if (product && product.variants && product.variants[index]) {
+              const variant = product.variants[index];
+              if (productState.wholesaleQty) {
+                const qty = parseInt(productState.wholesaleQty) || 0;
+                const price = variant.stocking_price || 0;
+                chemistSummary.items.push({
+                  name: `${category} - ${productState.name}`, type: "Wholesale", qty: qty, unitPrice: price, lineTotal: qty * price
+                });
+              }
+            }
+          });
+        }
+      });
+    }
+    // Only add to summary if there are items OR selected managers
+    if (chemistSummary.items.length > 0 || chemistSummary.managersSelected.length > 0) {
+      summary.push(chemistSummary);
+    }
+  });
+  return summary;
+};
+
 const generateSummaryData = (tableData, productCategories) => {
   const summary = [];
   tableData.forEach(doc => {
+    // Skip entries that don't have a doctor (i.e., chemist entries)
+    if (!doc.doctor) return;
+    
     const docSummary = {
       doctor: doc.doctor,
       items: [],
@@ -112,6 +174,7 @@ const calculateExpensesTotal = (dcr) => {
   if (dcr.dailyExpenses) {
     if (dcr.dailyExpenses.bata) total += 50;
     if (dcr.dailyExpenses.nightOut) total += 50;
+    if (dcr.dailyExpenses.nightOutReturn) total += 50;
     if (dcr.dailyExpenses.fuel) total += 50;
   }
   if (dcr.otherBills && dcr.otherBills.details) {
@@ -187,6 +250,74 @@ const LiveSummaryTable = ({ tableData, productCategories }) => {
           ) : (
             // If only managers selected but no items
             <p className="text-sm text-gray-500 italic">No products selected for this doctor.</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/**
+ * Chemist Summary Table Component
+ */
+const ChemistSummaryTable = ({ tableData, products }) => {
+  const summaryData = generateChemistSummaryData(tableData, products);
+
+  if (summaryData.length === 0) {
+    return (
+      <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-center text-gray-500">
+        No chemist calls recorded.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {summaryData.map((summary, idx) => (
+        <div key={idx} className="p-4 border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
+          <h4 className="font-bold text-md text-green-700 mb-1">{summary.chemist}</h4>
+          {/* Display selected managers */}
+          {summary.managersSelected.length > 0 && (
+            <p className="text-xs text-gray-600 mb-3">
+              <span className="font-semibold">Joint Visit with:</span> {summary.managersSelected.join(', ')}
+            </p>
+          )}
+
+          {summary.items.length > 0 ? (
+            <table className="w-full text-sm min-w-[600px]">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-600">Product</th>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-600">Type</th>
+                  <th className="px-4 py-2 text-right font-semibold text-gray-600">Unit Price</th>
+                  <th className="px-4 py-2 text-right font-semibold text-gray-600">Quantity</th>
+                  <th className="px-4 py-2 text-right font-semibold text-gray-600">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.items.map((item, itemIdx) => (
+                  <tr key={itemIdx} className="border-b last:border-b-0">
+                    <td className="px-4 py-2 whitespace-nowrap">{item.name}</td>
+                    <td className="px-4 py-2">{item.type}</td>
+                    <td className="px-4 py-2 text-right">Rs. {item.unitPrice.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right">{item.qty}</td>
+                    <td className="px-4 py-2 text-right font-medium">Rs. {item.lineTotal.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t-2 border-gray-300">
+                <tr>
+                  <td colSpan="4" className="px-4 py-2 text-right font-bold text-gray-800">
+                    Total for {summary.chemist}:
+                  </td>
+                  <td className="px-4 py-2 text-right font-bold text-lg text-green-600">
+                    Rs. {summary.total.toFixed(2)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : (
+            <p className="text-sm text-gray-500 italic">No products selected for this chemist.</p>
           )}
         </div>
       ))}
@@ -317,7 +448,7 @@ export default function DCRReportsDashboard() {
             <div><strong>Town:</strong> {selectedDCR.town}</div>
           </div>
 
-          {/* Call Report */}
+          {/* Call Report - Doctors */}
           {selectedDCR.callReport && selectedDCR.callReport.length > 0 && (
             <div className="mb-6">
               <h3 className="text-xl font-bold mb-4">Doctor Call Reports</h3>
@@ -325,13 +456,27 @@ export default function DCRReportsDashboard() {
             </div>
           )}
 
+          {/* Call Report - Chemists */}
+          {selectedDCR.callReport && selectedDCR.callReport.some(entry => entry.chemist) && (
+            <div className="mb-6">
+              <h3 className="text-xl font-bold mb-4">Chemist Call Reports</h3>
+              <ChemistSummaryTable tableData={selectedDCR.callReport.filter(entry => entry.chemist)} products={Object.keys(productCategories).map(catName => ({
+                name: catName,
+                variants: productCategories[catName].map(v => ({
+                  stocking_price: v.stockingPrice || 0
+                }))
+              }))} />
+            </div>
+          )}
+
           {/* Expenses */}
           {selectedDCR.dailyExpenses && (
             <div className="mb-6">
               <h3 className="text-xl font-bold mb-4">Daily Expenses</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div>Bata: {selectedDCR.dailyExpenses.bata ? 'Yes' : 'No'}</div>
                 <div>Night Out: {selectedDCR.dailyExpenses.nightOut ? 'Yes' : 'No'}</div>
+                <div>Night Out Return: {selectedDCR.dailyExpenses.nightOutReturn ? 'Yes' : 'No'}</div>
                 <div>Fuel: {selectedDCR.dailyExpenses.fuel ? 'Yes' : 'No'}</div>
               </div>
             </div>
@@ -372,7 +517,7 @@ export default function DCRReportsDashboard() {
             <table className="w-full border-collapse">
               <tbody>
                 <tr>
-                  <td className="px-3 py-2 border-b border-gray-200 text-sm w-1/3">Schedule mileage</td>
+                  <td className="px-3 py-2 border-b border-gray-200 text-sm w-1/3">Scheduled mileage</td>
                   <td className="px-3 py-2 border-b border-gray-200">{selectedDCR.mileage?.scheduleMileage || 'Not provided'}</td>
                 </tr>
                 <tr>
@@ -449,20 +594,35 @@ export default function DCRReportsDashboard() {
           )}
 
           {/* Totals */}
-          <div className="mt-6 space-y-4">
-            <div className="p-4 bg-blue-800 text-white rounded-lg flex justify-between items-center">
-              <span className="text-xl font-bold">Total (Products):</span>
-              <span className="text-2xl font-bold">Rs. {generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0).toFixed(2)}</span>
-            </div>
-            <div className="p-4 bg-green-800 text-white rounded-lg flex justify-between items-center">
-              <span className="text-xl font-bold">Total (Expenses):</span>
-              <span className="text-2xl font-bold">Rs. {calculateExpensesTotal(selectedDCR).toFixed(2)}</span>
-            </div>
-            <div className="p-4 bg-gray-800 text-white rounded-lg flex justify-between items-center">
-              <span className="text-xl font-bold">Grand Total:</span>
-              <span className="text-2xl font-bold">Rs. {(generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0) + calculateExpensesTotal(selectedDCR)).toFixed(2)}</span>
-            </div>
-          </div>
+          {/* Transform productCategories to products format for chemist calculations */}
+          {(() => {
+            const productsList = Object.keys(productCategories).map(catName => ({
+              name: catName,
+              variants: productCategories[catName].map(v => ({
+                stocking_price: v.stockingPrice || 0
+              }))
+            }));
+            const chemistData = selectedDCR.callReport?.filter(entry => entry.chemist) || [];
+            const chemistTotal = chemistData.length > 0 
+              ? generateChemistSummaryData(chemistData, productsList).reduce((acc, chem) => acc + chem.total, 0)
+              : 0;
+            return (
+              <div className="mt-6 space-y-4">
+                <div className="p-4 bg-blue-600 text-white rounded-lg flex justify-between items-center">
+                  <span className="text-xl font-bold">Total stocking orders :</span>
+                  <span className="text-2xl font-bold">Rs. {generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0).toFixed(2)}</span>
+                </div>
+                <div className="p-4 bg-green-600 text-white rounded-lg flex justify-between items-center">
+                  <span className="text-xl font-bold">Total chemist orders:</span>
+                  <span className="text-2xl font-bold">Rs. {chemistTotal.toFixed(2)}</span>
+                </div>
+                <div className="p-4 bg-red-600 text-white rounded-lg flex justify-between items-center">
+                  <span className="text-xl font-bold">Expenses Total:</span>
+                  <span className="text-2xl font-bold">Rs. {calculateExpensesTotal(selectedDCR).toFixed(2)}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     );

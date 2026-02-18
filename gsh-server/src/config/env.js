@@ -4,7 +4,7 @@ const config = {
   JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret_here",
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || "your_jwt_access_secret_here",
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || "your_jwt_refresh_secret_here",
-  ACCESS_TTL: process.env.ACCESS_TTL || "15m",
+  ACCESS_TTL: process.env.ACCESS_TTL || "8h",
   REFRESH_TTL: process.env.REFRESH_TTL || "7d",
   EMAIL_HOST: process.env.EMAIL_HOST || "smtp.gshealth.lk",
   EMAIL_PORT: process.env.EMAIL_PORT || 587,

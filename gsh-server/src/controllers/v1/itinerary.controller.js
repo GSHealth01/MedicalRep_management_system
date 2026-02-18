@@ -404,6 +404,7 @@ const getItineraryByDate = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, {
     area: entry.area,
     town: entry.town,
+    mileage: entry.mileage,
     itineraryEntryId: entry.id
   }, 'Itinerary entry found'));
 });

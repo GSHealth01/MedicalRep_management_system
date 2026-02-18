@@ -27,7 +27,12 @@ export const api = axios.create({
 
 // attach Authorization
 api.interceptors.request.use((config) => {
-  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+    console.log('[API] Attached token:', accessToken.substring(0, 20) + '...');
+  } else {
+    console.log('[API] No access token available!');
+  }
   return config;
 });
 
@@ -41,14 +46,20 @@ const flushQueue = (error, token = null) => {
 };
 
 async function performRefresh() {
+  console.log('[API] Performing token refresh...');
   // use a bare client so we don't recurse interceptors
   const bare = axios.create({ baseURL: base, headers: { "Content-Type": "application/json" } });
   const payload = refreshToken ? { refreshToken } : {}; // if you store refresh in cookie, this can be {}
+  console.log('[API] Sending refresh request with payload:', !!refreshToken);
   const res = await bare.post("/auth/refresh", payload);
   const data = res?.data?.data ?? res?.data ?? {};
   const newAT = data.accessToken || data.access || data.token;
   const newRT = data.refreshToken || refreshToken; // support rotation or keep old
-  if (!newAT) throw new Error("No access token from refresh");
+  if (!newAT) {
+    console.error('[API] No access token from refresh response');
+    throw new Error("No access token from refresh");
+  }
+  console.log('[API] Token refresh successful');
   setAuthTokens(newAT, newRT);
   return newAT;
 }
@@ -57,15 +68,24 @@ api.interceptors.response.use(
   (r) => r,
   async (error) => {
     const { response, config } = error;
-    if (!response) return Promise.reject(error);
+    if (!response) {
+      console.log('[API] No response received:', error.message);
+      return Promise.reject(error);
+    }
     const original = config;
 
     // don't loop & don't intercept the refresh call itself
     const isRefreshCall = original?.url?.includes("/auth/refresh");
     if (response.status !== 401 || original._retry || isRefreshCall) {
+      console.log('[API] 401 but not processing (status:', response.status, ', retry:', original._retry, ', isRefresh:', isRefreshCall, ')');
       return Promise.reject(error);
     }
+    
+    console.log('[API] 401 Unauthorized - attempting refresh');
+    console.log('[API] Has refreshToken:', !!refreshToken);
+    
     if (!refreshToken) {
+      console.log('[API] No refresh token - triggering logout');
       clearAuthTokens();
       if (unauthorizedHandler) unauthorizedHandler();
       return Promise.reject(error);

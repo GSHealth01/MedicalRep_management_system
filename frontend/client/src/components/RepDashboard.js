@@ -49,14 +49,32 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
       productsWithPrices.forEach((priceInfo, index) => {
         if (index < productStates.length) {
           const stateInfo = productStates[index];
-          if (stateInfo.sampling && stateInfo.samplingQty) {
-            total += (priceInfo.samplingPrice || 0) * (parseInt(stateInfo.samplingQty) || 0);
-          }
+          // Only stocking/wholeale has quantity and price
           if (stateInfo.stocking && stateInfo.stockingQty) {
             total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.stockingQty) || 0);
           }
-          if (stateInfo.detailed) {
-            total += (priceInfo.detailedPrice || 0);
+        }
+      });
+    }
+  });
+  return total;
+};
+
+const calculateChemistTotal = (chemistRow, productCategories) => {
+  let total = 0;
+  if (!chemistRow || !chemistRow.productData) return total;
+
+  Object.keys(productCategories).forEach(category => {
+    if (productCategories[category] && chemistRow.productData[category]) {
+      const productsWithPrices = productCategories[category];
+      const productStates = chemistRow.productData[category];
+
+      productsWithPrices.forEach((priceInfo, index) => {
+        if (index < productStates.length) {
+          const stateInfo = productStates[index];
+          // Chemist uses wholesaleQty
+          if (stateInfo.wholesaleQty) {
+            total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.wholesaleQty) || 0);
           }
         }
       });
@@ -156,12 +174,24 @@ export default function RepDashboard() {
 
     Object.values(dcrs).forEach(monthDcrs => {
       monthDcrs.forEach(dcr => {
-        const revenue = dcr.callReport ? dcr.callReport.reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) : 0;
+        // Calculate doctor revenue
+        const doctorRevenue = dcr.callReport 
+          ? dcr.callReport.filter(entry => entry.doctor).reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) 
+          : 0;
+        
+        // Calculate chemist revenue
+        const chemistRevenue = dcr.callReport 
+          ? dcr.callReport.filter(entry => entry.chemist).reduce((sum, chemist) => sum + calculateChemistTotal(chemist, productCategories), 0) 
+          : 0;
+        
+        totalRevenue += doctorRevenue + chemistRevenue;
+        
         // Calculate expenses
         let expenses = 0;
         if (dcr.dailyExpenses) {
           if (dcr.dailyExpenses.bata) expenses += 50;
           if (dcr.dailyExpenses.nightOut) expenses += 50;
+          if (dcr.dailyExpenses.nightOutReturn) expenses += 50;
           if (dcr.dailyExpenses.fuel) expenses += 50;
         }
         if (dcr.otherBills?.details) {
@@ -172,7 +202,7 @@ export default function RepDashboard() {
         if (dcr.mileage?.cost) {
           expenses += parseFloat(dcr.mileage.cost || 0);
         }
-        totalRevenue += revenue + expenses;
+        totalRevenue += expenses;
       });
     });
 
@@ -382,12 +412,19 @@ export default function RepDashboard() {
                 {expandedDcrs.has(month) && (
                   <div className="detail-content">
                     {monthDcrs.map((dcr) => {
-                      const revenue = dcr.callReport ? dcr.callReport.reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) : 0;
+                      const doctorRevenue = dcr.callReport 
+                        ? dcr.callReport.filter(entry => entry.doctor).reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) 
+                        : 0;
+                      const chemistRevenue = dcr.callReport 
+                        ? dcr.callReport.filter(entry => entry.chemist).reduce((sum, chemist) => sum + calculateChemistTotal(chemist, productCategories), 0) 
+                        : 0;
+                      
                       // Calculate expenses from dailyExpenses, otherBills, and mileage
                       let expenses = 0;
                       if (dcr.dailyExpenses) {
                         if (dcr.dailyExpenses.bata) expenses += 50;
                         if (dcr.dailyExpenses.nightOut) expenses += 50;
+                        if (dcr.dailyExpenses.nightOutReturn) expenses += 50;
                         if (dcr.dailyExpenses.fuel) expenses += 50;
                       }
                       if (dcr.otherBills?.details) {
@@ -398,13 +435,13 @@ export default function RepDashboard() {
                       if (dcr.mileage?.cost) {
                         expenses += parseFloat(dcr.mileage.cost || 0);
                       }
-                      const grandTotal = revenue + expenses;
+                      
                       return (
                         <div key={dcr.id || dcr.date} className="dcr-summary">
                           <h5>{new Date(dcr.date).toLocaleDateString()}</h5>
-                          <p><strong>Total (Products):</strong> Rs. {revenue.toFixed(2)}</p>
-                          <p><strong>Total (Expenses):</strong> Rs. {expenses.toFixed(2)}</p>
-                          <p><strong>Grand Total:</strong> Rs. {grandTotal.toFixed(2)}</p>
+                          <p><strong>Total wholesale orders (Doctors):</strong> Rs. {doctorRevenue.toFixed(2)}</p>
+                          <p><strong>Total chemist orders:</strong> Rs. {chemistRevenue.toFixed(2)}</p>
+                          <p><strong>Expenses Total:</strong> Rs. {expenses.toFixed(2)}</p>
                         </div>
                       );
                     })}

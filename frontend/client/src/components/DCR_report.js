@@ -40,14 +40,9 @@ const calculateDoctorTotal = (doctorRow, productCategories) => {
       productsWithPrices.forEach((priceInfo, index) => {
         if (index < productStates.length) {
           const stateInfo = productStates[index];
-          if (stateInfo.sampling && stateInfo.samplingQty) {
-            total += (priceInfo.samplingPrice || 0) * (parseInt(stateInfo.samplingQty) || 0);
-          }
+          // Sampling no longer has quantity, just checkbox
           if (stateInfo.stocking && stateInfo.stockingQty) {
             total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.stockingQty) || 0);
-          }
-          if (stateInfo.detailed) {
-            total += (priceInfo.detailedPrice || 0);
           }
         }
       });
@@ -77,24 +72,23 @@ const generateSummaryData = (tableData, productCategories) => {
                     if (index < productCategories[category].length) {
                         const priceInfo = productCategories[category][index];
 
-                        if (productState.sampling && productState.samplingQty) {
-                          const qty = parseInt(productState.samplingQty) || 0;
-                          const price = priceInfo.samplingPrice || 0;
+                        if (productState.sampling) {
+                          const qty = 1;
                           docSummary.items.push({
-                            name: `${category} - ${productState.name}`, type: "Sampling", qty: qty, unitPrice: price, lineTotal: qty * price
+                            name: `${category} - ${productState.name}`, type: "Sampling", qty: qty, unitPrice: 0, lineTotal: 0
                           });
                         }
                         if (productState.detailed) {
-                          const price = priceInfo.detailedPrice || 0;
+                          const qty = 1;
                           docSummary.items.push({
-                            name: `${category} - ${productState.name}`, type: "Detailed", qty: 1, unitPrice: price, lineTotal: price
+                            name: `${category} - ${productState.name}`, type: "Detailed", qty: qty, unitPrice: 0, lineTotal: 0
                           });
                         }
                         if (productState.stocking && productState.stockingQty) {
                           const qty = parseInt(productState.stockingQty) || 0;
                           const price = priceInfo.stockingPrice || 0;
                           docSummary.items.push({
-                            name: `${category} - ${productState.name}`, type: "Stocking", qty: qty, unitPrice: price, lineTotal: qty * price
+                            name: `${category} - ${productState.name}`, type: "Wholesale", qty: qty, unitPrice: price, lineTotal: qty * price
                           });
                         }
                     }
@@ -110,14 +104,80 @@ const generateSummaryData = (tableData, productCategories) => {
   return summary;
 };
 
+const calculateChemistTotal = (chemistRow, productCategories) => {
+  let total = 0;
+  if (!chemistRow || !chemistRow.productData) return total;
+
+  Object.keys(productCategories).forEach(category => {
+    if (productCategories[category] && chemistRow.productData[category]) {
+      const productsWithPrices = productCategories[category];
+      const productStates = chemistRow.productData[category];
+
+      productsWithPrices.forEach((priceInfo, index) => {
+        if (index < productStates.length) {
+          const stateInfo = productStates[index];
+          // Wholesale quantity for chemists - use stocking_price as wholesale price
+          if (stateInfo.wholesaleQty) {
+            total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.wholesaleQty) || 0);
+          }
+        }
+      });
+    }
+  });
+  return total;
+};
+
+const generateChemistSummaryData = (tableData, productCategories) => {
+  const summary = [];
+  tableData.forEach(chemist => {
+    const chemistSummary = {
+      chemist: chemist.chemist,
+      items: [],
+      total: calculateChemistTotal(chemist, productCategories),
+      managersSelected: (chemist.jointVisit && chemist.jointVisitManagers)
+        ? Object.entries(chemist.jointVisitManagers)
+            .filter(([key, value]) => value === true)
+            .map(([key, value]) => key.split(' - ')[1] || key)
+        : []
+    };
+
+    if (chemist.productData) {
+        Object.keys(chemist.productData).forEach(category => {
+            if (productCategories[category] && chemist.productData[category]) {
+                chemist.productData[category].forEach((productState, index) => {
+                    if (index < productCategories[category].length) {
+                        const priceInfo = productCategories[category][index];
+
+                        // Wholesale quantity for chemists
+                        if (productState.wholesaleQty) {
+                          const qty = parseInt(productState.wholesaleQty) || 0;
+                          const price = priceInfo.stockingPrice || 0; // Use stocking_price as wholesale price
+                          chemistSummary.items.push({
+                            name: `${category} - ${productState.name}`, type: "Wholesale", qty: qty, unitPrice: price, lineTotal: qty * price
+                          });
+                        }
+                    }
+                });
+            }
+        });
+    }
+    if (chemistSummary.items.length > 0 || chemistSummary.managersSelected.length > 0) {
+      summary.push(chemistSummary);
+    }
+  });
+  return summary;
+};
+
 
 /**
  * Summary Table Component (Shows prices, totals, and managers for selected items)
  */
-const LiveSummaryTable = ({ tableData, productCategories }) => {
-  const summaryData = generateSummaryData(tableData, productCategories);
+const LiveSummaryTable = ({ doctorTableData, chemistTableData, productCategories }) => {
+  const doctorSummaryData = generateSummaryData(doctorTableData, productCategories);
+  const chemistSummaryData = generateChemistSummaryData(chemistTableData, productCategories);
+  const allSummaries = [...doctorSummaryData, ...chemistSummaryData];
 
-  if (summaryData.length === 0) {
+  if (allSummaries.length === 0) {
     return (
       <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-center text-gray-500">
         No items or joint visits selected yet.
@@ -127,33 +187,33 @@ const LiveSummaryTable = ({ tableData, productCategories }) => {
 
   return (
     <div className="space-y-4">
-      {summaryData.map((docSummary, idx) => (
+      {allSummaries.map((summary, idx) => (
         <div key={idx} className="p-4 border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
-          <h4 className="font-bold text-md text-blue-700 mb-1">{docSummary.doctor}</h4>
-          {/* NEW: Display selected managers */}
-          {docSummary.managersSelected.length > 0 && (
+          <h4 className={`font-bold text-md mb-1 ${summary.doctor ? 'text-blue-700' : 'text-green-700'}`}>
+            {summary.doctor || summary.chemist}
+          </h4>
+          {/* Display selected managers for doctors */}
+          {summary.managersSelected && summary.managersSelected.length > 0 && (
             <p className="text-xs text-gray-600 mb-3">
-              <span className="font-semibold">Joint Visit with:</span> {docSummary.managersSelected.join(', ')}
+              <span className="font-semibold">Joint Visit with:</span> {summary.managersSelected.join(', ')}
             </p>
           )}
 
-          {docSummary.items.length > 0 ? (
-            <table className="w-full text-sm min-w-[600px]">
+          {summary.items.length > 0 ? (
+            <table className="w-full text-sm min-w-[500px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold text-gray-600">Product</th>
                   <th className="px-4 py-2 text-left font-semibold text-gray-600">Type</th>
-                  <th className="px-4 py-2 text-right font-semibold text-gray-600">Unit Price</th>
                   <th className="px-4 py-2 text-right font-semibold text-gray-600">Quantity</th>
                   <th className="px-4 py-2 text-right font-semibold text-gray-600">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {docSummary.items.map((item, itemIdx) => (
+                {summary.items.map((item, itemIdx) => (
                   <tr key={itemIdx} className="border-b last:border-b-0">
                     <td className="px-4 py-2 whitespace-nowrap">{item.name}</td>
                     <td className="px-4 py-2">{item.type}</td>
-                    <td className="px-4 py-2 text-right">Rs. {item.unitPrice.toFixed(2)}</td>
                     <td className="px-4 py-2 text-right">{item.qty}</td>
                     <td className="px-4 py-2 text-right font-medium">Rs. {item.lineTotal.toFixed(2)}</td>
                   </tr>
@@ -161,18 +221,17 @@ const LiveSummaryTable = ({ tableData, productCategories }) => {
               </tbody>
               <tfoot className="border-t-2 border-gray-300">
                 <tr>
-                  <td colSpan="4" className="px-4 py-2 text-right font-bold text-gray-800">
-                    Total for {docSummary.doctor}:
+                  <td colSpan="3" className="px-4 py-2 text-right font-bold text-gray-800">
+                    Total for {summary.doctor || summary.chemist}:
                   </td>
                   <td className="px-4 py-2 text-right font-bold text-lg text-blue-600">
-                    Rs. {docSummary.total.toFixed(2)}
+                    Rs. {summary.total.toFixed(2)}
                   </td>
                 </tr>
               </tfoot>
             </table>
           ) : (
-            // If only managers selected but no items
-            <p className="text-sm text-gray-500 italic">No products selected for this doctor.</p>
+            <p className="text-sm text-gray-500 italic">No products selected.</p>
           )}
         </div>
       ))}
@@ -210,13 +269,19 @@ export default function RepdetailsReport() {
   const [townDisabled, setTownDisabled] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [doctorsLoading, setDoctorsLoading] = useState(true);
+  // Chemist state
+  const [selectedChemists, setSelectedChemists] = useState([]);
+  const [showChemistDropdown, setShowChemistDropdown] = useState(false);
+  const [chemists, setChemists] = useState([]);
+  const [chemistsLoading, setChemistsLoading] = useState(true);
   const [managers, setManagers] = useState([]);
   const [managersLoading, setManagersLoading] = useState(true);
   const [allDcrs, setAllDcrs] = useState([]);
 
   // Step 2 State
   const [selectedProductTab, setSelectedProductTab] = useState("");
-  const [tableData, setTableData] = useState([]);
+  const [doctorTableData, setDoctorTableData] = useState([]);
+  const [chemistTableData, setChemistTableData] = useState([]);
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
@@ -230,7 +295,7 @@ export default function RepdetailsReport() {
   const [existingOtherBillImages, setExistingOtherBillImages] = useState([]);
   const [newOtherBillImages, setNewOtherBillImages] = useState([]);
   const otherBillImages = [...existingOtherBillImages, ...newOtherBillImages];
-  const [expenses, setExpenses] = useState({ bata: false, nightOut: false, fuel: false });
+  const [expenses, setExpenses] = useState({ bata: false, nightOut: false, nightOutReturn: false, fuel: false });
   const [remarks, setRemarks] = useState("");
   const [existingOrderFormImages, setExistingOrderFormImages] = useState([]);
   const [newOrderFormImages, setNewOrderFormImages] = useState([]);
@@ -266,8 +331,14 @@ export default function RepdetailsReport() {
           setDistributor(dcr.distributor);
           setArea(dcr.area);
           setTown(dcr.town);
-          setSelectedDoctors(dcr.callReport.map(d => d.doctor));
-          setTableData(dcr.callReport);
+          // Handle doctor data
+          const doctorCalls = dcr.callReport?.filter(d => d.doctor) || [];
+          setSelectedDoctors(doctorCalls.map(d => d.doctor));
+          setDoctorTableData(doctorCalls);
+          // Handle chemist data (new field)
+          const chemistCalls = dcr.callReport?.filter(d => d.chemist) || [];
+          setSelectedChemists(chemistCalls.map(c => c.chemist));
+          setChemistTableData(chemistCalls);
           setExpenses(dcr.dailyExpenses || {});
           setOtherBills(dcr.otherBills?.details || { parking: { checked: false, amount: "" }, highway: { checked: false, amount: "" }, other: { checked: false, amount: "" } });
           setExistingOtherBillImages(dcr.otherBills?.images || []);
@@ -416,6 +487,31 @@ export default function RepdetailsReport() {
     }
   }, [userProfile]);
 
+  // Fetch chemists on component mount
+  useEffect(() => {
+    const fetchChemists = async () => {
+      try {
+        const response = await api.get('/chemists');
+        const chemistsData = response.data.chemists || [];
+        // Format chemist names: "Name - Distributor" if distributor exists
+        const formattedChemists = chemistsData.map(chemist =>
+          chemist.distributor ? `${chemist.name} - ${chemist.distributor.name}` : chemist.name
+        );
+        setChemists(formattedChemists);
+      } catch (error) {
+        console.error('Error fetching chemists:', error);
+        // Fallback to empty array
+        setChemists([]);
+      } finally {
+        setChemistsLoading(false);
+      }
+    };
+
+    if (userProfile) {
+      fetchChemists();
+    }
+  }, [userProfile]);
+
   // Fetch managers on component mount
   useEffect(() => {
     const fetchManagers = async () => {
@@ -486,6 +582,11 @@ export default function RepdetailsReport() {
           setTown(data.town || "");
           setAreaDisabled(true);
           setTownDisabled(true);
+          // Set scheduled mileage from itinerary and make it read-only
+          setMileage(prev => ({
+            ...prev,
+            scheduleMileage: data.mileage ? String(data.mileage) : ""
+          }));
           setItineraryMessage("");
         }
       } catch (error) {
@@ -506,26 +607,34 @@ export default function RepdetailsReport() {
     );
   };
 
+  const toggleChemist = (chemist) => {
+    setSelectedChemists(prev =>
+      prev.includes(chemist) ? prev.filter(c => c !== chemist) : [...prev, chemist]
+    );
+  };
+
   useEffect(() => {
     const onClick = (e) => {
       if (showDoctorDropdown && !e.target.closest("#doctor-dropdown"))
         setShowDoctorDropdown(false);
+      if (showChemistDropdown && !e.target.closest("#chemist-dropdown"))
+        setShowChemistDropdown(false);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [showDoctorDropdown]);
+  }, [showDoctorDropdown, showChemistDropdown]);
 
   const step1Valid =
-    date && selectedDoctors.length > 0 && !dateError;
+    date && (selectedDoctors.length > 0 || selectedChemists.length > 0) && !dateError;
     
   // --- Step 2 Functions ---
   useEffect(() => {
     if (step === 2 && managers.length > 0) {
-      const doctorsInTable = tableData.map(d => d.doctor);
+      const doctorsInTable = doctorTableData.map(d => d.doctor);
       const doctorsMatch = selectedDoctors.length === doctorsInTable.length && selectedDoctors.every(doc => doctorsInTable.includes(doc));
 
       if (!doctorsMatch) {
-        const newTableData = selectedDoctors.map((doctor) => ({
+        const newDoctorTableData = selectedDoctors.map((doctor) => ({
           doctor,
           jointVisit: false,
           jointVisitManagers: managers.reduce((acc, manager) => {
@@ -535,26 +644,49 @@ export default function RepdetailsReport() {
           productData: Object.keys(productCategories).reduce((acc, category) => {
             acc[category] = productCategories[category].map(product => ({
               name: product.name, // Only copy name
-              sampling: false, samplingQty: "",
+              sampling: false,
               detailed: false,
               stocking: false, stockingQty: ""
             }));
             return acc;
           }, {}),
         }));
-        setTableData(newTableData);
+        setDoctorTableData(newDoctorTableData);
+      }
+
+      // Also sync chemist table data
+      const chemistsInTable = chemistTableData.map(c => c.chemist);
+      const chemistsMatch = selectedChemists.length === chemistsInTable.length && selectedChemists.every(chem => chemistsInTable.includes(chem));
+
+      if (!chemistsMatch) {
+        const newChemistTableData = selectedChemists.map((chemist) => ({
+          chemist,
+          jointVisit: false,
+          jointVisitManagers: managers.reduce((acc, manager) => {
+            acc[manager] = false;
+            return acc;
+          }, {}),
+          productData: Object.keys(productCategories).reduce((acc, category) => {
+            acc[category] = productCategories[category].map(product => ({
+              name: product.name,
+              wholesaleQty: ""
+            }));
+            return acc;
+          }, {}),
+        }));
+        setChemistTableData(newChemistTableData);
       }
     }
-  }, [step, selectedDoctors, tableData, productCategories, managers]);
+  }, [step, selectedDoctors, selectedChemists, doctorTableData, chemistTableData, productCategories, managers]);
 
-  const updateCell = (docIdx, productIdx, field, value) => {
-    setTableData(old => 
+  const updateDoctorCell = (docIdx, productIdx, field, value) => {
+    setDoctorTableData(old => 
       old.map((doc, i) => {
         if (i !== docIdx) return doc;
         const newProductData = { ...doc.productData };
         if (!newProductData[selectedProductTab]) {
             newProductData[selectedProductTab] = productCategories[selectedProductTab].map(p => ({
-                name: p.name, sampling: false, samplingQty: "", detailed: false, stocking: false, stockingQty: ""
+                name: p.name, sampling: false, detailed: false, stocking: false, stockingQty: ""
             }));
         }
         const newProductTabArray = [...newProductData[selectedProductTab]];
@@ -572,8 +704,33 @@ export default function RepdetailsReport() {
     );
   };
 
+  const updateChemistCell = (chemistIdx, productIdx, field, value) => {
+    setChemistTableData(old => 
+      old.map((chemist, i) => {
+        if (i !== chemistIdx) return chemist;
+        const newProductData = { ...chemist.productData };
+        if (!newProductData[selectedProductTab]) {
+            newProductData[selectedProductTab] = productCategories[selectedProductTab].map(p => ({
+                name: p.name, wholesaleQty: ""
+            }));
+        }
+        const newProductTabArray = [...newProductData[selectedProductTab]];
+        if (productIdx < newProductTabArray.length) {
+            newProductTabArray[productIdx] = {
+              ...newProductTabArray[productIdx],
+              [field]: value
+            };
+            newProductData[selectedProductTab] = newProductTabArray;
+        } else {
+            console.error("Invalid product index:", productIdx, "for tab:", selectedProductTab);
+        }
+        return { ...chemist, productData: newProductData };
+      })
+    );
+  };
+
   const toggleJointVisit = (idx) => {
-    setTableData(prev =>
+    setDoctorTableData(prev =>
       prev.map((doc, i) =>
         i === idx
           ? { ...doc,
@@ -590,8 +747,26 @@ export default function RepdetailsReport() {
     );
   };
 
+  const toggleChemistJointVisit = (idx) => {
+    setChemistTableData(prev =>
+      prev.map((chemist, i) =>
+        i === idx
+          ? { ...chemist,
+              jointVisit: !chemist.jointVisit,
+              jointVisitManagers: chemist.jointVisit
+                ? managers.reduce((acc, manager) => {
+                    acc[manager] = false;
+                    return acc;
+                  }, {})
+                : chemist.jointVisitManagers
+            }
+          : chemist
+      )
+    );
+  };
+
   const toggleManagerCheckbox = (docIdx, managerKey) => {
-    setTableData(prev =>
+    setDoctorTableData(prev =>
       prev.map((doc, i) => {
         if (i !== docIdx) return doc;
         return {
@@ -605,18 +780,46 @@ export default function RepdetailsReport() {
     );
   };
 
+  const toggleChemistManagerCheckbox = (chemistIdx, managerKey) => {
+    setChemistTableData(prev =>
+      prev.map((chemist, i) => {
+        if (i !== chemistIdx) return chemist;
+        return {
+          ...chemist,
+          jointVisitManagers: {
+            ...chemist.jointVisitManagers,
+            [managerKey]: !chemist.jointVisitManagers[managerKey]
+          }
+        };
+      })
+    );
+  };
+
   /**
    * Calculates the grand total for Step 2 display.
    */
   const calculateLiveGrandTotal = () => {
-    const summary = generateSummaryData(tableData, productCategories);
-    return summary.reduce((acc, doc) => acc + doc.total, 0);
+    const doctorSummary = generateSummaryData(doctorTableData, productCategories);
+    const chemistSummary = generateChemistSummaryData(chemistTableData, productCategories);
+    return doctorSummary.reduce((acc, doc) => acc + doc.total, 0) + 
+           chemistSummary.reduce((acc, chem) => acc + chem.total, 0);
+  };
+
+  const calculateDoctorTotal = () => {
+    const doctorSummary = generateSummaryData(doctorTableData, productCategories);
+    return doctorSummary.reduce((acc, doc) => acc + doc.total, 0);
+  };
+
+  const calculateChemistTotal = () => {
+    const chemistSummary = generateChemistSummaryData(chemistTableData, productCategories);
+    return chemistSummary.reduce((acc, chem) => acc + chem.total, 0);
   };
 
   const calculateExpensesTotal = () => {
     let total = 0;
     if (expenses.bata) total += 50;
     if (expenses.nightOut) total += 50;
+    if (expenses.nightOutReturn) total += 50;
     if (expenses.fuel) total += 50;
     total += parseFloat(otherBills.parking.amount || 0);
     total += parseFloat(otherBills.highway.amount || 0);
@@ -646,8 +849,9 @@ export default function RepdetailsReport() {
   const handleExpenseChange = (key) => {
     setExpenses(prev => {
       const newVal = !prev[key];
-      if (key === "bata" && newVal) return { ...prev, bata: true, nightOut: false };
-      if (key === "nightOut" && newVal) return { ...prev, bata: false, nightOut: true };
+      if (key === "bata" && newVal) return { ...prev, bata: true, nightOut: false, nightOutReturn: false };
+      if (key === "nightOut" && newVal) return { ...prev, bata: false, nightOut: true, nightOutReturn: false };
+      if (key === "nightOutReturn" && newVal) return { ...prev, bata: false, nightOut: false, nightOutReturn: true };
       return { ...prev, [key]: newVal };
     });
   };
@@ -684,8 +888,11 @@ export default function RepdetailsReport() {
       formData.append('area', area);
       formData.append('town', town);
 
+      // Combine doctor and chemist call report data
+      const combinedCallReport = [...doctorTableData, ...chemistTableData];
+      
       // Add complex data as JSON strings
-      formData.append('callReport', JSON.stringify(tableData));
+      formData.append('callReport', JSON.stringify(combinedCallReport));
       formData.append('dailyExpenses', JSON.stringify(expenses));
       formData.append('otherBills', JSON.stringify(otherBills));
       formData.append('mileage', JSON.stringify(mileage));
@@ -850,6 +1057,42 @@ export default function RepdetailsReport() {
           )}
         </div>
       </div>
+
+      {/* Chemist dropdown */}
+      <div className="mb-8">
+        <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Chemist</label>
+        <div id="chemist-dropdown" className="relative" onClick={() => !chemistsLoading && setShowChemistDropdown(v => !v)}>
+          <div className={`flex justify-between items-center px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 ${!chemistsLoading ? 'cursor-pointer hover:border-green-500 hover:bg-green-50' : 'cursor-not-allowed'}`}>
+            <span className="text-gray-700">
+              {chemistsLoading ? 'Loading chemists...' : 'Select Chemist(s)'}
+            </span>
+            <div className="flex items-center">
+              {selectedChemists.length > 0 && (
+                <span className="text-sm text-green-600 mr-3 font-semibold bg-green-100 px-2 py-1 rounded-full">
+                  {selectedChemists.length} selected
+                </span>
+              )}
+              {!chemistsLoading && <span className="text-gray-500 text-lg">▾</span>}
+            </div>
+          </div>
+          {showChemistDropdown && !chemistsLoading && (
+            <div className="absolute top-full left-0 right-0 bg-white border-2 border-gray-200 rounded-lg max-h-60 overflow-y-auto z-10 shadow-xl mt-1">
+              {chemists.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                  No chemists available. Please contact admin to add chemists.
+                </div>
+              ) : (
+                chemists.map((chemist) => (
+                  <label key={chemist} className={`flex items-center px-4 py-3 cursor-pointer text-sm ${selectedChemists.includes(chemist) ? 'bg-green-50 text-green-700 font-medium border-l-4 border-green-500' : 'hover:bg-gray-50'}`}>
+                    <input type="checkbox" checked={selectedChemists.includes(chemist)} onChange={(e) => { e.stopPropagation(); toggleChemist(chemist); }} className="mr-3 scale-125 cursor-pointer" />
+                    {chemist}
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
       {/* Next Button */}
       <div className="text-center mt-10">
         <button
@@ -887,104 +1130,177 @@ export default function RepdetailsReport() {
         ))}
       </div>
 
-      {/* Main Product Selection Table */}
-      <div className="overflow-x-auto mt-4 border border-gray-200 rounded-lg shadow-sm">
-        <table className="w-full min-w-[1100px] border-collapse table-fixed"> {/* table-fixed helps maintain defined widths */}
-          <colgroup> {/* Define column widths */}
-             <col style={{ width: `${FROZEN.no}px` }} />
-             <col style={{ width: `${FROZEN.doctor}px` }} />
-             <col style={{ width: `${FROZEN.joint}px` }} />
-             {/* Dynamic columns will take remaining space */}
-          </colgroup>
-          <thead>
-            <tr>
-              {/* No. */}
-              <th style={{ ...stickyBase, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center text-xs">No.</th>
-              {/* Doctor */}
-              <th style={{ ...stickyBase, left: LEFTS.doctor, width: FROZEN.doctor }} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center text-xs">Doctors</th>
-              {/* Joint Visit */}
-              <th style={{ ...stickyBase, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center text-xs">Joint Visit</th>
-              {/* Dynamic Product Columns */}
-              {productCategories[selectedProductTab]?.map((product, i) => (
-                <th key={i} className="border border-gray-200 px-3 py-2 bg-gray-100 text-gray-700 font-semibold text-center min-w-[180px] text-xs">{product.name}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tableData.map((doc, docIdx) => {
-              const rowBg = docIdx % 2 === 0 ? '#f9fafb' : '#ffffff';
-              const stickyCellStyle = { ...stickyBase, background: rowBg };
-              return (
-                <tr key={docIdx} style={{ background: rowBg }}>
-                  {/* No. */}
-                  <td style={{ ...stickyCellStyle, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 text-center text-sm">{docIdx + 1}</td>
-                  {/* Doctor */}
-                  <td style={{ ...stickyCellStyle, left: LEFTS.doctor, width: FROZEN.doctor }} className="border border-gray-200 px-3 py-2 font-medium whitespace-nowrap text-sm">{doc.doctor}</td>
-                  {/* Joint Visit & Manager Checkboxes */}
-                  <td style={{ ...stickyCellStyle, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2">
-                    <div className="flex flex-col items-start gap-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={doc.jointVisit} onChange={() => toggleJointVisit(docIdx)} className="scale-110 cursor-pointer" />
-                        <span className="text-xs text-gray-600">Joint Visit</span>
-                      </label>
-                      {doc.jointVisit && (
-                        <div className="pl-5 flex flex-col gap-1">
-                          {managers.map(manager => (
-                            <label key={manager} className="flex items-center gap-2 cursor-pointer">
-                              <input type="checkbox" checked={doc.jointVisitManagers[manager]} onChange={() => toggleManagerCheckbox(docIdx, manager)} className="scale-110 cursor-pointer" />
-                              <span className="text-xs text-gray-700">{manager}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  {/* Dynamic Product cells */}
-                  {doc.productData && doc.productData[selectedProductTab] ? (
-                    doc.productData[selectedProductTab].map((cell, productIdx) => (
-                      <td key={productIdx} className="border border-gray-200 px-3 py-2 align-top min-w-[180px]">
-                        <div className="flex flex-col gap-3">
-                          <label className={`flex items-center gap-2 text-sm`}>
-                            <input type="checkbox" checked={cell.sampling || false} onChange={(e) => updateCell(docIdx, productIdx, "sampling", e.target.checked)} className="scale-110 cursor-pointer" />
-                            <span className="flex-1 text-left text-xs">Sampling</span>
-                            <input type="number" min="0" value={cell.samplingQty || ""} onChange={(e) => updateCell(docIdx, productIdx, "samplingQty", e.target.value)} placeholder="QTY" disabled={!cell.sampling} className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-xs" />
+      {/* Doctor Product Selection Table */}
+      {doctorTableData.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-lg font-bold text-blue-700 mb-3">Doctors</h3>
+          <div className="overflow-x-auto mt-4 border border-blue-200 rounded-lg shadow-sm">
+            <table className="w-full min-w-[1100px] border-collapse table-fixed">
+              <colgroup>
+                 <col style={{ width: `${FROZEN.no}px` }} />
+                 <col style={{ width: `${FROZEN.doctor}px` }} />
+                 <col style={{ width: `${FROZEN.joint}px` }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ ...stickyBase, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 bg-blue-100 text-gray-700 font-semibold text-center text-xs">No.</th>
+                  <th style={{ ...stickyBase, left: LEFTS.doctor, width: FROZEN.doctor }} className="border border-gray-200 px-3 py-2 bg-blue-100 text-gray-700 font-semibold text-center text-xs">Doctors</th>
+                  <th style={{ ...stickyBase, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2 bg-blue-100 text-gray-700 font-semibold text-center text-xs">Joint Visit</th>
+                  {productCategories[selectedProductTab]?.map((product, i) => (
+                    <th key={i} className="border border-gray-200 px-3 py-2 bg-blue-100 text-gray-700 font-semibold text-center min-w-[180px] text-xs">{product.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {doctorTableData.map((doc, docIdx) => {
+                  const rowBg = docIdx % 2 === 0 ? '#f0f9ff' : '#ffffff';
+                  const stickyCellStyle = { ...stickyBase, background: rowBg };
+                  return (
+                    <tr key={docIdx} style={{ background: rowBg }}>
+                      <td style={{ ...stickyCellStyle, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 text-center text-sm">{docIdx + 1}</td>
+                      <td style={{ ...stickyCellStyle, left: LEFTS.doctor, width: FROZEN.doctor }} className="border border-gray-200 px-3 py-2 font-medium whitespace-nowrap text-sm">{doc.doctor}</td>
+                      <td style={{ ...stickyCellStyle, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2">
+                        <div className="flex flex-col items-start gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={doc.jointVisit} onChange={() => toggleJointVisit(docIdx)} className="scale-110 cursor-pointer" />
+                            <span className="text-xs text-gray-600">Joint Visit</span>
                           </label>
-                          <label className={`flex items-center gap-2 text-sm`}>
-                            <input type="checkbox" checked={cell.detailed || false} onChange={(e) => updateCell(docIdx, productIdx, "detailed", e.target.checked)} className="scale-110 cursor-pointer" />
-                            <span className="flex-1 text-left text-xs">Detailed</span>
-                          </label>
-                          <label className={`flex items-center gap-2 text-sm`}>
-                            <input type="checkbox" checked={cell.stocking || false} onChange={(e) => updateCell(docIdx, productIdx, "stocking", e.target.checked)} className="scale-110 cursor-pointer" />
-                            <span className="flex-1 text-left text-xs">Stocking</span>
-                            <input type="number" min="0" value={cell.stockingQty || ""} onChange={(e) => updateCell(docIdx, productIdx, "stockingQty", e.target.value)} placeholder="QTY" disabled={!cell.stocking} className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-xs" />
-                          </label>
+                          {doc.jointVisit && (
+                            <div className="pl-5 flex flex-col gap-1">
+                              {managers.map(manager => (
+                                <label key={manager} className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" checked={doc.jointVisitManagers[manager]} onChange={() => toggleManagerCheckbox(docIdx, manager)} className="scale-110 cursor-pointer" />
+                                  <span className="text-xs text-gray-700">{manager}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </td>
-                    ))
-                  ) : (
-                    Array(productCategories[selectedProductTab]?.length || 0).fill(null).map((_, idx) => (
-                        <td key={idx} className="border border-gray-200 px-3 py-2 align-top min-w-[180px]"></td>
-                    ))
-                  )}
+                      {doc.productData && doc.productData[selectedProductTab] ? (
+                        doc.productData[selectedProductTab].map((cell, productIdx) => (
+                          <td key={productIdx} className="border border-gray-200 px-3 py-2 align-top min-w-[180px]">
+                            <div className="flex flex-col gap-3">
+                              <label className={`flex items-center gap-2 text-sm`}>
+                                <input type="checkbox" checked={cell.sampling || false} onChange={(e) => updateDoctorCell(docIdx, productIdx, "sampling", e.target.checked)} className="scale-110 cursor-pointer" />
+                                <span className="flex-1 text-left text-xs">Sampling</span>
+                              </label>
+                              <label className={`flex items-center gap-2 text-sm`}>
+                                <input type="checkbox" checked={cell.detailed || false} onChange={(e) => updateDoctorCell(docIdx, productIdx, "detailed", e.target.checked)} className="scale-110 cursor-pointer" />
+                                <span className="flex-1 text-left text-xs">Detailed</span>
+                              </label>
+                              <label className={`flex items-center gap-2 text-sm`}>
+                                <input type="checkbox" checked={cell.stocking || false} onChange={(e) => updateDoctorCell(docIdx, productIdx, "stocking", e.target.checked)} className="scale-110 cursor-pointer" />
+                                <span className="flex-1 text-left text-xs">Wholesale</span>
+                                <input type="number" min="0" value={cell.stockingQty || ""} onChange={(e) => updateDoctorCell(docIdx, productIdx, "stockingQty", e.target.value)} placeholder="QTY" disabled={!cell.stocking} className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-xs" />
+                              </label>
+                            </div>
+                          </td>
+                        ))
+                      ) : (
+                        Array(productCategories[selectedProductTab]?.length || 0).fill(null).map((_, idx) => (
+                            <td key={idx} className="border border-gray-200 px-3 py-2 align-top min-w-[180px]"></td>
+                        ))
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Chemist Product Selection Table */}
+      {chemistTableData.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-lg font-bold text-green-700 mb-3">Chemists</h3>
+          <div className="overflow-x-auto mt-4 border border-green-200 rounded-lg shadow-sm">
+            <table className="w-full min-w-[1100px] border-collapse table-fixed">
+              <colgroup>
+                 <col style={{ width: `${FROZEN.no}px` }} />
+                 <col style={{ width: '300px' }} />
+                 <col style={{ width: `${FROZEN.joint}px` }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ ...stickyBase, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 bg-green-100 text-gray-700 font-semibold text-center text-xs">No.</th>
+                  <th style={{ ...stickyBase, left: LEFTS.doctor, width: '300px' }} className="border border-gray-200 px-3 py-2 bg-green-100 text-gray-700 font-semibold text-center text-xs">Chemist</th>
+                  <th style={{ ...stickyBase, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2 bg-green-100 text-gray-700 font-semibold text-center text-xs">Joint Visit</th>
+                  {productCategories[selectedProductTab]?.map((product, i) => (
+                    <th key={i} className="border border-gray-200 px-3 py-2 bg-green-100 text-gray-700 font-semibold text-center min-w-[180px] text-xs">{product.name}</th>
+                  ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {chemistTableData.map((chemist, chemistIdx) => {
+                  const rowBg = chemistIdx % 2 === 0 ? '#f0fdf4' : '#ffffff';
+                  const stickyCellStyle = { ...stickyBase, background: rowBg };
+                  return (
+                    <tr key={chemistIdx} style={{ background: rowBg }}>
+                      <td style={{ ...stickyCellStyle, left: LEFTS.no, width: FROZEN.no }} className="border border-gray-200 px-3 py-2 text-center text-sm">{chemistIdx + 1}</td>
+                      <td style={{ ...stickyCellStyle, left: LEFTS.doctor, width: '300px' }} className="border border-gray-200 px-3 py-2 font-medium whitespace-nowrap text-sm">{chemist.chemist}</td>
+                      <td style={{ ...stickyCellStyle, left: LEFTS.joint, width: FROZEN.joint }} className="border border-gray-200 px-3 py-2">
+                        <div className="flex flex-col items-start gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={chemist.jointVisit || false} onChange={() => toggleChemistJointVisit(chemistIdx)} className="scale-110 cursor-pointer" />
+                            <span className="text-xs text-gray-600">Joint Visit</span>
+                          </label>
+                          {chemist.jointVisit && (
+                            <div className="pl-5 flex flex-col gap-1">
+                              {managers.map(manager => (
+                                <label key={manager} className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" checked={chemist.jointVisitManagers?.[manager] || false} onChange={() => toggleChemistManagerCheckbox(chemistIdx, manager)} className="scale-110 cursor-pointer" />
+                                  <span className="text-xs text-gray-700">{manager}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      {chemist.productData && chemist.productData[selectedProductTab] ? (
+                        chemist.productData[selectedProductTab].map((cell, productIdx) => (
+                          <td key={productIdx} className="border border-gray-200 px-3 py-2 align-top min-w-[180px]">
+                            <div className="flex flex-col gap-3">
+                              <label className={`flex items-center gap-2 text-sm`}>
+                                <span className="flex-1 text-left text-xs">Wholesale Qty</span>
+                                <input type="number" min="0" value={cell.wholesaleQty || ""} onChange={(e) => updateChemistCell(chemistIdx, productIdx, "wholesaleQty", e.target.value)} placeholder="QTY" className="w-20 px-2 py-1 border border-gray-300 rounded-md text-center text-xs" />
+                              </label>
+                            </div>
+                          </td>
+                        ))
+                      ) : (
+                        Array(productCategories[selectedProductTab]?.length || 0).fill(null).map((_, idx) => (
+                            <td key={idx} className="border border-gray-200 px-3 py-2 align-top min-w-[180px]"></td>
+                        ))
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Live Summary Section */}
       <h3 className="text-xl font-bold text-gray-800 mt-10 mb-4">
         Selected Items Summary
       </h3>
       <div className="p-4 border border-gray-200 rounded-lg">
-        <LiveSummaryTable tableData={tableData} productCategories={productCategories} />
+        <LiveSummaryTable doctorTableData={doctorTableData} chemistTableData={chemistTableData} productCategories={productCategories} />
       </div>
 
-       {/* Grand Total Box */}
-       <div className="mt-6 p-4 bg-gray-800 text-white rounded-lg flex justify-between items-center">
-         <span className="text-xl font-bold">Grand Total:</span>
-         <span className="text-2xl font-bold">Rs. {calculateLiveGrandTotal().toFixed(2)}</span>
+       {/* Total Boxes */}
+       <div className="mt-6 flex gap-4">
+         <div className="flex-1 p-4 bg-blue-600 text-white rounded-lg flex justify-between items-center">
+           <span className="text-lg font-bold">Total wholesale orders (Doctors):</span>
+           <span className="text-xl font-bold">Rs. {calculateDoctorTotal().toFixed(2)}</span>
+         </div>
+         <div className="flex-1 p-4 bg-green-600 text-white rounded-lg flex justify-between items-center">
+           <span className="text-lg font-bold">Total chemist orders:</span>
+           <span className="text-xl font-bold">Rs. {calculateChemistTotal().toFixed(2)}</span>
+         </div>
        </div>
 
       {/* Buttons */}
@@ -1019,10 +1335,10 @@ export default function RepdetailsReport() {
             Daily Expenses
           </caption>
           <tbody>
-            {["bata", "nightOut", "fuel"].map(key => (
+            {["bata", "nightOut", "nightOutReturn", "fuel"].map(key => (
               <tr key={key}>
                 <td className="px-2 py-2 border-b border-gray-200 text-sm">
-                  {key === "bata" ? "Daily Bata" : key === "nightOut" ? "Night Out" : "Fuel"}
+                  {key === "bata" ? "Daily Bata" : key === "nightOut" ? "Night Out" : key === "nightOutReturn" ? "Night Out Return" : "Fuel"}
                 </td>
                 <td className="px-2 py-2 border-b border-gray-200">
                   <input type="checkbox" checked={expenses[key]} onChange={() => handleExpenseChange(key)} className="scale-125 cursor-pointer" />
@@ -1089,7 +1405,7 @@ export default function RepdetailsReport() {
           </caption>
           <tbody>
             {[
-              { label: "Schedule mileage", input: <input type="text" value={mileage.scheduleMileage} onChange={(e) => setMileage(prev => ({ ...prev, scheduleMileage: e.target.value }))} placeholder="1000 km" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Scheduled mileage", input: <input type="text" value={mileage.scheduleMileage} readOnly placeholder="From Itinerary" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm bg-gray-100" /> },
               { label: "Opening mileage", input: <input type="text" value={mileage.openingMileage} onChange={(e) => setMileage(prev => ({ ...prev, openingMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
               { label: "Closing mileage", input: <input type="text" value={mileage.closingMileage} onChange={(e) => setMileage(prev => ({ ...prev, closingMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
               { label: "Private mileage", input: <input type="text" value={mileage.privateMileage} onChange={(e) => setMileage(prev => ({ ...prev, privateMileage: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
@@ -1197,7 +1513,7 @@ export default function RepdetailsReport() {
         </div>
 
         {/* Expenses Total */}
-        <div className="mt-6 p-4 bg-gray-800 text-white rounded-lg flex justify-between items-center">
+        <div className="mt-6 p-4 bg-red-600 text-white rounded-lg flex justify-between items-center">
           <span className="text-xl font-bold">Expenses Total:</span>
           <span className="text-2xl font-bold">Rs. {calculateExpensesTotal().toFixed(2)}</span>
         </div>
