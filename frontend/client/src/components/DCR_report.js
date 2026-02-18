@@ -214,8 +214,8 @@ const LiveSummaryTable = ({ doctorTableData, chemistTableData, productCategories
                   <tr key={itemIdx} className="border-b last:border-b-0">
                     <td className="px-4 py-2 whitespace-nowrap">{item.name}</td>
                     <td className="px-4 py-2">{item.type}</td>
-                    <td className="px-4 py-2 text-right">{item.qty}</td>
-                    <td className="px-4 py-2 text-right font-medium">Rs. {item.lineTotal.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right">{item.type === 'Detailed' ? '-' : item.qty}</td>
+                    <td className="px-4 py-2 text-right font-medium">{item.type === 'Sampling' || item.type === 'Detailed' ? '-' : `Rs. ${item.lineTotal.toFixed(2)}`}</td>
                   </tr>
                 ))}
               </tbody>
