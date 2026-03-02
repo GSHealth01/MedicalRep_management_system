@@ -14,6 +14,7 @@ export default function AdminLayout() {
     { name: "Doctors", path: "/admin/doctors" },
     { name: "Chemists", path: "/admin/chemists" },
     { name: "Teams", path: "/admin/teams" },
+    { name: "Allocated Prices", path: "/admin/allocated-prices" },
   ];
 
   const handleLogout = () => {

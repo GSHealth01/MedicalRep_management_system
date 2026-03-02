@@ -21,5 +21,6 @@ router.use("/admin/sectors", require("./admin/sectors.routes"));
 router.use("/admin/subsectors", require("./admin/subsectors.routes"));
 router.use("/admin/teams", require("./admin/teams.routes"));
 router.use("/admin/chemists", require("./admin/chemists.routes"));
+router.use("/admin/allocated-prices", require("./admin/allocatedPrices.routes"));
 
 module.exports = router;

@@ -340,3 +340,18 @@ model dcr {
 
    @@map("dcrs")
 }
+
+// ==============================
+// ALLOCATED PRICES (Daily Bata & Night Out by Designation)
+// ==============================
+
+model allocatedPrice {
+  id          Int       @id @default(autoincrement())
+  designation String    // e.g., "MR", "Territory Manager", "Product Manager"
+  dailyBata   Float?    // Daily bata amount
+  nightOut    Float?    // Night out allowance amount
+  dateAdded   DateTime? @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  @@unique([designation]) // One price entry per designation
+}

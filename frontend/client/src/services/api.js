@@ -160,3 +160,39 @@ export async function forgotPasswordStep3(userId, newPassword, confirmPassword) 
     throw error.response?.data || error;
   }
 }
+
+// Allocated Prices API
+export async function getAllocatedPrices() {
+  const response = await api.get("/admin/allocated-prices");
+  return response.data;
+}
+
+export async function createAllocatedPrice(data) {
+  const response = await api.post("/admin/allocated-prices", data);
+  return response.data;
+}
+
+export async function updateAllocatedPrice(id, data) {
+  const response = await api.patch(`/admin/allocated-prices/${id}`, data);
+  return response.data;
+}
+
+export async function deleteAllocatedPrice(id) {
+  const response = await api.delete(`/admin/allocated-prices/${id}`);
+  return response.data;
+}
+
+export async function getAllocatedPriceById(id) {
+  const response = await api.get(`/admin/allocated-prices/${id}`);
+  return response.data;
+}
+
+export async function getDesignations() {
+  const response = await api.get("/admin/allocated-prices/designations");
+  return response.data;
+}
+
+export async function getAllocatedPriceByDesignation(designation) {
+  const response = await api.get(`/admin/allocated-prices/by-designation/${encodeURIComponent(designation)}`);
+  return response.data;
+}

@@ -42,6 +42,7 @@ import ManageDistributors from "./Pages/ManageDistributors";
 import ManageDoctors      from "./Pages/ManageDoctors";
 import ManageChemists      from "./Pages/ManageChemists";
 import ManageTeams        from "./Pages/ManageTeams";
+import ManageAllocatedPrices from "./Pages/ManageAllocatedPrices";
 // Removed ManageRoles import
 
 export default function App() {
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="chemists" element={<ManageChemists />} />
           <Route path="distributors" element={<ManageDistributors />} />
           <Route path="teams" element={<ManageTeams />} />
+          <Route path="allocated-prices" element={<ManageAllocatedPrices />} />
           {/* Removed roles route */}
         </Route>
 
