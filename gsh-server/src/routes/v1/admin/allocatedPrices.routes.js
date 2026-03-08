@@ -4,6 +4,9 @@ const { requireRole } = require("../../../middlewares/requireRole");
 const ctrl = require("../../../controllers/v1/admin/allocatedPrices.controller");
 const asyncHandler = require("../../../utils/asyncHandler");
 
+// Public read endpoints for authenticated users (to get their own allocated prices)
+router.get("/by-designation-code/:designationCode", requireAuth, asyncHandler(ctrl.getByDesignationCode));
+
 // ADMIN-only
 router.use(requireAuth, requireRole("ADMIN", "OM"));
 

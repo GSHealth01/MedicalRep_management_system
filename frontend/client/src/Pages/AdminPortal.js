@@ -52,6 +52,13 @@ const adminCards = [
     path: "/admin/teams",
     icon: "👥",
   },
+  {
+    title: "Allocated Prices",
+    description: "Manage product pricing for different ranges and agencies.",
+    button: "Manage Prices",
+    path: "/admin/allocated-prices",
+    icon: "💰",
+  },
 ];
 
 export default function AdminPortal() {

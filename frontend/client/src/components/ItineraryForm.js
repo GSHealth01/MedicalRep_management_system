@@ -13,6 +13,9 @@ export default function ItineraryForm() {
   const isEditMode = mode === 'edit';
   const { user } = useAuth();
   
+  // Night out options
+  const NIGHT_OUT_OPTIONS = ["", "Night Out", "Daily Bata", "Half Night Out"];
+  
   const [repName, setRepName] = useState("");
   const [distributor, setDistributor] = useState("");
   const [town, setTown] = useState("");
@@ -21,6 +24,9 @@ export default function ItineraryForm() {
   const [daysInMonth, setDaysInMonth] = useState(0);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("pending");
+  
+  // New state for storing all distributors
+  const [allDistributors, setAllDistributors] = useState([]);
 
   // Build rows whenever month changes (only for new forms)
   useEffect(() => {
@@ -30,16 +36,27 @@ export default function ItineraryForm() {
     const dim = new Date(y, m, 0).getDate();
     setDaysInMonth(dim);
 
-    const rows = Array.from({ length: dim }, (_, i) => ({
-      date: `${month}-${String(i + 1).padStart(2, "0")}`,
-      dayNo: i + 1,
-      area: "",
-      town: "",
-      doctorCalls: "",
-      chemistCalls: "",
-      mileage: "",
-      nightOutArea: "",
-    }));
+    // Generate dates and filter out Sundays (day 0)
+    const rows = [];
+    let consecutiveDayNo = 1;
+    for (let i = 1; i <= dim; i++) {
+      const date = new Date(y, m - 1, i);
+      const dayOfWeek = date.getDay();
+      
+      // Skip Sundays (dayOfWeek === 0)
+      if (dayOfWeek === 0) continue;
+      
+      rows.push({
+        date: `${month}-${String(i).padStart(2, "0")}`,
+        dayNo: consecutiveDayNo++,
+        area: "",
+        town: "",
+        doctorCalls: "",
+        chemistCalls: "",
+        mileage: "",
+        nightOutArea: "",
+      });
+    }
     setItinerary(rows);
   }, [month, isEditMode, isViewMode]);
 
@@ -48,23 +65,26 @@ export default function ItineraryForm() {
       const response = await api.get("/users/profile");
       const userData = response.data.user || response.data;
       
-      // Set the first distributor as default if available
+      // Handle both single distributor (for backward compatibility) and multiple distributors
       if (userData.distributors && userData.distributors.length > 0) {
-        const firstDistributor = userData.distributors[0];
-        let distributorName = '';
-        let distributorTown = '';
+        // Store all distributors for dropdown
+        const distributorList = userData.distributors.map(d => ({
+          code: d.distributor_code || d.distributor?.distributor_code,
+          name: d.name || d.distributor?.name || d.distributor_code,
+          town: d.coverage_town || d.distributor?.coverage_town,
+          route: d.route || d.distributor?.route,
+          area: d.area?.name || d.distributor?.area?.name || ''
+        }));
         
-        if (firstDistributor.distributor && firstDistributor.distributor.name) {
-          distributorName = firstDistributor.distributor.name;
-          distributorTown = firstDistributor.distributor.coverage_town || '';
-        } else if (firstDistributor.name) {
-          distributorName = firstDistributor.name;
-          distributorTown = firstDistributor.coverage_town || '';
-        }
+        setAllDistributors(distributorList);
         
-        if (distributorName && !isEditMode && !isViewMode) {
-          setDistributor(distributorName);
-          setTown(distributorTown);
+        // If not in edit or view mode, select first distributor as default
+        if (!isEditMode && !isViewMode) {
+          if (distributorList.length > 0) {
+            const firstDist = distributorList[0];
+            setDistributor(firstDist.name);
+            setTown(firstDist.town);
+          }
         }
       }
     } catch (error) {
@@ -83,6 +103,22 @@ export default function ItineraryForm() {
     
     setLoading(true);
     try {
+      // First fetch user profile to get distributors
+      const profileResponse = await api.get("/users/profile");
+      const userData = profileResponse.data.user || profileResponse.data;
+      
+      // Handle both single distributor (for backward compatibility) and multiple distributors
+      if (userData.distributors && userData.distributors.length > 0) {
+        const distributorList = userData.distributors.map(d => ({
+          code: d.distributor_code || d.distributor?.distributor_code,
+          name: d.name || d.distributor?.name || d.distributor_code,
+          town: d.coverage_town || d.distributor?.coverage_town,
+          route: d.route || d.distributor?.route,
+          area: d.area?.name || d.distributor?.area?.name || ''
+        }));
+        setAllDistributors(distributorList);
+      }
+      
       const response = await api.get(`/itineraries/${id}`, { params: employeeId ? { employeeId } : {} });
       const data = response.data.data;
       
@@ -95,6 +131,17 @@ export default function ItineraryForm() {
       setMonth(data.month || "");
       setStatus(data.status || "pending");
       
+      // Find and set the selected distributor code for edit mode
+      if (data.distributor && userData.distributors) {
+        const matchedDist = userData.distributors.find(d => 
+          d.name === data.distributor || 
+          d.distributor?.name === data.distributor
+        );
+        if (matchedDist) {
+          setDistributor(matchedDist.name || matchedDist.distributor?.name || data.distributor);
+        }
+      }
+      
       // Build full month structure
       const [year, monthNum] = data.month.split("-").map((n) => +n);
       const dim = new Date(year, monthNum, 0).getDate();
@@ -102,21 +149,28 @@ export default function ItineraryForm() {
       
       console.log(`Building ${dim} days for ${data.month}`);
       
-      // Create full month template
-      const fullMonthRows = Array.from({ length: dim }, (_, i) => {
-        const day = i + 1;
-        const date = `${year}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        return {
-          date: date,
-          dayNo: day,
+      // Build full month structure (excluding Sundays)
+      const fullMonthRows = [];
+      let consecutiveDayNo = 1;
+      for (let i = 1; i <= dim; i++) {
+        const date = new Date(year, monthNum - 1, i);
+        const dayOfWeek = date.getDay();
+        
+        // Skip Sundays (dayOfWeek === 0)
+        if (dayOfWeek === 0) continue;
+        
+        const dateStr = `${year}-${String(monthNum).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+        fullMonthRows.push({
+          date: dateStr,
+          dayNo: consecutiveDayNo++,
           area: "",
           town: "",
           doctorCalls: "",
           chemistCalls: "",
           mileage: "",
           nightOutArea: "",
-        };
-      });
+        });
+      }
       
       // Merge with saved entries
       const entries = data.entries || [];
@@ -335,7 +389,9 @@ export default function ItineraryForm() {
               className="mt-1 px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
               style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
             >
-              {distributor || 'No distributor assigned'}
+              {allDistributors.length > 0 
+                ? allDistributors.map(d => d.name).join(', ') 
+                : (distributor || 'No distributor assigned')}
             </div>
           </label>
 
@@ -345,7 +401,9 @@ export default function ItineraryForm() {
               className="mt-1 px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
               style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
             >
-              {town || 'No town assigned'}
+              {allDistributors.length > 0 
+                ? [...new Set(allDistributors.map(d => d.town).filter(Boolean))].join(', ') 
+                : (town || 'No town assigned')}
             </div>
           </label>
 
@@ -375,7 +433,7 @@ export default function ItineraryForm() {
                 <th className="px-3 py-2 border text-center w-32">Doctor Calls</th>
                 <th className="px-3 py-2 border text-center w-32">Chemist Calls</th>
                 <th className="px-3 py-2 border text-center w-32">Scheduled Mileage (km)</th>
-                <th className="px-3 py-2 border text-left w-48">Night Out Area</th>
+                <th className="px-3 py-2 border text-left w-48">Allowance Type</th>
               </tr>
             </thead>
             <tbody>
@@ -453,14 +511,18 @@ export default function ItineraryForm() {
                   </td>
 
                   <td className="px-2 py-1 border w-48">
-                    <input
-                      type="text"
-                      placeholder="Overnight area"
-                      value={row.nightOutArea}
+                    <select
+                      value={row.nightOutArea || ""}
                       onChange={(e) => updateRow(i, "nightOutArea", e.target.value)}
                       disabled={isViewMode}
                       className="w-full px-2 py-1 border rounded focus:outline-none focus:ring focus:ring-blue-200 text-sm disabled:bg-gray-100"
-                    />
+                    >
+                      {NIGHT_OUT_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option === "" ? "Select" : option}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                 </tr>
               ))}

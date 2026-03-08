@@ -1,130 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
+import { api, getAllocatedPriceByDesignationCode } from '../services/api';
 import logo from '../assets/gsh.logo.png';
 import {
   FaPhone,
-  FaBoxOpen,
   FaClinicMedical,
   FaBars,
   FaTimes,
   FaSignOutAlt,
-  FaChevronDown,
-  FaChevronUp,
   FaRoute,
-  FaFileAlt,
-  FaSync
+  FaGasPump,
+  FaMoneyBillWave,
+  FaCalendarAlt,
+  FaMoon,
+  FaCheckCircle,
+  FaTimesCircle
 } from 'react-icons/fa';
 import './RepDashboard.css';
 
-// Function to transform products from API to expected format
-const transformProductsToCategories = (products) => {
-  const categories = {};
-
-  products.forEach(product => {
-    if (product.variants && product.variants.length > 0) {
-      // Use product name as category
-      categories[product.name] = product.variants.map(variant => ({
-        name: `${product.name} ${variant.strength || ''} ${variant.pack_size || ''}`.trim(),
-        samplingPrice: variant.sampling_price || 0,
-        stockingPrice: variant.stocking_price || 0,
-        detailedPrice: variant.detailed_price || 0
-      }));
+// Get available months from data - returns format like "March 2026"
+const getAvailableMonths = (itineraries, dcrs) => {
+  const months = new Set();
+  
+  // Add months from itineraries - convert from "2026-03" to "March 2026"
+  itineraries.forEach(itinerary => {
+    if (itinerary.month) {
+      // Handle both "2026-03" and "March 2026" formats
+      let monthStr = itinerary.month;
+      if (monthStr.match(/^\d{4}-\d{2}$/)) {
+        const [year, month] = monthStr.split('-');
+        const date = new Date(`${year}-${month}-01`);
+        monthStr = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+      }
+      months.add(monthStr);
     }
   });
-
-  return categories;
-};
-
-const calculateDoctorTotal = (doctorRow, productCategories) => {
-  let total = 0;
-  if (!doctorRow || !doctorRow.productData) return total;
-
-  Object.keys(productCategories).forEach(category => {
-    if (productCategories[category] && doctorRow.productData[category]) {
-      const productsWithPrices = productCategories[category];
-      const productStates = doctorRow.productData[category];
-
-      productsWithPrices.forEach((priceInfo, index) => {
-        if (index < productStates.length) {
-          const stateInfo = productStates[index];
-          // Only stocking/wholeale has quantity and price
-          if (stateInfo.stocking && stateInfo.stockingQty) {
-            total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.stockingQty) || 0);
-          }
-        }
-      });
-    }
+  
+  // Add months from DCRs - already in "Month Year" format
+  Object.keys(dcrs).forEach(monthYear => {
+    months.add(monthYear);
   });
-  return total;
-};
-
-const calculateChemistTotal = (chemistRow, productCategories) => {
-  let total = 0;
-  if (!chemistRow || !chemistRow.productData) return total;
-
-  Object.keys(productCategories).forEach(category => {
-    if (productCategories[category] && chemistRow.productData[category]) {
-      const productsWithPrices = productCategories[category];
-      const productStates = chemistRow.productData[category];
-
-      productsWithPrices.forEach((priceInfo, index) => {
-        if (index < productStates.length) {
-          const stateInfo = productStates[index];
-          // Chemist uses wholesaleQty
-          if (stateInfo.wholesaleQty) {
-            total += (priceInfo.stockingPrice || 0) * (parseInt(stateInfo.wholesaleQty) || 0);
-          }
-        }
-      });
-    }
+  
+  // Sort months in chronological order
+  const sortedMonths = Array.from(months).sort((a, b) => {
+    const dateA = new Date(a + '-01');
+    const dateB = new Date(b + '-01');
+    return dateB - dateA; // Most recent first
   });
-  return total;
+  
+  return sortedMonths;
 };
 
 export default function RepDashboard() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('Overview');
   const [itineraries, setItineraries] = useState([]);
   const [dcrs, setDcrs] = useState({});
-  const [productCategories, setProductCategories] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [allocatedPrices, setAllocatedPrices] = useState(null);
+  const [availableMonths, setAvailableMonths] = useState([]);
 
   const handleLogout = () => {
     logout();
     navigate('/', { replace: true });
   };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      // Refetch data
-      const productsResponse = await api.get('/products', { params: { limit: 500 } });
-      const productsData = productsResponse.data.data?.items || [];
-      const categories = transformProductsToCategories(productsData);
-      setProductCategories(categories);
-
-      const itinerariesResponse = await api.get('/itineraries');
-      setItineraries(itinerariesResponse.data.data || []);
-
-      const dcrsResponse = await api.get('/dcrs');
-      setDcrs(dcrsResponse.data.dcrs || {});
-    } catch (err) {
-      console.error('Error refreshing data:', err);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleViewItinerary = (itinerary) => {
-    navigate(`/itineraryForm/${itinerary.id}/view`);
-  };
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -132,19 +75,36 @@ export default function RepDashboard() {
         setLoading(true);
         setError(null);
 
-        // Fetch products for revenue calculation
-        const productsResponse = await api.get('/products', { params: { limit: 500 } });
-        const productsData = productsResponse.data.data?.items || [];
-        const categories = transformProductsToCategories(productsData);
-        setProductCategories(categories);
-
         // Fetch itineraries
         const itinerariesResponse = await api.get('/itineraries');
-        setItineraries(itinerariesResponse.data.data || []);
+        const itinerariesData = itinerariesResponse.data.data || [];
+        setItineraries(itinerariesData);
 
         // Fetch DCRs
         const dcrsResponse = await api.get('/dcrs');
-        setDcrs(dcrsResponse.data.dcrs || {});
+        const dcrsData = dcrsResponse.data.dcrs || {};
+        setDcrs(dcrsData);
+
+        // Get available months
+        const months = getAvailableMonths(itinerariesData, dcrsData);
+        setAvailableMonths(months);
+
+        // Set default selected month to most recent
+        if (months.length > 0) {
+          setSelectedMonth(months[0]);
+        }
+
+        // Fetch allocated prices based on user designation
+        if (user?.designation) {
+          try {
+            const pricesResponse = await getAllocatedPriceByDesignationCode(user.designation);
+            if (pricesResponse.data) {
+              setAllocatedPrices(pricesResponse.data);
+            }
+          } catch (priceErr) {
+            console.error('Error fetching allocated prices:', priceErr);
+          }
+        }
 
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -155,123 +115,200 @@ export default function RepDashboard() {
     };
 
     fetchData();
-  }, []);
+  }, [user?.designation]);
 
-  // Compute Quick Stats from real data
-  const computeQuickStats = () => {
-    let totalDoctorCalls = 0;
-    let totalChemistCalls = 0;
-    let totalMileage = 0;
-    let totalRevenue = 0;
+  // Calculate dashboard metrics for selected month
+  const calculateMetrics = () => {
+    if (!selectedMonth) return null;
 
-    itineraries.forEach(itinerary => {
-      itinerary.entries.forEach(entry => {
-        totalDoctorCalls += entry.doctorCalls || 0;
-        totalChemistCalls += entry.chemistCalls || 0;
-        totalMileage += entry.mileage || 0;
-      });
+    // Convert selectedMonth to "Month Year" format if needed
+    let monthKey = selectedMonth;
+    if (monthKey.match(/^\d{4}-\d{2}$/)) {
+      const [year, month] = monthKey.split('-');
+      const date = new Date(`${year}-${month}-01`);
+      monthKey = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+    }
+
+    // Filter DCRs for selected month
+    const monthDcrs = dcrs[monthKey] || [];
+    
+    // Filter itineraries for selected month
+    const monthItineraries = itineraries.filter(it => {
+      let itMonth = it.month;
+      if (itMonth && itMonth.match(/^\d{4}-\d{2}$/)) {
+        const [year, m] = itMonth.split('-');
+        const date = new Date(`${year}-${m}-01`);
+        itMonth = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+      }
+      return itMonth === monthKey;
+    });
+    
+    // Calculate scheduled values from itinerary
+    let scheduledDoctorCalls = 0;
+    let scheduledChemistCalls = 0;
+    let scheduledMileage = 0;
+    
+    monthItineraries.forEach(itinerary => {
+      if (itinerary.entries && Array.isArray(itinerary.entries)) {
+        itinerary.entries.forEach(entry => {
+          scheduledDoctorCalls += parseInt(entry.doctorCalls) || 0;
+          scheduledChemistCalls += parseInt(entry.chemistCalls) || 0;
+          scheduledMileage += parseFloat(entry.mileage) || 0;
+        });
+      }
     });
 
-    Object.values(dcrs).forEach(monthDcrs => {
-      monthDcrs.forEach(dcr => {
-        // Calculate doctor revenue
-        const doctorRevenue = dcr.callReport 
-          ? dcr.callReport.filter(entry => entry.doctor).reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) 
-          : 0;
+    // Calculate actual values from DCR
+    let actualDoctorCalls = 0;
+    let actualChemistCalls = 0;
+    let actualMileage = 0;
+    let totalFuelPumped = 0;
+    let totalFuelCost = 0;
+    let bataDays = 0;
+    let nightOutDays = 0;
+    let nightOutReturnDays = 0;
+
+    monthDcrs.forEach(dcr => {
+      // Count doctors and chemists from callReport
+      if (dcr.callReport && Array.isArray(dcr.callReport)) {
+        dcr.callReport.forEach(entry => {
+          if (entry.doctor) actualDoctorCalls++;
+          if (entry.chemist) actualChemistCalls++;
+        });
+      }
+
+      // Calculate actual mileage (closing - opening + private)
+      // Handle both cases: closing >= opening and closing < opening
+      if (dcr.mileage) {
+        let opening = parseFloat(dcr.mileage.openingMileage) || 0;
+        let closing = parseFloat(dcr.mileage.closingMileage) || 0;
         
-        // Calculate chemist revenue
-        const chemistRevenue = dcr.callReport 
-          ? dcr.callReport.filter(entry => entry.chemist).reduce((sum, chemist) => sum + calculateChemistTotal(chemist, productCategories), 0) 
-          : 0;
+        // If opening/closing not available, try alternative field names
+        if (opening === 0 && dcr.mileage.odometerStart) {
+          opening = parseFloat(dcr.mileage.odometerStart) || 0;
+        }
+        if (closing === 0 && dcr.mileage.odometerEnd) {
+          closing = parseFloat(dcr.mileage.odometerEnd) || 0;
+        }
         
-        totalRevenue += doctorRevenue + chemistRevenue;
-        
-        // Calculate expenses
-        let expenses = 0;
-        if (dcr.dailyExpenses) {
-          if (dcr.dailyExpenses.bata) expenses += 50;
-          if (dcr.dailyExpenses.nightOut) expenses += 50;
-          if (dcr.dailyExpenses.nightOutReturn) expenses += 50;
-          if (dcr.dailyExpenses.fuel) expenses += 50;
+        // Calculate mileage - handle both cases
+        if (closing >= opening && closing > 0 && opening > 0) {
+          // Normal case: closing is greater than or equal to opening
+          actualMileage += (closing - opening);
+        } else if (closing > 0 && opening > 0) {
+          // Closing is less than opening - use absolute difference (odometer might have been reset)
+          actualMileage += Math.abs(closing - opening);
         }
-        if (dcr.otherBills?.details) {
-          expenses += parseFloat(dcr.otherBills.details.parking?.amount || 0);
-          expenses += parseFloat(dcr.otherBills.details.highway?.amount || 0);
-          expenses += parseFloat(dcr.otherBills.details.other?.amount || 0);
-        }
-        if (dcr.mileage?.cost) {
-          expenses += parseFloat(dcr.mileage.cost || 0);
-        }
-        totalRevenue += expenses;
-      });
+
+        // Fuel pumped
+        totalFuelPumped += parseFloat(dcr.mileage.fuelPumped) || 0;
+        totalFuelCost += parseFloat(dcr.mileage.cost) || 0;
+      }
+
+      // Count bata and night out days
+      if (dcr.dailyExpenses) {
+        if (dcr.dailyExpenses.bata) bataDays++;
+        if (dcr.dailyExpenses.nightOut) nightOutDays++;
+        if (dcr.dailyExpenses.nightOutReturn) nightOutReturnDays++;
+      }
     });
+
+    // Calculate percentages
+    const doctorCallsPercentage = scheduledDoctorCalls > 0 
+      ? (actualDoctorCalls / scheduledDoctorCalls) * 100 
+      : 0;
+    const chemistCallsPercentage = scheduledChemistCalls > 0 
+      ? (actualChemistCalls / scheduledChemistCalls) * 100 
+      : 0;
+    const mileagePercentage = scheduledMileage > 0 
+      ? (actualMileage / scheduledMileage) * 100 
+      : 0;
+
+    // Calculate exceeded mileage (actual - scheduled, positive means exceeded)
+    const exceededMileage = actualMileage - scheduledMileage;
+    const fuelPricePerLiter = allocatedPrices?.fuel || 0;
+    // eslint-disable-next-line no-unused-vars
+    const exceededFuelCost = exceededMileage * fuelPricePerLiter;
+
+    // Calculate expenses based on designation
+    const dailyBataAmount = allocatedPrices?.dailyBata || 0;
+    const nightOutAmount = allocatedPrices?.nightOut || 0;
+    const nightOutReturnAmount = allocatedPrices?.nightOutReturn || 0;
+    
+    const totalBata = bataDays * dailyBataAmount;
+    const totalNightOut = (nightOutDays * nightOutAmount) + (nightOutReturnDays * nightOutReturnAmount);
 
     return {
-      totalDoctorCalls,
-      totalChemistCalls,
-      totalMileage,
-      totalRevenue
+      // Doctor Calls
+      scheduledDoctorCalls,
+      actualDoctorCalls,
+      doctorCallsPercentage,
+      
+      // Chemist Calls
+      scheduledChemistCalls,
+      actualChemistCalls,
+      chemistCallsPercentage,
+      
+      // Mileage
+      scheduledMileage,
+      actualMileage,
+      mileagePercentage,
+      
+      // Exceeded Mileage
+      exceededMileage,
+      totalFuelPumped,
+      totalFuelCost,
+      exceededFuelCost,
+      
+      // Expenses
+      bataDays,
+      totalBata,
+      nightOutDays,
+      nightOutReturnDays,
+      totalNightOut,
+      
+      // Counts
+      dcrCount: monthDcrs.length,
+      itineraryCount: monthItineraries.length
     };
   };
 
-  const quickStatsData = computeQuickStats();
+  const metrics = calculateMetrics();
 
-  const quickStats = [
-    { title: 'Doctor Calls', value: quickStatsData.totalDoctorCalls, icon: <FaPhone /> },
-    { title: 'Chemist Calls', value: quickStatsData.totalChemistCalls, icon: <FaClinicMedical /> },
-    { title: 'Total Mileage', value: `${quickStatsData.totalMileage} km`, icon: <FaRoute /> },
-    { title: 'Revenue', value: `Rs. ${quickStatsData.totalRevenue.toFixed(2)}`, icon: <FaBoxOpen /> },
-  ];
-
-  // Group itineraries by month
-  const groupItinerariesByMonth = () => {
-    const grouped = {};
-    itineraries.forEach(itinerary => {
-      const month = itinerary.month;
-      if (!grouped[month]) grouped[month] = [];
-      grouped[month].push(itinerary);
-    });
-    return grouped;
+  // Helper to get color based on percentage
+  const getPercentageColor = (percentage) => {
+    if (percentage >= 100) return 'text-green-600';
+    return 'text-red-600';
   };
 
-  const itinerariesByMonth = groupItinerariesByMonth();
-
-  // Group DCRs by month
-  const groupDcrsByMonth = () => {
-    const grouped = {};
-    Object.entries(dcrs).forEach(([monthYear, monthDcrs]) => {
-      // monthYear is like "January 2026"
-      const month = monthYear;
-      if (!grouped[month]) grouped[month] = [];
-      grouped[month].push(...monthDcrs);
-    });
-    return grouped;
+  // Helper to get background color based on percentage
+  const getPercentageBgColor = (percentage) => {
+    if (percentage >= 100) return 'bg-green-100 border-green-300';
+    return 'bg-red-100 border-red-300';
   };
 
-  const dcrsByMonth = groupDcrsByMonth();
-
-  // State for expanded items
-  const [expandedItineraries, setExpandedItineraries] = useState(new Set());
-  const [expandedDcrs, setExpandedDcrs] = useState(new Set());
-
-  const toggleItinerary = (month) => {
-    const newExpanded = new Set(expandedItineraries);
-    if (newExpanded.has(month)) {
-      newExpanded.delete(month);
-    } else {
-      newExpanded.add(month);
-    }
-    setExpandedItineraries(newExpanded);
+  // Helper to get background color for Mileage (inverted logic)
+  const getMileageBgColor = (percentage) => {
+    if (percentage >= 100) return 'bg-red-100 border-red-300';
+    return 'bg-green-100 border-green-300';
   };
 
-  const toggleDcr = (dcrId) => {
-    const newExpanded = new Set(expandedDcrs);
-    if (newExpanded.has(dcrId)) {
-      newExpanded.delete(dcrId);
-    } else {
-      newExpanded.add(dcrId);
-    }
-    setExpandedDcrs(newExpanded);
+  // Helper to get text color for Mileage (inverted logic)
+  const getMileageTextColor = (percentage) => {
+    if (percentage >= 100) return 'text-red-600';
+    return 'text-green-600';
+  };
+
+  // Helper to get icon for Mileage (inverted logic)
+  const getMileageIcon = (percentage) => {
+    if (percentage >= 100) return <FaTimesCircle className="text-red-600" />;
+    return <FaCheckCircle className="text-green-600" />;
+  };
+
+  // Helper to get icon based on percentage
+  const getPercentageIcon = (percentage) => {
+    if (percentage >= 100) return <FaCheckCircle className="text-green-600" />;
+    return <FaTimesCircle className="text-red-600" />;
   };
 
   if (loading) {
@@ -311,9 +348,9 @@ export default function RepDashboard() {
         <img src={logo} alt="GSH Logo" className="logo" />
         <nav className="sidebar-nav">
           <ul>
-            <li className={activeTab === 'Overview' ? 'active' : ''} onClick={() => setActiveTab('Overview')}>Overview</li>
-            <li className={activeTab === 'Itinerary' ? 'active' : ''} onClick={() => navigate('/itineraries')}>Itinerary</li>
-            <li className={activeTab === 'Reports' ? 'active' : ''} onClick={() => navigate('/dcr-reports')}>Reports</li>
+            <li className="active">Overview</li>
+            <li onClick={() => navigate('/itineraries')}>Itinerary</li>
+            <li onClick={() => navigate('/dcr-reports')}>Reports</li>
           </ul>
         </nav>
         <div className="sidebar-footer">
@@ -333,124 +370,251 @@ export default function RepDashboard() {
         {/* Top bar */}
         <header className="topbar">
           <div className="actions">
-            <FaSync className={`icon ${refreshing ? 'spinning' : ''}`} onClick={handleRefresh} title="Refresh Data" />
             <span className="user-info">
               Welcome, {user?.name || 'User'}
             </span>
           </div>
         </header>
 
-        {/* Quick Stats */}
-        <section className="quick-stats">
-          {quickStats.map((stat,i) => (
-            <div key={i} className="stat-card">
-              <div className="stat-icon">{stat.icon}</div>
-              <div className="stat-text">
-                <p className="stat-value">{stat.value}</p>
-                <p className="stat-title">{stat.title}</p>
-              </div>
-            </div>
-          ))}
-        </section>
+        {/* Month Selector */}
+        <div className="month-selector-container">
+          <label htmlFor="month-select" className="month-label">
+            <FaCalendarAlt className="mr-2" />
+            Select Month:
+          </label>
+          <select
+            id="month-select"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="month-select"
+          >
+            {availableMonths.length === 0 ? (
+              <option value="">No data available</option>
+            ) : (
+              availableMonths.map(month => (
+                <option key={month} value={month}>{month}</option>
+              ))
+            )}
+          </select>
+          {user?.designation && (
+            <span className="designation-badge">
+              Designation: {user.designation}
+            </span>
+          )}
+        </div>
 
-        {/* Itinerary Details */}
-        <section className="details-section">
-          <h3 className="section-title"><FaRoute /> Itinerary Details</h3>
-          {Object.keys(itinerariesByMonth).length === 0 ? (
-            <p>No itineraries found.</p>
-          ) : (
-            Object.entries(itinerariesByMonth).map(([month, monthItineraries]) => (
-              <div key={month} className="detail-card">
-                <div className="detail-header">
-                  <div onClick={() => toggleItinerary(month)} style={{ flex: 1, cursor: 'pointer' }}>
-                    <h4>{new Date(month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} ({monthItineraries[0]?.status === 'completed' ? 'Completed' : 'Pending'})</h4>
+        {selectedMonth && metrics && (
+          <>
+            {/* Overview Cards */}
+            <section className="overview-cards">
+              {/* Doctor Calls Card */}
+              <div className={`overview-card ${getPercentageBgColor(metrics.doctorCallsPercentage)}`}>
+                <div className="card-header">
+                  <div className="card-icon">
+                    <FaPhone />
                   </div>
-                  <button
-                    onClick={() => handleViewItinerary(monthItineraries[0])}
-                    className="view-btn"
-                    title="View Itinerary"
-                  >
-                    View
-                  </button>
-                  <div onClick={() => toggleItinerary(month)} style={{ cursor: 'pointer' }}>
-                    {expandedItineraries.has(month) ? <FaChevronUp /> : <FaChevronDown />}
+                  <div className="card-title">
+                    <h3>Doctor Calls</h3>
+                    <p className="card-subtitle">for {selectedMonth}</p>
+                  </div>
+                  <div className="card-percentage">
+                    {getPercentageIcon(metrics.doctorCallsPercentage)}
+                    <span className={getPercentageColor(metrics.doctorCallsPercentage)}>
+                      {metrics.doctorCallsPercentage.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
-                {expandedItineraries.has(month) && (
-                  <div className="detail-content">
-                    {monthItineraries.flatMap(itinerary =>
-                      itinerary.entries.map((entry, eidx) => (
-                        <div key={`${month}-${eidx}`} className="itinerary-item">
-                          <strong>Date:</strong> {entry.date} |
-                          <strong>Area:</strong> {entry.area || 'N/A'} |
-                          <strong>Doctor Calls:</strong> {entry.doctorCalls || 0} |
-                          <strong>Chemist Calls:</strong> {entry.chemistCalls || 0} |
-                          <strong>Mileage:</strong> {entry.mileage || 0} km
-                        </div>
-                      ))
-                    )}
+                <div className="card-content">
+                  <div className="metric-value">
+                    <span className="actual-value">{metrics.actualDoctorCalls}</span>
+                    <span className="separator">/</span>
+                    <span className="scheduled-value">{metrics.scheduledDoctorCalls}</span>
                   </div>
-                )}
-              </div>
-            ))
-          )}
-        </section>
-
-        {/* DCR Details */}
-        <section className="details-section">
-          <h3 className="section-title"><FaFileAlt /> Daily Call Reports Details</h3>
-          {Object.keys(dcrsByMonth).length === 0 ? (
-            <p>No DCR reports found.</p>
-          ) : (
-            Object.entries(dcrsByMonth).map(([month, monthDcrs]) => (
-              <div key={month} className="detail-card">
-                <div className="detail-header" onClick={() => toggleDcr(month)}>
-                  <h4>{month}</h4>
-                  <span>{monthDcrs.length} DCR(s)</span>
-                  {expandedDcrs.has(month) ? <FaChevronUp /> : <FaChevronDown />}
+                  <p className="metric-label">Actual / Scheduled</p>
                 </div>
-                {expandedDcrs.has(month) && (
-                  <div className="detail-content">
-                    {monthDcrs.map((dcr) => {
-                      const doctorRevenue = dcr.callReport 
-                        ? dcr.callReport.filter(entry => entry.doctor).reduce((sum, doctor) => sum + calculateDoctorTotal(doctor, productCategories), 0) 
-                        : 0;
-                      const chemistRevenue = dcr.callReport 
-                        ? dcr.callReport.filter(entry => entry.chemist).reduce((sum, chemist) => sum + calculateChemistTotal(chemist, productCategories), 0) 
-                        : 0;
-                      
-                      // Calculate expenses from dailyExpenses, otherBills, and mileage
-                      let expenses = 0;
-                      if (dcr.dailyExpenses) {
-                        if (dcr.dailyExpenses.bata) expenses += 50;
-                        if (dcr.dailyExpenses.nightOut) expenses += 50;
-                        if (dcr.dailyExpenses.nightOutReturn) expenses += 50;
-                        if (dcr.dailyExpenses.fuel) expenses += 50;
-                      }
-                      if (dcr.otherBills?.details) {
-                        expenses += parseFloat(dcr.otherBills.details.parking?.amount || 0);
-                        expenses += parseFloat(dcr.otherBills.details.highway?.amount || 0);
-                        expenses += parseFloat(dcr.otherBills.details.other?.amount || 0);
-                      }
-                      if (dcr.mileage?.cost) {
-                        expenses += parseFloat(dcr.mileage.cost || 0);
-                      }
-                      
-                      return (
-                        <div key={dcr.id || dcr.date} className="dcr-summary">
-                          <h5>{new Date(dcr.date).toLocaleDateString()}</h5>
-                          <p><strong>Total wholesale orders (Doctors):</strong> Rs. {doctorRevenue.toFixed(2)}</p>
-                          <p><strong>Total chemist orders:</strong> Rs. {chemistRevenue.toFixed(2)}</p>
-                          <p><strong>Expenses Total:</strong> Rs. {expenses.toFixed(2)}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
-            ))
-          )}
-        </section>
+
+              {/* Chemist Calls Card */}
+              <div className={`overview-card ${getPercentageBgColor(metrics.chemistCallsPercentage)}`}>
+                <div className="card-header">
+                  <div className="card-icon">
+                    <FaClinicMedical />
+                  </div>
+                  <div className="card-title">
+                    <h3>Chemist Calls</h3>
+                    <p className="card-subtitle">for {selectedMonth}</p>
+                  </div>
+                  <div className="card-percentage">
+                    {getPercentageIcon(metrics.chemistCallsPercentage)}
+                    <span className={getPercentageColor(metrics.chemistCallsPercentage)}>
+                      {metrics.chemistCallsPercentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="card-content">
+                  <div className="metric-value">
+                    <span className="actual-value">{metrics.actualChemistCalls}</span>
+                    <span className="separator">/</span>
+                    <span className="scheduled-value">{metrics.scheduledChemistCalls}</span>
+                  </div>
+                  <p className="metric-label">Actual / Scheduled</p>
+                </div>
+              </div>
+
+              {/* Total Mileage Card */}
+              <div className={`overview-card ${getMileageBgColor(metrics.mileagePercentage)}`}>
+                <div className="card-header">
+                  <div className="card-icon">
+                    <FaRoute />
+                  </div>
+                  <div className="card-title">
+                    <h3>Total Mileage</h3>
+                    <p className="card-subtitle">for {selectedMonth}</p>
+                  </div>
+                  <div className="card-percentage">
+                    {getMileageIcon(metrics.mileagePercentage)}
+                    <span className={getMileageTextColor(metrics.mileagePercentage)}>
+                      {metrics.mileagePercentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="card-content">
+                  <div className="metric-value">
+                    <span className="actual-value">{metrics.actualMileage.toFixed(1)} km</span>
+                    <span className="separator">/</span>
+                    <span className="scheduled-value">{metrics.scheduledMileage.toFixed(1)} km</span>
+                  </div>
+                  <p className="metric-label">Actual / Scheduled</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Exceeded Mileage Section */}
+            <section className="details-section">
+              <h3 className="section-title">
+                <FaRoute /> Mileage Details
+              </h3>
+              <div className="exceeded-mileage-cards">
+                <div className="exceeded-card">
+                  <div className="exceeded-icon">
+                    <FaRoute />
+                  </div>
+                  <div className="exceeded-content">
+                    <p className="exceeded-label">Exceeded Mileage</p>
+                    <p className="exceeded-value">{(metrics.exceededMileage || 0).toFixed(1)} km</p>
+                    <p className="exceeded-detail">
+                      (Actual: {(metrics.actualMileage || 0).toFixed(1)} km - Scheduled: {(metrics.scheduledMileage || 0).toFixed(1)} km)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="exceeded-card">
+                  <div className="exceeded-icon">
+                    <FaGasPump />
+                  </div>
+                  <div className="exceeded-content">
+                    <p className="exceeded-label">Total Fuel Pumped</p>
+                    <p className="exceeded-value">{(metrics.totalFuelPumped || 0).toFixed(2)} L</p>
+                    <p className="exceeded-detail">
+                      Cost: Rs. {((metrics.totalFuelCost) || 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="exceeded-card highlight">
+                  <div className="exceeded-icon">
+                    <FaMoneyBillWave />
+                  </div>
+                  <div className="exceeded-content">
+                    <p className="exceeded-label">Exceeded Fuel Cost</p>
+                    <p className="exceeded-value">Rs. {((metrics.exceededFuelCost) || 0).toFixed(2)}</p>
+                    <p className="exceeded-detail">
+                      ({(metrics.exceededMileage || 0).toFixed(1)} km × Rs. {allocatedPrices?.fuel || 0}/L)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Expenses Section */}
+            <section className="details-section">
+              <h3 className="section-title">
+                <FaMoneyBillWave /> Expenses
+              </h3>
+              <div className="expenses-cards">
+                <div className="expense-card">
+                  <div className="expense-icon">
+                    <FaCheckCircle />
+                  </div>
+                  <div className="expense-content">
+                    <p className="expense-label">Total Daily Bata</p>
+                    <p className="expense-days">{metrics.bataDays} day(s)</p>
+                    <p className="expense-amount">
+                      Rs. {metrics.totalBata.toFixed(2)}
+                      <span className="expense-rate">
+                        (Rs. {allocatedPrices?.dailyBata || 0}/day)
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="expense-card">
+                  <div className="expense-icon">
+                    <FaMoon />
+                  </div>
+                  <div className="expense-content">
+                    <p className="expense-label">Night Out</p>
+                    <p className="expense-days">
+                      {metrics.nightOutDays} night(s)
+                    </p>
+                    <p className="expense-amount">
+                      Rs. {(metrics.nightOutDays * (allocatedPrices?.nightOut || 0)).toFixed(2)}
+                      <span className="expense-rate">
+                        (Rs. {allocatedPrices?.nightOut || 0}/night)
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="expense-card">
+                  <div className="expense-icon">
+                    <FaMoon />
+                  </div>
+                  <div className="expense-content">
+                    <p className="expense-label">Night Out Return</p>
+                    <p className="expense-days">
+                      {metrics.nightOutReturnDays} return(s)
+                    </p>
+                    <p className="expense-amount">
+                      Rs. {(metrics.nightOutReturnDays * (allocatedPrices?.nightOutReturn || 0)).toFixed(2)}
+                      <span className="expense-rate">
+                        (Rs. {allocatedPrices?.nightOutReturn || 0}/return)
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Summary Stats */}
+            <section className="summary-stats">
+              <div className="summary-item">
+                <span className="summary-label">Total DCRs Submitted:</span>
+                <span className="summary-value">{metrics.dcrCount}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Itinerary Status:</span>
+                <span className="summary-value">{metrics.itineraryCount > 0 ? 'Available' : 'Not Available'}</span>
+              </div>
+            </section>
+          </>
+        )}
+
+        {!selectedMonth && (
+          <div className="no-data-message">
+            <p>No month data available. Please create itineraries and DCRs to see your dashboard.</p>
+          </div>
+        )}
       </div>
     </div>
   );

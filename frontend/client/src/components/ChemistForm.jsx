@@ -6,6 +6,7 @@ export default function ChemistForm({ onSubmit }) {
     chemist_code: "",
     name: "",
     distributor_code: "",
+    town: "",
     address_owner_name: "",
     address_owner_birthday: "",
     purchasing_officer_name: "",
@@ -53,6 +54,7 @@ export default function ChemistForm({ onSubmit }) {
       chemist_code: "",
       name: "",
       distributor_code: "",
+      town: "",
       address_owner_name: "",
       address_owner_birthday: "",
       purchasing_officer_name: "",
@@ -113,6 +115,19 @@ export default function ChemistForm({ onSubmit }) {
         {errorDistributors && (
           <p className="text-sm text-red-600 mt-1">{errorDistributors}</p>
         )}
+      </div>
+
+      {/* Town */}
+      <div>
+        <label className="block text-gray-700 mb-1">Town</label>
+        <input
+          type="text"
+          name="town"
+          value={formData.town}
+          onChange={handleChange}
+          placeholder="Enter town"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
 
       {/* Contact Number */}

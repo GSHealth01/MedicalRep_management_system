@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../services/api";
+import { api, getAllocatedPriceByDesignationCode } from "../services/api";
 
 // Doctors will be fetched from API
 
@@ -263,6 +263,50 @@ export default function RepdetailsReport() {
   const [area, setArea] = useState("");
   const [town, setTown] = useState("");
   const [actualWorkingArea, setActualWorkingArea] = useState("");
+  const [distributorTowns, setDistributorTowns] = useState([]);
+  const [allUserDistributors, setAllUserDistributors] = useState([]);
+  
+  // Function to filter doctors and chemists based on selected town
+  const filterDoctorsAndChemistsByTown = (selectedTown) => {
+    // Filter doctors by town (doctor.town)
+    if (allDoctors.length > 0) {
+      let filteredDoctors;
+      if (!selectedTown || selectedTown === 'All Towns') {
+        // Show all doctors
+        filteredDoctors = allDoctors;
+      } else {
+        // Filter by selected town
+        filteredDoctors = allDoctors.filter(d => 
+          d.town && d.town.toLowerCase() === selectedTown.toLowerCase()
+        );
+      }
+      // Format doctor names: "Name - Specialty" if specialty exists
+      const formattedDoctors = filteredDoctors.map(doctor =>
+        doctor.specialty ? `${doctor.name} - ${doctor.specialty}` : doctor.name
+      );
+      setDoctors(formattedDoctors);
+    }
+    
+    // Filter chemists by town (chemist.town)
+    if (allChemists.length > 0) {
+      let filteredChemists;
+      if (!selectedTown || selectedTown === 'All Towns') {
+        // Show all chemists
+        filteredChemists = allChemists;
+      } else {
+        // Filter by selected town
+        filteredChemists = allChemists.filter(c => 
+          c.town && c.town.toLowerCase() === selectedTown.toLowerCase()
+        );
+      }
+      // Format chemist names: "Name - Distributor" if distributor exists
+      const formattedChemists = filteredChemists.map(chemist =>
+        chemist.distributor ? `${chemist.name} - ${chemist.distributor.name}` : chemist.name
+      );
+      setChemists(formattedChemists);
+    }
+  };
+  
   const [selectedDoctors, setSelectedDoctors] = useState([]);
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [itineraryMessage, setItineraryMessage] = useState("");
@@ -270,11 +314,31 @@ export default function RepdetailsReport() {
   const [townDisabled, setTownDisabled] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [doctorsLoading, setDoctorsLoading] = useState(true);
+  // Store all doctors with their town data for filtering
+  const [allDoctors, setAllDoctors] = useState([]);
   // Chemist state
   const [selectedChemists, setSelectedChemists] = useState([]);
   const [showChemistDropdown, setShowChemistDropdown] = useState(false);
   const [chemists, setChemists] = useState([]);
   const [chemistsLoading, setChemistsLoading] = useState(true);
+  // Store all chemists with their town data for filtering
+  const [allChemists, setAllChemists] = useState([]);
+  
+  // Effect to filter doctors/chemists when actualWorkingArea or town changes
+  // Priority: 1) actualWorkingArea (if selected), 2) town (user's default town from profile)
+  useEffect(() => {
+    if (allDoctors.length > 0) {
+      // If actualWorkingArea is selected, use it; otherwise use user's town
+      const townToFilter = actualWorkingArea || town;
+      if (townToFilter) {
+        filterDoctorsAndChemistsByTown(townToFilter);
+      } else {
+        // Show all if no town is available
+        filterDoctorsAndChemistsByTown('All Towns');
+      }
+    }
+  }, [actualWorkingArea, town, allDoctors.length]);
+  
   const [managers, setManagers] = useState([]);
   const [managersLoading, setManagersLoading] = useState(true);
   const [allDcrs, setAllDcrs] = useState([]);
@@ -301,6 +365,9 @@ export default function RepdetailsReport() {
   const [existingOrderFormImages, setExistingOrderFormImages] = useState([]);
   const [newOrderFormImages, setNewOrderFormImages] = useState([]);
   const orderFormImages = [...existingOrderFormImages, ...newOrderFormImages];
+  
+  // Allocated prices for the user's designation
+  const [allocatedPrices, setAllocatedPrices] = useState(null);
 
   // Step 3 Mileage State
   const [mileage, setMileage] = useState({
@@ -379,23 +446,41 @@ export default function RepdetailsReport() {
           setRange(profile.range?.name || "");
 
           // Handle both single distributor (for backward compatibility) and multiple distributors
-          if (profile.distributor) {
-            // Single distributor (backward compatibility)
-            setDistributor(profile.distributor.name || "");
-            setArea(profile.distributor.area?.name || "");
-            setTown(profile.distributor.coverage_town || "");
-          } else if (profile.distributors && profile.distributors.length > 0) {
+          // Check distributors array first (has all distributors) before checking single distributor
+          if (profile.distributors && profile.distributors.length > 0) {
             // Multiple distributors - use the first one for DCR form
             const primaryDistributor = profile.distributors[0];
             setDistributor(primaryDistributor.name || primaryDistributor.distributor_code || "");
             setArea(primaryDistributor.area?.name || "");
             setTown(primaryDistributor.coverage_town || "");
+            // Extract all unique towns from all distributors
+            const allTowns = profile.distributors
+              .map(d => d.coverage_town)
+              .filter(Boolean);
+            setDistributorTowns([...new Set(allTowns)]);
+            // Store all distributors for display
+            setAllUserDistributors(profile.distributors.map(d => ({
+              name: d.name || d.distributor?.name || d.distributor_code,
+              town: d.coverage_town || d.distributor?.coverage_town
+            })));
             console.log('DCR: Using primary distributor:', primaryDistributor); // Debug log
+            console.log('DCR: All distributor towns:', allTowns); // Debug log
+          } else if (profile.distributor) {
+            // Single distributor (backward compatibility)
+            setDistributor(profile.distributor.name || "");
+            setArea(profile.distributor.area?.name || "");
+            setTown(profile.distributor.coverage_town || "");
+            // Set the distributor towns for Actual Working Area dropdown
+            setDistributorTowns([profile.distributor.coverage_town].filter(Boolean));
+            // Also store all distributors
+            setAllUserDistributors([{ name: profile.distributor.name, town: profile.distributor.coverage_town }]);
           } else {
             // No distributors found
             setDistributor("");
             setArea("");
             setTown("");
+            setDistributorTowns([]);
+            setAllUserDistributors([]);
             console.log('DCR: No distributors found for user'); // Debug log
           }
         }
@@ -431,6 +516,31 @@ export default function RepdetailsReport() {
       fetchAllDcrs();
     }
   }, [user]);
+
+  // Fetch allocated prices based on user designation
+  useEffect(() => {
+    const fetchAllocatedPrices = async () => {
+      if (!userProfile || !userProfile.designation) {
+        return;
+      }
+      
+      try {
+        const response = await getAllocatedPriceByDesignationCode(userProfile.designation);
+        if (response.data) {
+          setAllocatedPrices(response.data);
+          console.log('DCR: Fetched allocated prices:', response.data);
+        } else {
+          console.log('DCR: No allocated prices found for designation:', userProfile.designation);
+          setAllocatedPrices(null);
+        }
+      } catch (error) {
+        console.error('Error fetching allocated prices:', error);
+        setAllocatedPrices(null);
+      }
+    };
+
+    fetchAllocatedPrices();
+  }, [userProfile]);
 
   // Fetch products and set categories
   useEffect(() => {
@@ -470,6 +580,8 @@ export default function RepdetailsReport() {
       try {
         const response = await api.get('/doctors', { params: { range: userProfile?.range?.name } });
         const doctorsData = response.data.doctors;
+        // Store all doctors with their data for filtering
+        setAllDoctors(doctorsData);
         // Format doctor names: "Name - Specialty" if specialty exists
         const formattedDoctors = doctorsData.map(doctor =>
           doctor.specialty ? `${doctor.name} - ${doctor.specialty}` : doctor.name
@@ -479,6 +591,7 @@ export default function RepdetailsReport() {
         console.error('Error fetching doctors:', error);
         // Fallback to empty array
         setDoctors([]);
+        setAllDoctors([]);
       } finally {
         setDoctorsLoading(false);
       }
@@ -495,6 +608,8 @@ export default function RepdetailsReport() {
       try {
         const response = await api.get('/chemists');
         const chemistsData = response.data.chemists || [];
+        // Store all chemists with their data for filtering
+        setAllChemists(chemistsData);
         // Format chemist names: "Name - Distributor" if distributor exists
         const formattedChemists = chemistsData.map(chemist =>
           chemist.distributor ? `${chemist.name} - ${chemist.distributor.name}` : chemist.name
@@ -504,6 +619,7 @@ export default function RepdetailsReport() {
         console.error('Error fetching chemists:', error);
         // Fallback to empty array
         setChemists([]);
+        setAllChemists([]);
       } finally {
         setChemistsLoading(false);
       }
@@ -819,14 +935,20 @@ export default function RepdetailsReport() {
 
   const calculateExpensesTotal = () => {
     let total = 0;
-    if (expenses.bata) total += 50;
-    if (expenses.nightOut) total += 50;
-    if (expenses.nightOutReturn) total += 50;
-    if (expenses.fuel) total += 50;
+    // Use allocated prices from admin settings
+    const prices = allocatedPrices || {};
+    if (expenses.bata) total += parseFloat(prices.dailyBata || 0);
+    if (expenses.nightOut) total += parseFloat(prices.nightOut || 0);
+    if (expenses.nightOutReturn) total += parseFloat(prices.nightOutReturn || 0);
+    // Fuel is calculated separately based on fuel pumped * price per liter
+    if (expenses.fuel && mileage.fuelPumped) {
+      const fuelCost = parseFloat(mileage.fuelPumped) * parseFloat(prices.fuel || 0);
+      total += fuelCost;
+    }
     total += parseFloat(otherBills.parking.amount || 0);
     total += parseFloat(otherBills.highway.amount || 0);
     total += parseFloat(otherBills.other.amount || 0);
-    total += parseFloat(mileage.cost || 0);
+    // Don't add mileage.cost separately as it's calculated from fuelPumped
     return total;
   };
 
@@ -873,6 +995,26 @@ export default function RepdetailsReport() {
     } else {
       const newIndex = index - existingOrderFormImages.length;
       setNewOrderFormImages(prev => prev.filter((_, i) => i !== newIndex));
+    }
+  };
+
+  // Handle fuel pumped change to auto-calculate cost
+  const handleFuelPumpedChange = (value) => {
+    const fuelPumped = parseFloat(value) || 0;
+    const fuelPricePerLiter = allocatedPrices?.fuel || 0;
+    const calculatedCost = fuelPumped * fuelPricePerLiter;
+    
+    setMileage(prev => ({
+      ...prev,
+      fuelPumped: value,
+      cost: calculatedCost.toFixed(2)
+    }));
+    
+    // Also check/uncheck the fuel expense based on whether fuel was pumped
+    if (fuelPumped > 0 && !expenses.fuel) {
+      setExpenses(prev => ({ ...prev, fuel: true }));
+    } else if (fuelPumped === 0 && expenses.fuel) {
+      setExpenses(prev => ({ ...prev, fuel: false }));
     }
   };
 
@@ -1000,7 +1142,12 @@ export default function RepdetailsReport() {
       {/* Distributor */}
       <div className="mb-6">
         <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Distributor</label>
-        <input type="text" value={distributor} onChange={(e) => setDistributor(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readOnly />
+        <input 
+          type="text" 
+          value={allUserDistributors.length > 0 ? allUserDistributors.map(d => d.name).join(', ') : distributor} 
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+          readOnly 
+        />
       </div>
       {/* Primary Working Area + Town + Actual Working Area */}
       <div className="flex flex-col gap-6 mb-6">
@@ -1028,12 +1175,41 @@ export default function RepdetailsReport() {
         </div>
         <div className="flex-1">
           <label className="block mb-3 font-semibold text-gray-700 text-sm uppercase tracking-wide">Actual Working Area</label>
-          <input
-            type="text"
-            value={actualWorkingArea}
-            onChange={(e) => setActualWorkingArea(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          {distributorTowns.length > 0 ? (
+            <select
+              value={actualWorkingArea}
+              onChange={(e) => {
+                setActualWorkingArea(e.target.value);
+                filterDoctorsAndChemistsByTown(e.target.value);
+              }}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select Town</option>
+              <option value="All Towns">All Towns</option>
+              {distributorTowns.map((town) => (
+                <option key={town} value={town}>
+                  {town}
+                </option>
+              ))}
+              {/* Add the saved value if it's not in the list (for edit mode) */}
+              {actualWorkingArea && !distributorTowns.includes(actualWorkingArea) && actualWorkingArea !== 'All Towns' && (
+                <option key={actualWorkingArea} value={actualWorkingArea}>
+                  {actualWorkingArea} (saved)
+                </option>
+              )}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={actualWorkingArea}
+              onChange={(e) => {
+                setActualWorkingArea(e.target.value);
+                filterDoctorsAndChemistsByTown(e.target.value);
+              }}
+              placeholder="Enter actual working area"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          )}
         </div>
       </div>
       {/* Doctor dropdown */}
@@ -1350,10 +1526,15 @@ export default function RepdetailsReport() {
             Daily Expenses
           </caption>
           <tbody>
-            {["bata", "nightOut", "nightOutReturn", "fuel"].map(key => (
+            {[
+              { key: "bata", label: "Daily Bata" },
+              { key: "nightOut", label: "Night Out" },
+              { key: "nightOutReturn", label: "Night Out Return" },
+              { key: "fuel", label: "Fuel" }
+            ].map(({ key, label }) => (
               <tr key={key}>
                 <td className="px-2 py-2 border-b border-gray-200 text-sm">
-                  {key === "bata" ? "Daily Bata" : key === "nightOut" ? "Night Out" : key === "nightOutReturn" ? "Night Out Return" : "Fuel"}
+                  {label}
                 </td>
                 <td className="px-2 py-2 border-b border-gray-200">
                   <input type="checkbox" checked={expenses[key]} onChange={() => handleExpenseChange(key)} className="scale-125 cursor-pointer" />
@@ -1445,8 +1626,8 @@ export default function RepdetailsReport() {
                   <input type="file" accept="image/*" onChange={(e) => setOdometerReadingFile(e.target.files[0])} className="w-full text-sm" />
                 </div>
               ) },
-              { label: "Fuel Pumped", input: <input type="text" value={mileage.fuelPumped} onChange={(e) => setMileage(prev => ({ ...prev, fuelPumped: e.target.value }))} className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
-              { label: "Cost", input: <input type="text" value={mileage.cost} onChange={(e) => setMileage(prev => ({ ...prev, cost: e.target.value }))} placeholder="Rs." className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Fuel Pumped (L)", input: <input type="number" step="0.01" min="0" value={mileage.fuelPumped} onChange={(e) => handleFuelPumpedChange(e.target.value)} placeholder="Liters" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Cost (Rs.)", input: <input type="text" value={mileage.cost} readOnly placeholder="Auto-calculated" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm bg-gray-100" /> },
               { label: "Fuel Bill", input: (
                 <div>
                   {fuelBillFile && (

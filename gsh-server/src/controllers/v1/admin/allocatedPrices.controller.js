@@ -51,21 +51,61 @@ exports.getDesignations = async (req, res) => {
 };
 
 /**
- * GET /api/v1/admin/allocated-prices/by-designation/:designation
- * Get allocated price by designation (for DCR use)
+ * GET /api/v1/admin/allocated-prices/by-designation-code/:designationCode
+ * Get allocated price by designation code (for DCR use) - handles mapping from code to full name
  */
-exports.getByDesignation = async (req, res) => {
+exports.getByDesignationCode = async (req, res) => {
   try {
-    const { designation } = req.params;
-
-    const allocatedPrice = await prisma.allocatedPrice.findFirst({
+    const { designationCode } = req.params;
+    
+    // Map designation codes to full names
+    const designationMap = {
+      'MR': 'Medical Rep',
+      'FC': 'Field Coordinator',
+      'JE': 'Junior Executive',
+      'SE': 'Senior Executive',
+      'TM': 'Territory Manager',
+      'PM': 'Product Manager',
+      'OM': 'Operations Manager',
+      'ADMIN': 'Admin'
+    };
+    
+    // Try to find by code first (case insensitive)
+    let allocatedPrice = await prisma.allocatedPrice.findFirst({
       where: { 
         designation: { 
-          equals: designation, 
+          equals: designationCode, 
           mode: 'insensitive' 
         }
       }
     });
+    
+    // If not found by code, try to find by full name
+    if (!allocatedPrice) {
+      const fullName = designationMap[designationCode.toUpperCase()];
+      if (fullName) {
+        allocatedPrice = await prisma.allocatedPrice.findFirst({
+          where: { 
+            designation: { 
+              equals: fullName, 
+              mode: 'insensitive' 
+            }
+          }
+        });
+      }
+    }
+    
+    // If still not found, try to find by searching for the code in designation (contains)
+    if (!allocatedPrice) {
+      allocatedPrice = await prisma.allocatedPrice.findFirst({
+        where: { 
+          designation: {
+            contains: designationCode,
+            mode: 'insensitive'
+          }
+        }
+      });
+    }
 
     if (!allocatedPrice) {
       return ApiResponse.error(res, "Allocated price not found for this designation", 404);
@@ -73,7 +113,7 @@ exports.getByDesignation = async (req, res) => {
 
     return ApiResponse.ok(res, "Allocated price fetched", allocatedPrice);
   } catch (error) {
-    console.error('Error fetching allocated price by designation:', error);
+    console.error('Error fetching allocated price by designation code:', error);
     return ApiResponse.error(res, "Failed to fetch allocated price");
   }
 };
@@ -84,7 +124,7 @@ exports.getByDesignation = async (req, res) => {
  */
 exports.create = async (req, res) => {
   try {
-    const { designation, dailyBata, nightOut } = req.body;
+    const { designation, dailyBata, nightOut, nightOutReturn, fuel } = req.body;
 
     if (!designation) {
       return ApiResponse.error(res, "Designation is required", 400);
@@ -108,7 +148,9 @@ exports.create = async (req, res) => {
       data: {
         designation: designation, // Keep original case (full name)
         dailyBata: dailyBata ? parseFloat(dailyBata) : null,
-        nightOut: nightOut ? parseFloat(nightOut) : null
+        nightOut: nightOut ? parseFloat(nightOut) : null,
+        nightOutReturn: nightOutReturn ? parseFloat(nightOutReturn) : null,
+        fuel: fuel ? parseFloat(fuel) : null
       }
     });
 
@@ -147,7 +189,7 @@ exports.getOne = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { designation, dailyBata, nightOut } = req.body;
+    const { designation, dailyBata, nightOut, nightOutReturn, fuel } = req.body;
 
     // Check if exists
     const existing = await prisma.allocatedPrice.findUnique({
@@ -172,6 +214,8 @@ exports.update = async (req, res) => {
     if (designation) updateData.designation = designation; // Keep original case (full name)
     if (dailyBata !== undefined) updateData.dailyBata = dailyBata ? parseFloat(dailyBata) : null;
     if (nightOut !== undefined) updateData.nightOut = nightOut ? parseFloat(nightOut) : null;
+    if (nightOutReturn !== undefined) updateData.nightOutReturn = nightOutReturn ? parseFloat(nightOutReturn) : null;
+    if (fuel !== undefined) updateData.fuel = fuel ? parseFloat(fuel) : null;
 
     const allocatedPrice = await prisma.allocatedPrice.update({
       where: { id: parseInt(id) },

@@ -196,3 +196,8 @@ export async function getAllocatedPriceByDesignation(designation) {
   const response = await api.get(`/admin/allocated-prices/by-designation/${encodeURIComponent(designation)}`);
   return response.data;
 }
+
+export async function getAllocatedPriceByDesignationCode(designationCode) {
+  const response = await api.get(`/admin/allocated-prices/by-designation-code/${encodeURIComponent(designationCode)}`);
+  return response.data;
+}

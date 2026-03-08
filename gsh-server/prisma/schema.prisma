@@ -163,6 +163,7 @@ model chemist {
   purchasing_officer_name    String?
   purchasing_officer_birthday DateTime?
   contact_number             String?
+  town                       String?
   date_added                 DateTime? @default(now())
   updated_at                 DateTime? @updatedAt
 
@@ -350,6 +351,8 @@ model allocatedPrice {
   designation String    // e.g., "MR", "Territory Manager", "Product Manager"
   dailyBata   Float?    // Daily bata amount
   nightOut    Float?    // Night out allowance amount
+  nightOutReturn Float? // Night out return allowance amount
+  fuel        Float?    // Fuel (1L) amount
   dateAdded   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
 

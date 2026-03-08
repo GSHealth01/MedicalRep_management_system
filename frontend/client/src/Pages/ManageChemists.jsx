@@ -10,6 +10,7 @@ function EditChemistModal({ chemist, onClose, onSave }) {
     chemist_code: chemist?.chemist_code || "",
     name: chemist?.name || "",
     distributor_code: chemist?.distributor_code || "",
+    town: chemist?.town || "",
     address_owner_name: chemist?.address_owner_name || "",
     address_owner_birthday: chemist?.address_owner_birthday
       ? new Date(chemist.address_owner_birthday).toISOString().slice(0, 10)
@@ -109,6 +110,18 @@ function EditChemistModal({ chemist, onClose, onSave }) {
             {errorDistributors && (
               <p className="text-sm text-red-600 mt-1">{errorDistributors}</p>
             )}
+          </div>
+
+          {/* Town */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Town</label>
+            <input
+              type="text"
+              name="town"
+              value={formData.town}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
           </div>
 
           {/* Contact Number */}
@@ -336,6 +349,7 @@ export default function ManageChemists() {
                 <tr>
                   <th className="py-2 px-4 text-center">Code</th>
                   <th className="py-2 px-4 text-center">Name</th>
+                  <th className="py-2 px-4 text-center">Town</th>
                   <th className="py-2 px-4 text-center">Distributor</th>
                   <th className="py-2 px-4 text-center">Contact</th>
                   <th className="py-2 px-4 text-center">Address Owner</th>
@@ -358,6 +372,7 @@ export default function ManageChemists() {
                     <tr key={chem.id} className="border-b hover:bg-gray-50 text-center">
                       <td className="py-2 px-4 font-medium">{chem.chemist_code}</td>
                       <td className="py-2 px-4">{chem.name}</td>
+                      <td className="py-2 px-4">{chem.town || "-"}</td>
                       <td className="py-2 px-4">
                         {chem.distributor?.name || chem.distributor_code || "-"}
                       </td>

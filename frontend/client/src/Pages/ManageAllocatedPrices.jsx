@@ -45,7 +45,9 @@ function AllocatedPriceModal({ allocatedPrice, availableDesignations, onClose, o
   const [formData, setFormData] = useState({
     designation: allocatedPrice?.designation || "",
     dailyBata: allocatedPrice?.dailyBata || "",
-    nightOut: allocatedPrice?.nightOut || ""
+    nightOut: allocatedPrice?.nightOut || "",
+    nightOutReturn: allocatedPrice?.nightOutReturn || "",
+    fuel: allocatedPrice?.fuel || ""
   });
   
   const [loading, setLoading] = useState(false);
@@ -62,7 +64,9 @@ function AllocatedPriceModal({ allocatedPrice, availableDesignations, onClose, o
       await onSave({
         designation: formData.designation,
         dailyBata: formData.dailyBata ? parseFloat(formData.dailyBata) : null,
-        nightOut: formData.nightOut ? parseFloat(formData.nightOut) : null
+        nightOut: formData.nightOut ? parseFloat(formData.nightOut) : null,
+        nightOutReturn: formData.nightOutReturn ? parseFloat(formData.nightOutReturn) : null,
+        fuel: formData.fuel ? parseFloat(formData.fuel) : null
       });
       onClose();
     } catch (error) {
@@ -139,6 +143,40 @@ function AllocatedPriceModal({ allocatedPrice, availableDesignations, onClose, o
               step="0.01"
               min="0"
               placeholder="Enter night out amount"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          {/* Night Out Return */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Night Out Return (LKR)
+            </label>
+            <input
+              type="number"
+              name="nightOutReturn"
+              value={formData.nightOutReturn}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              placeholder="Enter night out return amount"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          {/* Fuel */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fuel (1L) (LKR)
+            </label>
+            <input
+              type="number"
+              name="fuel"
+              value={formData.fuel}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              placeholder="Enter fuel amount per liter"
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             />
           </div>
@@ -345,6 +383,12 @@ export default function ManageAllocatedPrices() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Night Out (LKR)
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Night Out Return (LKR)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fuel (1L) (LKR)
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -361,6 +405,12 @@ export default function ManageAllocatedPrices() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {price.nightOut ? `LKR ${parseFloat(price.nightOut).toFixed(2)}` : "Nothing added"}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {price.nightOutReturn ? `LKR ${parseFloat(price.nightOutReturn).toFixed(2)}` : "Nothing added"}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {price.fuel ? `LKR ${parseFloat(price.fuel).toFixed(2)}` : "Nothing added"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button

@@ -5,6 +5,20 @@ const AppError = require('../../utils/AppError');
 // const pdf = require('html-pdf'); // Commented out for now
 const ExcelJS = require('exceljs');
 
+// Helper function to check if a date is a Sunday
+const isSunday = (dateStr) => {
+  if (!dateStr) return false;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getDay() === 0; // 0 = Sunday
+};
+
+// Helper function to filter out Sunday entries
+const filterOutSundays = (entries) => {
+  if (!Array.isArray(entries)) return [];
+  return entries.filter(entry => !isSunday(entry.date));
+};
+
 // Create Itinerary
 const createItinerary = asyncHandler(async (req, res) => {
   const { repName, distributor, town, month, itinerary, status } = req.body;
@@ -43,6 +57,9 @@ const createItinerary = asyncHandler(async (req, res) => {
     throw new AppError(400, 'At least one valid itinerary entry is required with date, area, town, doctorCalls, chemistCalls, and mileage');
   }
   
+  // Filter out Sunday entries (server-side validation)
+  const filteredEntries = filterOutSundays(validEntries);
+  
   // Create itinerary with entries
   const newItinerary = await prisma.itinerary.create({
     data: {
@@ -53,7 +70,7 @@ const createItinerary = asyncHandler(async (req, res) => {
       status: status || "pending",
       user_id: userId,
       entries: {
-        create: itinerary.map(entry => ({
+        create: filteredEntries.map(entry => ({
           date: entry.date,
           dayNo: parseInt(entry.dayNo) || 0,
           area: entry.area || null,
@@ -155,10 +172,17 @@ const getItinerary = asyncHandler(async (req, res) => {
   const { id } = req.params;
   console.log('Getting itinerary id:', id);
   let userId = req.user.id;
+  console.log('Current userId:', userId, 'User designation:', req.user.designation);
   if (req.query.employeeId) {
     userId = parseInt(req.query.employeeId);
     console.log('Switched to employeeId:', userId);
   }
+
+  // Debug: Check if itinerary exists at all (bypass user filter)
+  const anyItinerary = await prisma.itinerary.findUnique({
+    where: { id: parseInt(id) }
+  });
+  console.log('Itinerary exists (any):', anyItinerary ? 'YES' : 'NO', 'Itinerary user_id:', anyItinerary?.user_id);
 
   const itinerary = await prisma.itinerary.findFirst({
     where: {
@@ -219,6 +243,9 @@ const updateItinerary = asyncHandler(async (req, res) => {
     throw new AppError(400, 'At least one valid itinerary entry is required with date, area, town, doctorCalls, chemistCalls, and mileage');
   }
   
+  // Filter out Sunday entries (server-side validation)
+  const filteredEntries = filterOutSundays(validEntries);
+  
   // Delete existing entries and create new ones
   await prisma.itineraryEntry.deleteMany({
     where: { itinerary_id: parseInt(id) }
@@ -233,7 +260,7 @@ const updateItinerary = asyncHandler(async (req, res) => {
       month,
       status: status || "pending",
       entries: {
-        create: itinerary.map(entry => ({
+        create: filteredEntries.map(entry => ({
           date: entry.date,
           dayNo: parseInt(entry.dayNo) || 0,
           area: entry.area || null,

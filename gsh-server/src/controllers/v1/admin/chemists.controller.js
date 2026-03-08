@@ -52,7 +52,7 @@ exports.list = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const {
-      chemist_code, name, distributor_code,
+      chemist_code, name, distributor_code, town,
       address_owner_name, address_owner_birthday,
       purchasing_officer_name, purchasing_officer_birthday,
       contact_number
@@ -76,6 +76,7 @@ exports.create = async (req, res) => {
         chemist_code,
         name,
         distributor_code,
+        town,
         address_owner_name,
         address_owner_birthday: address_owner_birthday ? new Date(address_owner_birthday + 'T00:00:00.000Z') : undefined,
         purchasing_officer_name,
