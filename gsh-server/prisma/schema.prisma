@@ -352,7 +352,7 @@ model allocatedPrice {
   dailyBata   Float?    // Daily bata amount
   nightOut    Float?    // Night out allowance amount
   nightOutReturn Float? // Night out return allowance amount
-  fuel        Float?    // Fuel (1L) amount
+  monthlyFuel Float?    // Monthly fuel allocation amount
   dateAdded   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
 

@@ -376,6 +376,7 @@ export default function RepdetailsReport() {
     closingMileage: '',
     privateMileage: '',
     fuelPumped: '',
+    fuelRate: '',
     cost: ''
   });
 
@@ -940,9 +941,9 @@ export default function RepdetailsReport() {
     if (expenses.bata) total += parseFloat(prices.dailyBata || 0);
     if (expenses.nightOut) total += parseFloat(prices.nightOut || 0);
     if (expenses.nightOutReturn) total += parseFloat(prices.nightOutReturn || 0);
-    // Fuel is calculated separately based on fuel pumped * price per liter
-    if (expenses.fuel && mileage.fuelPumped) {
-      const fuelCost = parseFloat(mileage.fuelPumped) * parseFloat(prices.fuel || 0);
+    // Fuel is calculated separately based on fuel pumped * fuel rate (user enters the rate)
+    if (expenses.fuel && mileage.fuelPumped && mileage.fuelRate) {
+      const fuelCost = parseFloat(mileage.fuelPumped) * parseFloat(mileage.fuelRate || 0);
       total += fuelCost;
     }
     total += parseFloat(otherBills.parking.amount || 0);
@@ -1001,8 +1002,8 @@ export default function RepdetailsReport() {
   // Handle fuel pumped change to auto-calculate cost
   const handleFuelPumpedChange = (value) => {
     const fuelPumped = parseFloat(value) || 0;
-    const fuelPricePerLiter = allocatedPrices?.fuel || 0;
-    const calculatedCost = fuelPumped * fuelPricePerLiter;
+    const fuelRate = parseFloat(mileage.fuelRate) || 0;
+    const calculatedCost = fuelPumped * fuelRate;
     
     setMileage(prev => ({
       ...prev,
@@ -1016,6 +1017,19 @@ export default function RepdetailsReport() {
     } else if (fuelPumped === 0 && expenses.fuel) {
       setExpenses(prev => ({ ...prev, fuel: false }));
     }
+  };
+
+  // Handle fuel rate change to auto-calculate cost
+  const handleFuelRateChange = (value) => {
+    const fuelPumped = parseFloat(mileage.fuelPumped) || 0;
+    const fuelRate = parseFloat(value) || 0;
+    const calculatedCost = fuelPumped * fuelRate;
+
+    setMileage(prev => ({
+      ...prev,
+      fuelRate: value,
+      cost: calculatedCost.toFixed(2)
+    }));
   };
 
   const handleSubmit = async () => {
@@ -1627,6 +1641,7 @@ export default function RepdetailsReport() {
                 </div>
               ) },
               { label: "Fuel Pumped (L)", input: <input type="number" step="0.01" min="0" value={mileage.fuelPumped} onChange={(e) => handleFuelPumpedChange(e.target.value)} placeholder="Liters" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
+              { label: "Fuel Rate (Rs./L)", input: <input type="number" step="0.01" min="0" value={mileage.fuelRate} onChange={(e) => handleFuelRateChange(e.target.value)} placeholder="Rate per liter" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm" /> },
               { label: "Cost (Rs.)", input: <input type="text" value={mileage.cost} readOnly placeholder="Auto-calculated" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm bg-gray-100" /> },
               { label: "Fuel Bill", input: (
                 <div>

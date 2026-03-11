@@ -200,9 +200,9 @@ export default function RepDashboard() {
           actualMileage += Math.abs(closing - opening);
         }
 
-        // Fuel pumped
-        totalFuelPumped += parseFloat(dcr.mileage.fuelPumped) || 0;
-        totalFuelCost += parseFloat(dcr.mileage.cost) || 0;
+        // Fuel pumped and fuel cost from DCR mileage
+        totalFuelPumped += parseFloat(dcr.mileage?.fuelPumped) || 0;
+        totalFuelCost += parseFloat(dcr.mileage?.cost) || 0;
       }
 
       // Count bata and night out days
@@ -225,10 +225,13 @@ export default function RepDashboard() {
       : 0;
 
     // Calculate exceeded mileage (actual - scheduled, positive means exceeded)
-    const exceededMileage = actualMileage - scheduledMileage;
-    const fuelPricePerLiter = allocatedPrices?.fuel || 0;
-    // eslint-disable-next-line no-unused-vars
-    const exceededFuelCost = exceededMileage * fuelPricePerLiter;
+    // Show 0 if not exceeded (negative value)
+    const exceededMileage = Math.max(0, actualMileage - scheduledMileage);
+
+    // Calculate exceeded fuel cost = totalFuelCost - monthlyFuelAllocation
+    // Show 0 if not exceeded (negative value)
+    const monthlyFuelAllocation = allocatedPrices?.monthlyFuel || 0;
+    const exceededFuelCost = Math.max(0, totalFuelCost - monthlyFuelAllocation);
 
     // Calculate expenses based on designation
     const dailyBataAmount = allocatedPrices?.dailyBata || 0;
@@ -529,7 +532,7 @@ export default function RepDashboard() {
                     <p className="exceeded-label">Exceeded Fuel Cost</p>
                     <p className="exceeded-value">Rs. {((metrics.exceededFuelCost) || 0).toFixed(2)}</p>
                     <p className="exceeded-detail">
-                      ({(metrics.exceededMileage || 0).toFixed(1)} km × Rs. {allocatedPrices?.fuel || 0}/L)
+                      (Total Fuel Cost: Rs. {(metrics.totalFuelCost || 0).toFixed(2)} - Monthly Allocation: Rs. {(allocatedPrices?.monthlyFuel || 0)})
                     </p>
                   </div>
                 </div>

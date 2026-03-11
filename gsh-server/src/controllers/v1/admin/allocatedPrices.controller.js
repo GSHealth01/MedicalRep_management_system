@@ -124,7 +124,7 @@ exports.getByDesignationCode = async (req, res) => {
  */
 exports.create = async (req, res) => {
   try {
-    const { designation, dailyBata, nightOut, nightOutReturn, fuel } = req.body;
+    const { designation, dailyBata, nightOut, nightOutReturn, monthlyFuel } = req.body;
 
     if (!designation) {
       return ApiResponse.error(res, "Designation is required", 400);
@@ -150,7 +150,7 @@ exports.create = async (req, res) => {
         dailyBata: dailyBata ? parseFloat(dailyBata) : null,
         nightOut: nightOut ? parseFloat(nightOut) : null,
         nightOutReturn: nightOutReturn ? parseFloat(nightOutReturn) : null,
-        fuel: fuel ? parseFloat(fuel) : null
+        monthlyFuel: monthlyFuel ? parseFloat(monthlyFuel) : null
       }
     });
 
@@ -189,7 +189,7 @@ exports.getOne = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { designation, dailyBata, nightOut, nightOutReturn, fuel } = req.body;
+    const { designation, dailyBata, nightOut, nightOutReturn, monthlyFuel } = req.body;
 
     // Check if exists
     const existing = await prisma.allocatedPrice.findUnique({
@@ -215,7 +215,7 @@ exports.update = async (req, res) => {
     if (dailyBata !== undefined) updateData.dailyBata = dailyBata ? parseFloat(dailyBata) : null;
     if (nightOut !== undefined) updateData.nightOut = nightOut ? parseFloat(nightOut) : null;
     if (nightOutReturn !== undefined) updateData.nightOutReturn = nightOutReturn ? parseFloat(nightOutReturn) : null;
-    if (fuel !== undefined) updateData.fuel = fuel ? parseFloat(fuel) : null;
+    if (monthlyFuel !== undefined) updateData.monthlyFuel = monthlyFuel ? parseFloat(monthlyFuel) : null;
 
     const allocatedPrice = await prisma.allocatedPrice.update({
       where: { id: parseInt(id) },
