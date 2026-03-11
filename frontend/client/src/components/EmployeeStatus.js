@@ -237,10 +237,7 @@ export default function EmployeeStatus() {
         <img src={logo} alt="GSH Logo" className="logo" />
         <nav className="sidebar-nav">
           <ul>
-            <li onClick={() => navigate(user?.designation === 'OM' ? '/om-dashboard' : '/rep-dashboard')}>Overview</li>
-            {user?.designation === 'OM' && (
-              <li onClick={() => navigate('/om-dashboard')}>Employee Overview</li>
-            )}
+            <li onClick={() => navigate('/rep-dashboard')}>Overview</li>
             <li onClick={() => navigate('/itineraries')}>Itinerary</li>
             <li onClick={() => navigate('/dcr-reports')}>Reports</li>
           </ul>
@@ -262,7 +259,7 @@ export default function EmployeeStatus() {
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
               <button
-                onClick={() => navigate('/om-dashboard')}
+                onClick={() => navigate('/rep-dashboard')}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

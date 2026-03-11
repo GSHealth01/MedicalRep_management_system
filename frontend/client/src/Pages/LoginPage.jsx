@@ -32,7 +32,7 @@ export default function LoginPage() {
       if (designation === 'ADMIN') {
         navigate('/admin/portal', { replace: true });
       } else if (designation === 'OM') {
-        navigate('/om-dashboard', { replace: true });
+        navigate('/rep-dashboard', { replace: true });
       } else {
         // Regular users → rep dashboard
         navigate('/rep-dashboard', { replace: true });
