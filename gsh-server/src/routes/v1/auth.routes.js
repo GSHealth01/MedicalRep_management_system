@@ -115,121 +115,61 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-// Step 1: Check if staff number exists and send reset code to email
-router.post('/forgot-password/step1', async (req, res) => {
-  const { empNo } = req.body;
-  console.log('Forgot password step1 called with empNo:', empNo);
-
-  if (!empNo) {
-    return res.status(400).json({ msg: 'Employee Number is required' });
+// Step 1: Check if email exists
+router.post('/forgot-password/check-email', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ msg: 'Email is required' });
   }
 
   try {
-    // Find user by employee number
     const user = await prisma.user.findUnique({
-      where: { emp_no: empNo }
+      where: { email }
     });
 
     if (!user) {
-      return res.status(404).json({ msg: 'Employee Number not found' });
+      return res.status(404).json({ msg: 'Email not found' });
     }
 
-    // Generate 4-digit reset code
-    const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
-
-    // Create email transporter
-    const transporter = nodemailer.createTransport({
-      host: config.EMAIL_HOST,
-      port: config.EMAIL_PORT,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: config.EMAIL_USER,
-        pass: config.EMAIL_PASS,
-      },
-    });
-
-    // Send email
-    try {
-      await transporter.sendMail({
-        from: config.EMAIL_USER,
-        to: user.email,
-        subject: 'Password Reset Code',
-        text: `Your password reset code is: ${resetCode}`,
-        html: `<p>Your password reset code is: <strong>${resetCode}</strong></p>`,
-      });
-      console.log(`Reset code sent to ${user.email}: ${resetCode}`);
-    } catch (emailError) {
-      console.error('Failed to send email:', emailError);
-      return res.status(500).json({ msg: 'Failed to send reset code. Please try again.' });
-    }
-
-    // Store reset code temporarily (in production, use proper storage)
-    // For now, we'll store it in the user record temporarily
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { security_answer: resetCode } 
-    });
-
-    res.status(200).json({
-      msg: 'Reset code sent to your email',
-      userId: user.id
-    });
-
+    res.status(200).json({ msg: 'Email verified' });
   } catch (error) {
-    console.error('Forgot password step 1 error:', error);
-    return res.status(500).json({ msg: 'Internal server error' });
+    console.error('Check email error:', error);
+    res.status(500).json({ msg: 'Internal server error' });
   }
 });
 
-// Step 2: Verify reset code
-router.post('/forgot-password/step2', async (req, res) => {
-  const { userId, code } = req.body;
-
-  if (!userId || !code) {
-    return res.status(400).json({ msg: 'User ID and reset code are required' });
+// Step 2: Verify employee number for the given email
+router.post('/forgot-password/verify-employee', async (req, res) => {
+  const { email, empNo } = req.body;
+  if (!email || !empNo) {
+    return res.status(400).json({ msg: 'Email and Employee Number are required' });
   }
 
   try {
-    // Find user by ID
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(userId) }
+      where: { email }
     });
 
     if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
+      return res.status(404).json({ msg: 'Email not found' });
     }
 
-    if (!user.security_answer) {
-      return res.status(400).json({ msg: 'No reset code found. Please request a new one.' });
+    if (user.emp_no !== empNo) {
+      return res.status(400).json({ msg: 'Invalid Employee Number for this email' });
     }
 
-    // Verify the code (stored unhashed for simplicity)
-    if (code !== user.security_answer) {
-      return res.status(400).json({ msg: 'Invalid reset code. Please check and try again.' });
-    }
-
-    // Clear the reset code after verification
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { security_answer: null }
-    });
-
-    res.status(200).json({
-      msg: 'Reset code verified successfully',
-      userId: user.id
-    });
-
+    res.status(200).json({ msg: 'Employee verified' });
   } catch (error) {
-    console.error('Forgot password step 2 error:', error);
-    return res.status(500).json({ msg: 'Internal server error' });
+    console.error('Verify employee error:', error);
+    res.status(500).json({ msg: 'Internal server error' });
   }
 });
 
-// Step 3: Reset password
-router.post('/forgot-password/step3', async (req, res) => {
-  const { userId, newPassword, confirmPassword } = req.body;
+// Step 3: Reset password with validation
+router.post('/forgot-password/reset', async (req, res) => {
+  const { email, empNo, newPassword, confirmPassword } = req.body;
 
-  if (!userId || !newPassword || !confirmPassword) {
+  if (!email || !empNo || !newPassword || !confirmPassword) {
     return res.status(400).json({ msg: 'All fields are required' });
   }
 
@@ -242,31 +182,30 @@ router.post('/forgot-password/step3', async (req, res) => {
   }
 
   try {
-    // Find user by ID
+    // Validate both email and employee number
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(userId) }
+      where: { email }
     });
 
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    if (user.emp_no !== empNo) {
+      return res.status(400).json({ msg: 'Employee number does not match for this email' });
+    }
 
-    // Update user password
+    // Hash and update password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
       where: { id: user.id },
       data: { password: hashedPassword }
     });
 
-    res.status(200).json({
-      msg: 'Password reset successful. You can now log in with your new password.'
-    });
-
+    res.status(200).json({ msg: 'Password reset successful' });
   } catch (error) {
-    console.error('Forgot password step 3 error:', error);
-    return res.status(500).json({ msg: 'Internal server error' });
+    console.error('Reset password error:', error);
+    res.status(500).json({ msg: 'Internal server error' });
   }
 });
 

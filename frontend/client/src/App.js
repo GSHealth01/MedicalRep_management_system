@@ -19,8 +19,7 @@ import ItineraryForm    from './components/ItineraryForm';
 import ItineraryList    from './Pages/ItineraryList';
 
 //Forgot Password imports
-import ForgotPasswordStep1 from './Pages/ForgotPasswordStep1';
-import ForgotPasswordStep3 from './Pages/ForgotPasswordStep3';
+import ForgotPassword from './Pages/ForgotPassword';
 
 //Summary Components
 import StockingSummary    from './components/SummaryComponent/StockingSummary';
@@ -52,8 +51,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/forgot-password/step1" element={<ForgotPasswordStep1 />} />
-        <Route path="/forgot-password/step3" element={<ForgotPasswordStep3 />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/rep-dashboard" element={<RepDashboard />} />
         <Route path="/itineraries" element={<ProtectedUser><ItineraryList /></ProtectedUser>} />
         <Route path="/itineraryForm/:id?/:mode?" element={<ProtectedUser><ItineraryForm /></ProtectedUser>} />

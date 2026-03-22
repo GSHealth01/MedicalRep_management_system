@@ -129,29 +129,30 @@ export function setAuthToken(token) {
   }
 }
 
-// Forgot password functions (3-step flow)
-export async function forgotPasswordStep1(empNo) {
+// Forgot password functions
+export async function forgotPasswordCheckEmail(email) {
   try {
-    const response = await axios.post(`${base}/auth/forgot-password/step1`, { empNo });
+    const response = await axios.post(`${base}/auth/forgot-password/check-email`, { email });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 }
 
-export async function forgotPasswordStep2(userId, code) {
+export async function forgotPasswordVerifyEmployee(email, empNo) {
   try {
-    const response = await axios.post(`${base}/auth/forgot-password/step2`, { userId, code });
+    const response = await axios.post(`${base}/auth/forgot-password/verify-employee`, { email, empNo });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 }
 
-export async function forgotPasswordStep3(userId, newPassword, confirmPassword) {
+export async function forgotPasswordReset(email, empNo, newPassword, confirmPassword) {
   try {
-    const response = await axios.post(`${base}/auth/forgot-password/step3`, {
-      userId,
+    const response = await axios.post(`${base}/auth/forgot-password/reset`, {
+      email,
+      empNo,
       newPassword,
       confirmPassword
     });
