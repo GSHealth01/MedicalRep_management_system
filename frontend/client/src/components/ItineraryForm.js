@@ -3,6 +3,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import logo from '../assets/gsh.logo.png';
+import { FaBars, FaTimes, FaSignOutAlt, FaUsers } from 'react-icons/fa';
+import './RepDashboard.css';
 
 export default function ItineraryForm() {
   const navigate = useNavigate();
@@ -11,7 +14,13 @@ export default function ItineraryForm() {
   const employeeId = searchParams.get('employeeId');
   const isViewMode = mode === 'view';
   const isEditMode = mode === 'edit';
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
   
   // Night out options
   const NIGHT_OUT_OPTIONS = ["", "Night Out", "Daily Bata", "Half Night Out"];
@@ -361,7 +370,56 @@ export default function ItineraryForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
+    <div className="dashboard-wrapper">
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
+        <button 
+          className="toggle-btn"
+          onClick={() => setSidebarOpen(o => !o)}
+        >
+          {sidebarOpen ? <FaTimes /> : <FaBars />}
+        </button>
+        <img src={logo} alt="GSH Logo" className="logo" />
+        <nav className="sidebar-nav">
+          <ul>
+            <li onClick={() => {
+              const d = user?.designation;
+              if (d === 'OM') navigate('/om-dashboard');
+              else if (['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(d)) navigate('/team-dashboard');
+              else navigate('/rep-dashboard');
+            }}>Overview</li>
+            {user?.designation === 'OM' && (
+              <li 
+                onClick={() => navigate('/om-dashboard', { state: { tab: 'Employee Overview' } })}
+              >
+                Employee Overview
+              </li>
+            )}
+            {['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(user?.designation) && (
+              <li 
+                onClick={() => navigate('/team-dashboard', { state: { tab: 'Employee Overview' } })}
+              >
+                Team Overview
+              </li>
+            )}
+            <li className="active" onClick={() => navigate('/itineraries')}>Itinerary</li>
+            <li onClick={() => navigate('/dcr-reports')}>Reports</li>
+          </ul>
+        </nav>
+        <div className="sidebar-footer">
+          <button 
+            className="logout-btn-sidebar"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <FaSignOutAlt />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="main-content">
+        <div className="min-h-screen bg-gray-100 py-8 px-4">
       <form
         onSubmit={handleSubmit}
         className="bg-white rounded-lg shadow-lg w-full max-w-7xl mx-auto flex flex-col"
@@ -552,6 +610,8 @@ export default function ItineraryForm() {
           </div>
         </div>
       </form>
+    </div>
+    </div>
     </div>
   );
 }

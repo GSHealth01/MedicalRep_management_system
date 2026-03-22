@@ -1,8 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api, getAllocatedPriceByDesignationCode } from "../services/api";
+import logo from '../assets/gsh.logo.png';
+import { FaBars, FaTimes, FaSignOutAlt, FaUsers } from 'react-icons/fa';
+import './RepDashboard.css';
 
 // Doctors will be fetched from API
 
@@ -242,12 +244,18 @@ const LiveSummaryTable = ({ doctorTableData, chemistTableData, productCategories
 
 // --- Main Component ---
 export default function RepdetailsReport() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [step, setStep] = useState(1);
   const [isEdit, setIsEdit] = useState(false);
   const editId = location.state?.editId;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [productCategories, setProductCategories] = useState({});
@@ -1750,7 +1758,56 @@ export default function RepdetailsReport() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-red-100 to-red-50 py-8 px-4 relative">
+    <div className="dashboard-wrapper">
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
+        <button 
+          className="toggle-btn"
+          onClick={() => setSidebarOpen(o => !o)}
+        >
+          {sidebarOpen ? <FaTimes /> : <FaBars />}
+        </button>
+        <img src={logo} alt="GSH Logo" className="logo" />
+        <nav className="sidebar-nav">
+          <ul>
+            <li onClick={() => {
+              const d = user?.designation;
+              if (d === 'OM') navigate('/om-dashboard');
+              else if (['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(d)) navigate('/team-dashboard');
+              else navigate('/rep-dashboard');
+            }}>Overview</li>
+            {user?.designation === 'OM' && (
+              <li 
+                onClick={() => navigate('/om-dashboard', { state: { tab: 'Employee Overview' } })}
+              >
+                Employee Overview
+              </li>
+            )}
+            {['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(user?.designation) && (
+              <li 
+                onClick={() => navigate('/team-dashboard', { state: { tab: 'Employee Overview' } })}
+              >
+                Team Overview
+              </li>
+            )}
+            <li onClick={() => navigate('/itineraries')}>Itinerary</li>
+            <li className="active" onClick={() => navigate('/dcr-reports')}>Reports</li>
+          </ul>
+        </nav>
+        <div className="sidebar-footer">
+          <button 
+            className="logout-btn-sidebar"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <FaSignOutAlt />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="main-content">
+        <div className="min-h-screen bg-gradient-to-br from-red-50 via-red-100 to-red-50 py-8 px-4 relative">
       {step >= 2 && (
         <div
           className="absolute inset-0 opacity-5 pointer-events-none"
@@ -1767,6 +1824,7 @@ export default function RepdetailsReport() {
         {step === 3 && renderStep3()}
       </div>
     </div>
+  </div>
+  </div>
   );
 }
-              {/* Joint Visit */}

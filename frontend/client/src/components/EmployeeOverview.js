@@ -7,8 +7,14 @@ export default function EmployeeOverview() {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('name'); // default sort by name
+  const [sortBy, setSortBy] = useState('designation'); // default sort by designation
   const [sortOrder, setSortOrder] = useState('asc');
+
+  // Hierarchy rank: lower number = higher power
+  const HIERARCHY = {
+    'OM': 1, 'SM': 2, 'MGR': 3, 'PM': 4, 'TM': 5,
+    'PPES': 6, 'PPEJ': 7, 'FC': 8, 'MR': 9
+  };
 
   // Map abbreviations to full designations
   const designationMap = {
@@ -38,41 +44,25 @@ export default function EmployeeOverview() {
     fetchEmployees();
   }, []);
 
-  const sortedEmployees = useMemo(() => {
-    return [...employees].sort((a, b) => {
-      let aValue, bValue;
-      if (sortBy === 'range') {
-        aValue = a.sector?.range || '';
-        bValue = b.sector?.range || '';
-      } else if (sortBy === 'agency') {
-        aValue = a.sector?.agency || '';
-        bValue = b.sector?.agency || '';
-      } else {
-        aValue = a.name || '';
-        bValue = b.name || '';
-      }
-
-      if (sortOrder === 'asc') {
-        return aValue.localeCompare(bValue);
-      } else {
-        return bValue.localeCompare(aValue);
-      }
+  // Group employees by designation
+  const groupedEmployees = useMemo(() => {
+    const groups = {};
+    employees.forEach(emp => {
+      const des = emp.designation || 'OTHER';
+      if (!groups[des]) groups[des] = [];
+      groups[des].push(emp);
     });
-  }, [employees, sortBy, sortOrder]);
 
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
-    }
-  };
+    // Sort individuals within each group by name
+    Object.keys(groups).forEach(des => {
+      groups[des].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    });
 
-  const getSortIcon = (field) => {
-    if (sortBy !== field) return <FaSort className="text-gray-400" />;
-    return sortOrder === 'asc' ? <FaSortUp className="text-blue-500" /> : <FaSortDown className="text-blue-500" />;
-  };
+    return groups;
+  }, [employees]);
+
+  // The order in which to show the groups
+  const groupOrder = ['OM', 'SM', 'MGR', 'PM', 'TM', 'PPES', 'PPEJ', 'FC', 'MR'];
 
   if (loading) {
     return (
@@ -92,7 +82,7 @@ export default function EmployeeOverview() {
               <FaUser className="mr-2" />
               Employee Overview
             </h2>
-            <p className="text-blue-100">Manage and view employee details</p>
+            <p className="text-blue-100">Manage and view employee details grouped by designation</p>
           </div>
 
           <div className="overflow-x-auto">
@@ -105,23 +95,11 @@ export default function EmployeeOverview() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Designation
                   </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-                    onClick={() => handleSort('range')}
-                  >
-                    <div className="flex items-center">
-                      Range
-                      {getSortIcon('range')}
-                    </div>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Range
                   </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-                    onClick={() => handleSort('agency')}
-                  >
-                    <div className="flex items-center">
-                      Agency
-                      {getSortIcon('agency')}
-                    </div>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Agency
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Team
@@ -129,48 +107,64 @@ export default function EmployeeOverview() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedEmployees.map(employee => (
-                  <tr
-                    key={employee.id}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors duration-200"
-                    onClick={() => navigate(`/employee-rep-dashboard/${employee.id}`)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
-                            <span className="text-white font-semibold text-sm">
-                              {employee.name?.charAt(0).toUpperCase()}
+                {groupOrder.map(designationCode => {
+                  const group = groupedEmployees[designationCode];
+                  if (!group || group.length === 0) return null;
+
+                  return (
+                    <React.Fragment key={designationCode}>
+                      {/* Designation Header Row */}
+                      <tr className="bg-gray-50 border-t-2 border-gray-100">
+                        <td colSpan="5" className="px-6 py-3 text-sm font-bold text-blue-800">
+                          {designationMap[designationCode] || designationCode} ({group.length})
+                        </td>
+                      </tr>
+                      {/* Individual Employee Rows */}
+                      {group.map(employee => (
+                        <tr
+                          key={employee.id}
+                          className="hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+                          onClick={() => navigate(`/employee-rep-dashboard/${employee.id}`)}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
+                                  <span className="text-white font-semibold text-sm">
+                                    {employee.name?.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">{employee.name}</div>
+                                <div className="text-sm text-gray-500">ID: {employee.id}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              {designationMap[employee.designation] || employee.designation}
                             </span>
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                          <div className="text-sm text-gray-500">ID: {employee.id}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        {designationMap[employee.designation] || employee.designation}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employee.sector?.range || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employee.sector?.agency || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employee.team?.name || 'N/A'}
-                    </td>
-                  </tr>
-                ))}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {employee.sector?.range || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {employee.sector?.agency || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {employee.team?.name || 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
-          {sortedEmployees.length === 0 && (
+          {Object.keys(groupedEmployees).length === 0 && (
             <div className="text-center py-12">
               <FaUser className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No employees found</h3>

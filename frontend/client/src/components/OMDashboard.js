@@ -320,9 +320,7 @@ export default function OMDashboard() {
             <li
               className={activeTab === 'Employee Overview' ? 'active' : ''}
               onClick={() => setActiveTab('Employee Overview')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              <FaUsers style={{ fontSize: '0.9rem' }} />
               Employee Overview
             </li>
             <li onClick={() => navigate('/itineraries')}>Itinerary</li>

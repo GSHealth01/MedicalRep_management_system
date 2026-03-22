@@ -424,16 +424,65 @@ export default function DCRReportsDashboard() {
 
   if (selectedDCR) {
     return (
-      <div className="w-full p-6">
-        <div className="flex items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">DCR Report Details</h1>
+      <div className="dashboard-wrapper">
+        {/* Sidebar */}
+        <aside className={`sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
           <button
-            onClick={() => setSelectedDCR(null)}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            className="toggle-btn"
+            onClick={() => setSidebarOpen(o => !o)}
           >
-            Back to Dashboard
+            {sidebarOpen ? <FaTimes/> : <FaBars/>}
           </button>
-        </div>
+          <img src={logo} alt="GSH Logo" className="logo" />
+          <nav className="sidebar-nav">
+            <ul>
+              <li onClick={() => {
+                const d = user?.designation;
+                if (d === 'OM') navigate('/om-dashboard');
+                else if (['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(d)) navigate('/team-dashboard');
+                else navigate('/rep-dashboard');
+              }}>Overview</li>
+              {user?.designation === 'OM' && (
+                <li
+                  onClick={() => navigate('/om-dashboard', { state: { tab: 'Employee Overview' } })}
+                >
+                  Employee Overview
+                </li>
+              )}
+              {['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(user?.designation) && (
+                <li
+                  onClick={() => navigate('/team-dashboard', { state: { tab: 'Employee Overview' } })}
+                >
+                  Team Overview
+                </li>
+              )}
+              <li onClick={() => navigate('/itineraries')}>Itinerary</li>
+              <li className="active">Reports</li>
+            </ul>
+          </nav>
+          <div className="sidebar-footer">
+            <button
+              className="logout-btn-sidebar"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <FaSignOutAlt />
+              <span>Logout</span>
+            </button>
+          </div>
+        </aside>
+
+        <div className="main-content">
+          <div className="w-full p-6">
+            <div className="flex items-center mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">DCR Report Details</h1>
+              <button
+                onClick={() => setSelectedDCR(null)}
+                className="ml-auto px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                Back to Reports
+              </button>
+            </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
           {/* Basic Info */}
@@ -595,7 +644,6 @@ export default function DCRReportsDashboard() {
           )}
 
           {/* Totals */}
-          {/* Transform productCategories to products format for chemist calculations */}
           {(() => {
             const productsList = Object.keys(productCategories).map(catName => ({
               name: catName,
@@ -609,25 +657,27 @@ export default function DCRReportsDashboard() {
               : 0;
             return (
               <div className="mt-6 space-y-4">
-                <div className="p-4 bg-blue-600 text-white rounded-lg flex justify-between items-center">
-                  <span className="text-xl font-bold">Total stocking orders :</span>
-                  <span className="text-2xl font-bold">Rs. {generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0).toFixed(2)}</span>
+                <div className="p-4 bg-blue-600 text-white rounded-lg flex justify-between items-center text-sm sm:text-base">
+                  <span className="font-bold">Total stocking orders :</span>
+                  <span className="font-bold">Rs. {generateSummaryData(selectedDCR.callReport || [], productCategories).reduce((acc, doc) => acc + doc.total, 0).toFixed(2)}</span>
                 </div>
-                <div className="p-4 bg-green-600 text-white rounded-lg flex justify-between items-center">
-                  <span className="text-xl font-bold">Total chemist orders:</span>
-                  <span className="text-2xl font-bold">Rs. {chemistTotal.toFixed(2)}</span>
+                <div className="p-4 bg-green-600 text-white rounded-lg flex justify-between items-center text-sm sm:text-base">
+                  <span className="font-bold">Total chemist orders:</span>
+                  <span className="font-bold">Rs. {chemistTotal.toFixed(2)}</span>
                 </div>
-                <div className="p-4 bg-red-600 text-white rounded-lg flex justify-between items-center">
-                  <span className="text-xl font-bold">Expenses Total:</span>
-                  <span className="text-2xl font-bold">Rs. {calculateExpensesTotal(selectedDCR).toFixed(2)}</span>
+                <div className="p-4 bg-red-600 text-white rounded-lg flex justify-between items-center text-sm sm:text-base">
+                  <span className="font-bold">Expenses Total:</span>
+                  <span className="font-bold">Rs. {calculateExpensesTotal(selectedDCR).toFixed(2)}</span>
                 </div>
               </div>
             );
           })()}
         </div>
       </div>
-    );
-  }
+    </div>
+  </div>
+);
+}
 
   return (
     <div className="dashboard-wrapper">
@@ -651,18 +701,14 @@ export default function DCRReportsDashboard() {
             {user?.designation === 'OM' && (
               <li
                 onClick={() => navigate('/om-dashboard', { state: { tab: 'Employee Overview' } })}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <FaUsers style={{ fontSize: '0.9rem' }} />
                 Employee Overview
               </li>
             )}
             {['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(user?.designation) && (
               <li
                 onClick={() => navigate('/team-dashboard', { state: { tab: 'Employee Overview' } })}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <FaUsers style={{ fontSize: '0.9rem' }} />
                 Team Overview
               </li>
             )}

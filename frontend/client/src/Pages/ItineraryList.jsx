@@ -196,18 +196,14 @@ export default function ItineraryList() {
             {user?.designation === 'OM' && (
               <li
                 onClick={() => navigate('/om-dashboard', { state: { tab: 'Employee Overview' } })}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <FaUsers style={{ fontSize: '0.9rem' }} />
                 Employee Overview
               </li>
             )}
             {['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(user?.designation) && (
               <li
                 onClick={() => navigate('/team-dashboard', { state: { tab: 'Employee Overview' } })}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <FaUsers style={{ fontSize: '0.9rem' }} />
                 Team Overview
               </li>
             )}

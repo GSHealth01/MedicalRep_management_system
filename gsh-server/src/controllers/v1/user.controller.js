@@ -302,11 +302,18 @@ async function getTeamSubordinates(req, res) {
       include: {
         sector: true,
         team: true
-      },
-      orderBy: { name: 'asc' }
+      }
     });
 
-    console.log(`[DEBUG] Found ${subordinates.length} subordinates:`, subordinates.map(s => s.name));
+    // Sort by hierarchy rank, then by name
+    subordinates.sort((a, b) => {
+      const rankA = HIERARCHY[a.designation] || 999;
+      const rankB = HIERARCHY[b.designation] || 999;
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    console.log(`[DEBUG] Found ${subordinates.length} subordinates (sorted):`, subordinates.map(s => `${s.name} (${s.designation})`));
 
     res.json({ data: subordinates });
   } catch (error) {
@@ -318,17 +325,30 @@ async function getTeamSubordinates(req, res) {
 async function getEmployees(req, res) {
   try {
     const userId = req.user.id;
+    const HIERARCHY = {
+      'OM': 1, 'SM': 2, 'MGR': 3, 'PM': 4, 'TM': 5,
+      'PPES': 6, 'PPEJ': 7, 'FC': 8, 'MR': 9
+    };
+
     const users = await prisma.user.findMany({
       where: {
         designation: { notIn: ['ADMIN'] },
-        id: { not: parseInt(userId) } // Optional: also hide the user themselves
+        id: { not: parseInt(userId) }
       },
       include: {
         sector: true,
         team: true
-      },
-      orderBy: { name: 'asc' }
+      }
     });
+
+    // Sort by hierarchy rank, then by name
+    users.sort((a, b) => {
+      const rankA = HIERARCHY[a.designation] || 999;
+      const rankB = HIERARCHY[b.designation] || 999;
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
     res.json({ data: users });
   } catch (error) {
     console.error('Error fetching employees:', error);
