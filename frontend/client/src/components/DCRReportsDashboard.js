@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/gsh.logo.png';
-import { FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+import { FaBars, FaTimes, FaSignOutAlt, FaUsers } from 'react-icons/fa';
 import './RepDashboard.css';
 
 // Function to transform products from API to expected format
@@ -642,7 +642,30 @@ export default function DCRReportsDashboard() {
         <img src={logo} alt="GSH Logo" className="logo" />
         <nav className="sidebar-nav">
           <ul>
-            <li onClick={() => navigate('/rep-dashboard')}>Overview</li>
+            <li onClick={() => {
+              const d = user?.designation;
+              if (d === 'OM') navigate('/om-dashboard');
+              else if (['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(d)) navigate('/team-dashboard');
+              else navigate('/rep-dashboard');
+            }}>Overview</li>
+            {user?.designation === 'OM' && (
+              <li
+                onClick={() => navigate('/om-dashboard', { state: { tab: 'Employee Overview' } })}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <FaUsers style={{ fontSize: '0.9rem' }} />
+                Employee Overview
+              </li>
+            )}
+            {['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(user?.designation) && (
+              <li
+                onClick={() => navigate('/team-dashboard', { state: { tab: 'Employee Overview' } })}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <FaUsers style={{ fontSize: '0.9rem' }} />
+                Team Overview
+              </li>
+            )}
             <li onClick={() => navigate('/itineraries')}>Itinerary</li>
             <li className="active">Reports</li>
           </ul>
@@ -667,7 +690,16 @@ export default function DCRReportsDashboard() {
               <h1 className="text-3xl font-bold text-gray-800">Daily Call Reports Management</h1>
               <div className="flex gap-3">
                 <button
-                  onClick={() => employeeId ? navigate(`/employee-status/${employeeId}`) : navigate('/rep-dashboard')}
+                  onClick={() => {
+                    if (employeeId) {
+                      navigate(`/employee-rep-dashboard/${employeeId}`);
+                    } else {
+                      const d = user?.designation;
+                      if (d === 'OM') navigate('/om-dashboard');
+                      else if (['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(d)) navigate('/team-dashboard');
+                      else navigate('/rep-dashboard');
+                    }
+                  }}
                   className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -773,20 +805,24 @@ export default function DCRReportsDashboard() {
                                 </svg>
                                 View
                               </button>
-                              <button
-                                onClick={() => handleEditDCR(dcr.id)}
-                                className="text-orange-600 hover:text-orange-900 px-3 py-1 rounded text-sm font-medium border border-orange-600 hover:bg-orange-50"
-                                title="Edit DCR Report"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteDCR(dcr.id)}
-                                className="text-red-600 hover:text-red-900 px-3 py-1 rounded text-sm font-medium border border-red-600 hover:bg-red-50"
-                                title="Delete DCR Report"
-                              >
-                                Delete
-                              </button>
+                              {!employeeId && (
+                                <button
+                                  onClick={() => handleEditDCR(dcr.id)}
+                                  className="text-orange-600 hover:text-orange-900 px-3 py-1 rounded text-sm font-medium border border-orange-600 hover:bg-orange-50"
+                                  title="Edit DCR Report"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {!employeeId && (
+                                <button
+                                  onClick={() => handleDeleteDCR(dcr.id)}
+                                  className="text-red-600 hover:text-red-900 px-3 py-1 rounded text-sm font-medium border border-red-600 hover:bg-red-50"
+                                  title="Delete DCR Report"
+                                >
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

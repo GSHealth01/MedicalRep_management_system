@@ -27,14 +27,17 @@ export default function LoginPage() {
       // login() comes from AuthContext; it calls POST /auth/signin and stores tokens/user
       const user = await login({ email, password });
 
-      // If ADMIN → admin portal
+      // Route based on designation
       const designation = String(user?.designation || '');
+      const HIERARCHY_DESIGNATIONS = ['SM', 'MGR', 'PM', 'TM', 'PPES', 'PPEJ', 'FC'];
       if (designation === 'ADMIN') {
         navigate('/admin/portal', { replace: true });
       } else if (designation === 'OM') {
-        navigate('/rep-dashboard', { replace: true });
+        navigate('/om-dashboard', { replace: true });
+      } else if (HIERARCHY_DESIGNATIONS.includes(designation)) {
+        navigate('/team-dashboard', { replace: true });
       } else {
-        // Regular users → rep dashboard
+        // MR and any others → rep dashboard
         navigate('/rep-dashboard', { replace: true });
       }
     } catch (err) {

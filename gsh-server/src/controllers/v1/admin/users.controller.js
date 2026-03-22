@@ -125,6 +125,7 @@ exports.create = async (req, res) => {
       name,
       email: normalizedEmail,
       password: passwordHash,
+      // All designation codes are already uppercase (OM, SM, MGR, PM, TM, PPES, PPEJ, FC, MR, ADMIN)
       designation: designation ? designation.toUpperCase() : null,
       emp_no: emp_no,
       join_date: join_date ? new Date(join_date + 'T00:00:00.000Z') : undefined,

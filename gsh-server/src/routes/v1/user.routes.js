@@ -21,4 +21,7 @@ router.get('/profile', ctrl.getCurrentUserProfile);
 // GET /api/v1/users/employees - Get employees for OM
 router.get('/employees', ctrl.getEmployees);
 
+// GET /api/v1/users/team-subordinates - Get team members below the logged-in user in the hierarchy
+router.get('/team-subordinates', ctrl.getTeamSubordinates);
+
 module.exports = router;

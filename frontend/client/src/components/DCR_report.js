@@ -640,16 +640,18 @@ export default function RepdetailsReport() {
         const usersData = response.data.users || [];
         // Map abbreviations to full designations
         const designationMap = {
-          'SE': 'Senior Executive',
-          'TM': 'Territory Manager',
-          'PM': 'Product Manager',
-          'JE': 'Junior Executive',
-          'FC': 'Field Coordinator',
-          'OM': 'Operations Manager',
-          'MR': 'Medical Representative',
-          'ADMIN': 'Administrator'
+          'OM':   'Operations Manager',
+          'SM':   'Senior Manager',
+          'MGR':  'Manager',
+          'PM':   'Products Manager',
+          'TM':   'Territory Manager',
+          'PPES': 'Product Promotion Executive - Senior',
+          'PPEJ': 'Product Promotion Executive - Junior',
+          'FC':   'Field Coordinator',
+          'MR':   'Medical Representative',
+          'ADMIN':'Admin'
         };
-        // Filter out medical reps (MR) and system admins (ADMIN), format as "Name - Full Designation"
+        // Filter out medical representatives and admins, format as "Name - Full Designation"
         const filteredManagers = usersData
           .filter(user => user.designation !== 'MR' && user.designation !== 'ADMIN')
           .map(user => `${user.name} - ${designationMap[user.designation] || user.designation}`);

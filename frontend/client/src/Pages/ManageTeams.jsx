@@ -49,9 +49,18 @@ export default function ManageTeams() {
       const row = {
         id: created.id,
         name: created.name,
-        range: created.range,
-        agency: created.agency,
-        _count: { users: 0 },
+        range: created.sector?.range || "-",
+        agency: created.sector?.agency || "-",
+        operations_manager: created.assignedUsers?.ops?.map(u => u.name).join(', ') || '-',
+        senior_managers: created.assignedUsers?.sms?.map(u => u.name).join(', ') || '-',
+        managers: created.assignedUsers?.mgrs?.map(u => u.name).join(', ') || '-',
+        products_managers: created.assignedUsers?.pms?.map(u => u.name).join(', ') || '-',
+        territory_managers: created.assignedUsers?.tms?.map(u => u.name).join(', ') || '-',
+        promo_executives_senior: created.assignedUsers?.ppes?.map(u => u.name).join(', ') || '-',
+        promo_executives_junior: created.assignedUsers?.ppej?.map(u => u.name).join(', ') || '-',
+        field_coordinators: created.assignedUsers?.fcs?.map(u => u.name).join(', ') || '-',
+        medical_representatives: created.assignedUsers?.mrs?.map(u => u.name).join(', ') || '-',
+        _count: { users: Object.values(created.assignedUsers || {}).reduce((total, bucket) => total + (bucket?.length || 0), 0) },
       };
 
       setTeams((list) => [row, ...list]);
@@ -202,10 +211,12 @@ export default function ManageTeams() {
                   <th className="py-2 px-4 text-center">Agency</th>
                   <th className="py-2 px-4 text-center">Range</th>
                   <th className="py-2 px-4 text-center">Operations Manager</th>
+                  <th className="py-2 px-4 text-center">Senior Managers</th>
+                  <th className="py-2 px-4 text-center">Managers</th>
+                  <th className="py-2 px-4 text-center">Products Managers</th>
                   <th className="py-2 px-4 text-center">Territory Managers</th>
-                  <th className="py-2 px-4 text-center">Product Managers</th>
-                  <th className="py-2 px-4 text-center">Senior Executives</th>
-                  <th className="py-2 px-4 text-center">Junior Executives</th>
+                  <th className="py-2 px-4 text-center">Promo Execs (Senior)</th>
+                  <th className="py-2 px-4 text-center">Promo Execs (Junior)</th>
                   <th className="py-2 px-4 text-center">Field Coordinators</th>
                   <th className="py-2 px-4 text-center">Medical Representatives</th>
                   <th className="py-2 px-4 text-center">Users</th>
@@ -216,7 +227,7 @@ export default function ManageTeams() {
                 {teams.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="12"
+                      colSpan="14"
                       className="text-center py-4 text-gray-500"
                     >
                       No teams created yet
@@ -239,16 +250,22 @@ export default function ManageTeams() {
                         {team.operations_manager || "-"}
                       </td>
                       <td className="py-2 px-4">
+                        {team.senior_managers || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.managers || "-"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {team.products_managers || team.product_managers || "-"}
+                      </td>
+                      <td className="py-2 px-4">
                         {team.territory_managers || "-"}
                       </td>
                       <td className="py-2 px-4">
-                        {team.product_managers || "-"}
+                        {team.promo_executives_senior || team.senior_executives || "-"}
                       </td>
                       <td className="py-2 px-4">
-                        {team.senior_executives || "-"}
-                      </td>
-                      <td className="py-2 px-4">
-                        {team.junior_executives || "-"}
+                        {team.promo_executives_junior || team.junior_executives || "-"}
                       </td>
                       <td className="py-2 px-4">
                         {team.field_coordinators || "-"}

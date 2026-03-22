@@ -6,38 +6,46 @@ import { useConfirm } from "../components/ConfirmDialog";
 
 function EditEmployeeModal({ employee, onClose, onSave }) {
   const designationMap = {
-    'MR': 'Medical Rep',
-    'FC': 'Field Coordinator',
-    'JE': 'Junior Executive',
-    'SE': 'Senior Executive',
-    'TM': 'Territory Manager',
-    'PM': 'Product Manager',
-    'OM': 'Operations Manager',
-    'ADMIN': 'Admin',
-    'Medical Rep': 'Medical Rep',
-    'Field Coordinator': 'Field Coordinator',
-    'Junior Executive': 'Junior Executive',
-    'Senior Executive': 'Senior Executive',
-    'Territory Manager': 'Territory Manager',
-    'Product Manager': 'Product Manager',
+    'OM':   'Operations Manager',
+    'SM':   'Senior Manager',
+    'MGR':  'Manager',
+    'PM':   'Products Manager',
+    'TM':   'Territory Manager',
+    'PPES': 'Product Promotion Executive - Senior',
+    'PPEJ': 'Product Promotion Executive - Junior',
+    'FC':   'Field Coordinator',
+    'MR':   'Medical Representative',
+    'ADMIN':'Admin',
+    // Full names map to themselves
     'Operations Manager': 'Operations Manager',
+    'Senior Manager': 'Senior Manager',
+    'Manager': 'Manager',
+    'Products Manager': 'Products Manager',
+    'Territory Manager': 'Territory Manager',
+    'Product Promotion Executive - Senior': 'Product Promotion Executive - Senior',
+    'Product Promotion Executive - Junior': 'Product Promotion Executive - Junior',
+    'Field Coordinator': 'Field Coordinator',
+    'Medical Representative': 'Medical Representative',
     'Admin': 'Admin'
   };
 
-  // Helper to convert designation code to full name
-  const getDesignationName = (value) => {
+  // Helper to convert designation to code for the select dropdown
+  const getDesignationCode = (value) => {
     if (!value) return '';
-    // If already in the map as full name, return as is
-    if (designationMap[value] === value) return value;
-    // Otherwise try to get full name from code
-    return designationMap[value] || value;
+    // If it's already a code (e.g. 'OM'), return it
+    if (['OM', 'SM', 'MGR', 'PM', 'TM', 'PPES', 'PPEJ', 'FC', 'MR', 'ADMIN'].includes(value)) {
+      return value;
+    }
+    // Otherwise try to find the code from the full name
+    const entry = Object.entries(designationMap).find(([key, val]) => val === value && key !== value);
+    return entry ? entry[0] : value;
   };
 
   const [formData, setFormData] = useState({
     name: employee?.name || '',
     email: employee?.email || '',
     empNo: employee?.emp_no || employee?.empNo || '',
-    designation: getDesignationName(employee?.designation),
+    designation: getDesignationCode(employee?.designation),
     range: employee?.range?.name || employee?.range || '',
     agency: employee?.agency?.name || employee?.agency || '',
     distributor: employee?.distributor || '',
@@ -174,14 +182,16 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
               required
             >
               <option value="">Select Designation</option>
-              <option value="Medical Rep">Medical Rep</option>
-              <option value="Field Coordinator">Field Coordinator</option>
-              <option value="Junior Executive">Junior Executive</option>
-              <option value="Senior Executive">Senior Executive</option>
-              <option value="Territory Manager">Territory Manager</option>
-              <option value="Product Manager">Product Manager</option>
-              <option value="Operations Manager">Operations Manager</option>
-              <option value="Admin">Admin</option>
+              <option value="OM">Operations Manager</option>
+              <option value="SM">Senior Manager</option>
+              <option value="MGR">Manager</option>
+              <option value="PM">Products Manager</option>
+              <option value="TM">Territory Manager</option>
+              <option value="PPES">Product Promotion Executive - Senior</option>
+              <option value="PPEJ">Product Promotion Executive - Junior</option>
+              <option value="FC">Field Coordinator</option>
+              <option value="MR">Medical Representative</option>
+              <option value="ADMIN">Admin</option>
             </select>
           </div>
           <div>
@@ -325,21 +335,26 @@ function EditEmployeeModal({ employee, onClose, onSave }) {
 }
 
 const designationMap = {
-  'MR': 'Medical Rep',
-  'FC': 'Field Coordinator',
-  'JE': 'Junior Executive',
-  'SE': 'Senior Executive',
-  'TM': 'Territory Manager',
-  'PM': 'Product Manager',
-  'OM': 'Operations Manager',
-  'ADMIN': 'Admin',
-  'Medical Rep': 'Medical Rep',
-  'Field Coordinator': 'Field Coordinator',
-  'Junior Executive': 'Junior Executive',
-  'Senior Executive': 'Senior Executive',
-  'Territory Manager': 'Territory Manager',
-  'Product Manager': 'Product Manager',
+  'OM':   'Operations Manager',
+  'SM':   'Senior Manager',
+  'MGR':  'Manager',
+  'PM':   'Products Manager',
+  'TM':   'Territory Manager',
+  'PPES': 'Product Promotion Executive - Senior',
+  'PPEJ': 'Product Promotion Executive - Junior',
+  'FC':   'Field Coordinator',
+  'MR':   'Medical Representative',
+  'ADMIN':'Admin',
+  // Full names map to themselves
   'Operations Manager': 'Operations Manager',
+  'Senior Manager': 'Senior Manager',
+  'Manager': 'Manager',
+  'Products Manager': 'Products Manager',
+  'Territory Manager': 'Territory Manager',
+  'Product Promotion Executive - Senior': 'Product Promotion Executive - Senior',
+  'Product Promotion Executive - Junior': 'Product Promotion Executive - Junior',
+  'Field Coordinator': 'Field Coordinator',
+  'Medical Representative': 'Medical Representative',
   'Admin': 'Admin'
 };
 

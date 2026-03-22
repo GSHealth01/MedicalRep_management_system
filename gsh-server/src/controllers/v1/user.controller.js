@@ -239,20 +239,97 @@ async function getCurrentUserProfile(req, res) {
   }
 }
 
-async function getEmployees(req, res) {
+async function getTeamSubordinates(req, res) {
   try {
-    const employees = await prisma.user.findMany({
+    const userId = req.user.id;
+    const userDesignation = (req.user.designation || '').toUpperCase().trim();
+
+    console.log(`[DEBUG] getTeamSubordinates for user ${userId}, designation: "${userDesignation}"`);
+
+    // Hierarchy rank: lower number = higher power
+    const HIERARCHY = {
+      // Abbreviations
+      'OM': 1, 'SM': 2, 'MGR': 3, 'PM': 4, 'TM': 5,
+      'PPES': 6, 'PPEJ': 7, 'FC': 8, 'MR': 9,
+      // Full names fallbacks
+      'OPERATIONS MANAGER': 1,
+      'SENIOR MANAGER': 2,
+      'MANAGER': 3,
+      'PRODUCTS MANAGER': 4,
+      'PRODUCT MANAGER': 4,
+      'TERRITORY MANAGER': 5,
+      'PRODUCT PROMOTION EXECUTIVE - SENIOR': 6,
+      'PRODUCT PROMOTION EXECUTIVE - JUNIOR': 7,
+      'FIELD COORDINATOR': 8,
+      'MEDICAL REPRESENTATIVE': 9,
+      'MEDICAL REP': 9
+    };
+
+    const userRank = HIERARCHY[userDesignation];
+    console.log(`[DEBUG] User Rank: ${userRank}`);
+
+    // MR (9), ADMIN, or unknown designation get no subordinates
+    if (!userRank || userRank >= 9 || userDesignation === 'ADMIN') {
+      console.log(`[DEBUG] User has no subordinates (Rank ${userRank}, Designation ${userDesignation})`);
+      return res.json({ data: [] });
+    }
+
+    // Get the logged-in user's team
+    const currentUser = await prisma.user.findUnique({
+      where: { id: parseInt(userId) },
+      select: { team_id: true }
+    });
+
+    if (!currentUser || !currentUser.team_id) {
+      console.log(`[DEBUG] User ${userId} has no team assigned.`);
+      return res.json({ data: [] });
+    }
+
+    console.log(`[DEBUG] User team ID: ${currentUser.team_id}`);
+
+    // All short codes that are BELOW this user in Rank
+    const subordinateDesignations = ['OM', 'SM', 'MGR', 'PM', 'TM', 'PPES', 'PPEJ', 'FC', 'MR']
+      .filter(code => HIERARCHY[code] > userRank);
+
+    console.log(`[DEBUG] Looking for subordinates with designations:`, subordinateDesignations);
+
+    const subordinates = await prisma.user.findMany({
       where: {
-        designation: {
-          notIn: ['ADMIN', 'OM']
-        }
+        team_id: currentUser.team_id,
+        designation: { in: subordinateDesignations },
+        id: { not: parseInt(userId) } // never show self
       },
       include: {
         sector: true,
         team: true
-      }
+      },
+      orderBy: { name: 'asc' }
     });
-    res.json({ data: employees });
+
+    console.log(`[DEBUG] Found ${subordinates.length} subordinates:`, subordinates.map(s => s.name));
+
+    res.json({ data: subordinates });
+  } catch (error) {
+    console.error('Error fetching team subordinates:', error);
+    res.status(500).json({ message: 'Failed to fetch team subordinates' });
+  }
+}
+
+async function getEmployees(req, res) {
+  try {
+    const userId = req.user.id;
+    const users = await prisma.user.findMany({
+      where: {
+        designation: { notIn: ['ADMIN'] },
+        id: { not: parseInt(userId) } // Optional: also hide the user themselves
+      },
+      include: {
+        sector: true,
+        team: true
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json({ data: users });
   } catch (error) {
     console.error('Error fetching employees:', error);
     res.status(500).json({ message: 'Failed to fetch employees' });
@@ -264,5 +341,6 @@ module.exports = {
   createUser,
   getAllUsers,
   getCurrentUserProfile,
-  getEmployees
+  getEmployees,
+  getTeamSubordinates
 };

@@ -12,14 +12,16 @@ export default function EmployeeOverview() {
 
   // Map abbreviations to full designations
   const designationMap = {
-    'SE': 'Senior Executive',
-    'TM': 'Territory Manager',
-    'PM': 'Product Manager',
-    'JE': 'Junior Executive',
-    'FC': 'Field Coordinator',
-    'OM': 'Operations Manager',
-    'MR': 'Medical Representative',
-    'ADMIN': 'Administrator'
+    'OM':   'Operations Manager',
+    'SM':   'Senior Manager',
+    'MGR':  'Manager',
+    'PM':   'Products Manager',
+    'TM':   'Territory Manager',
+    'PPES': 'Product Promotion Executive - Senior',
+    'PPEJ': 'Product Promotion Executive - Junior',
+    'FC':   'Field Coordinator',
+    'MR':   'Medical Representative',
+    'ADMIN':'Admin'
   };
 
   useEffect(() => {
@@ -131,7 +133,7 @@ export default function EmployeeOverview() {
                   <tr
                     key={employee.id}
                     className="hover:bg-gray-50 cursor-pointer transition-colors duration-200"
-                    onClick={() => navigate(`/employee-status/${employee.id}`)}
+                    onClick={() => navigate(`/employee-rep-dashboard/${employee.id}`)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">

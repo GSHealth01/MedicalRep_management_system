@@ -12,6 +12,9 @@ import DCRReportsDashboard from './components/DCRReportsDashboard';
 import RepDashboard     from './components/RepDashboard';
 import EmployeeStatus   from './components/EmployeeStatus';
 import ManagerDashboard from './components/ManagerDashboard';
+import OMDashboard from './components/OMDashboard';
+import TeamDashboard from './components/TeamDashboard';
+import EmployeeRepDashboard from './components/EmployeeRepDashboard';
 import ItineraryForm    from './components/ItineraryForm';
 import ItineraryList    from './Pages/ItineraryList';
 
@@ -57,6 +60,9 @@ export default function App() {
         <Route path="/dcr-reports" element={<ProtectedUser><DCRReportsDashboard /></ProtectedUser>} />
         <Route path="/DCR_report"   element={<DcrReport />} />
         <Route path="/employee-status/:id" element={<EmployeeStatus />} />
+        <Route path="/om-dashboard" element={<ProtectedUser><OMDashboard /></ProtectedUser>} />
+        <Route path="/team-dashboard" element={<ProtectedUser><TeamDashboard /></ProtectedUser>} />
+        <Route path="/employee-rep-dashboard/:id" element={<ProtectedUser><EmployeeRepDashboard /></ProtectedUser>} />
         <Route path="/manager-dashboard" element={<ManagerDashboard />} />
         <Route path="/summaries" element={<SummariesPage />} />
         <Route path="/summaries/stocking" element={<StockingSummary />} />

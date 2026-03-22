@@ -5,13 +5,15 @@ export default function TeamForm({ onSubmit, team }) {
   const [formData, setFormData] = useState({
     sector: "",        // sector ID
     teamName: "",
-    operationsManagers: [], // array of selected employee IDs
-    medicalReps: [],   // array of selected employee IDs
-    fieldCoordinators: [],
-    juniorExecutives: [],
-    seniorExecutives: [],
-    territoryManagers: [],
-    productManagers: []
+    ops: [],
+    sms: [],
+    mgrs: [],
+    pms: [],
+    tms: [],
+    ppes: [],
+    ppej: [],
+    fcs: [],
+    mrs: []
   });
 
   const [sectors, setSectors] = useState([]);
@@ -27,22 +29,25 @@ export default function TeamForm({ onSubmit, team }) {
       const groupedUsers = {
         ops: [],
         sms: [],
+        mgrs: [],
         pms: [],
         tms: [],
-        ses: [],
-        jes: [],
+        ppes: [],
+        ppej: [],
         fcs: [],
         mrs: []
       };
 
       const designationToBucket = {
-        'OM': 'ops', 'OPERATIONS_MANAGER': 'ops',
-        'SE': 'ses', 'SENIOR_EXECUTIVE': 'ses', 'SENIOR_MANAGER': 'ses',
-        'PM': 'pms', 'PRODUCT_MANAGER': 'pms',
-        'TM': 'tms', 'TERRITORY_MANAGER': 'tms',
-        'JE': 'jes', 'JUNIOR_EXECUTIVE': 'jes',
-        'FC': 'fcs', 'FIELD_COORDINATOR': 'fcs',
-        'MR': 'mrs', 'MEDICAL_REP': 'mrs', 'MEDICAL_REPRESENTATIVE': 'mrs'
+        'OM': 'ops',
+        'SM': 'sms',
+        'MGR': 'mgrs',
+        'PM': 'pms',
+        'TM': 'tms',
+        'PPES': 'ppes',
+        'PPEJ': 'ppej',
+        'FC': 'fcs',
+        'MR': 'mrs'
       };
 
       team.users.forEach(user => {
@@ -56,13 +61,15 @@ export default function TeamForm({ onSubmit, team }) {
       setFormData({
         sector: team.sector?.id || "",
         teamName: team.name || "",
-        operationsManagers: groupedUsers.ops,
-        medicalReps: groupedUsers.mrs,
-        fieldCoordinators: groupedUsers.fcs,
-        juniorExecutives: groupedUsers.jes,
-        seniorExecutives: groupedUsers.ses,
-        territoryManagers: groupedUsers.tms,
-        productManagers: groupedUsers.pms
+        ops: groupedUsers.ops,
+        sms: groupedUsers.sms,
+        mgrs: groupedUsers.mgrs,
+        pms: groupedUsers.pms,
+        tms: groupedUsers.tms,
+        ppes: groupedUsers.ppes,
+        ppej: groupedUsers.ppej,
+        fcs: groupedUsers.fcs,
+        mrs: groupedUsers.mrs
       });
     }
   }, [team]);
@@ -163,46 +170,21 @@ export default function TeamForm({ onSubmit, team }) {
   // Group employees by designation
   const employeesByDesignation = useMemo(() => {
     const groups = {
-      'Operations Manager': [],
-      'Medical Rep': [],
-      'Field Coordinator': [],
-      'Junior Executive': [],
-      'Senior Executive': [],
-      'Territory Manager': [],
-      'Product Manager': []
-    };
-
-    // Map database designations to display names
-    const designationMap = {
-      'OM': 'Operations Manager',
-      'OPERATIONS MANAGER': 'Operations Manager',
-      'OPERATIONS_MANAGER': 'Operations Manager',
-      'MR': 'Medical Rep',
-      'MEDICAL REP': 'Medical Rep',
-      'MEDICAL_REP': 'Medical Rep',
-      'MEDICAL_REPRESENTATIVE': 'Medical Rep',
-      'FC': 'Field Coordinator',
-      'FIELD COORDINATOR': 'Field Coordinator',
-      'FIELD_COORDINATOR': 'Field Coordinator',
-      'JE': 'Junior Executive',
-      'JUNIOR EXECUTIVE': 'Junior Executive',
-      'JUNIOR_EXECUTIVE': 'Junior Executive',
-      'SE': 'Senior Executive',
-      'SENIOR EXECUTIVE': 'Senior Executive',
-      'SENIOR_EXECUTIVE': 'Senior Executive',
-      'TM': 'Territory Manager',
-      'TERRITORY MANAGER': 'Territory Manager',
-      'TERRITORY_MANAGER': 'Territory Manager',
-      'PM': 'Product Manager',
-      'PRODUCT MANAGER': 'Product Manager',
-      'PRODUCT_MANAGER': 'Product Manager'
+      'OM': [],
+      'SM': [],
+      'MGR': [],
+      'PM': [],
+      'TM': [],
+      'PPES': [],
+      'PPEJ': [],
+      'FC': [],
+      'MR': []
     };
 
     employees.forEach(emp => {
-      const designation = emp.designation || '';
-      const displayName = designationMap[designation.toUpperCase()];
-      if (displayName && groups[displayName]) {
-        groups[displayName].push(emp);
+      const designation = String(emp.designation || '').toUpperCase().trim();
+      if (groups[designation] !== undefined) {
+        groups[designation].push(emp);
       }
     });
 
@@ -215,29 +197,23 @@ export default function TeamForm({ onSubmit, team }) {
     const { name, value } = e.target;
     setFormData((s) => {
       const newData = { ...s, [name]: value };
-      // Clear employees when sector changes
       if (name === 'sector') {
-        newData.medicalReps = [];
-        newData.fieldCoordinators = [];
-        newData.juniorExecutives = [];
-        newData.seniorExecutives = [];
-        newData.territoryManagers = [];
-        newData.productManagers = [];
+        newData.ops = [];
+        newData.sms = [];
+        newData.mgrs = [];
+        newData.pms = [];
+        newData.tms = [];
+        newData.ppes = [];
+        newData.ppej = [];
+        newData.fcs = [];
+        newData.mrs = [];
       }
       return newData;
     });
   };
 
-  const handleEmployeeSelection = (designation, employeeId, checked) => {
-    const fieldName = {
-      'Operations Manager': 'operationsManagers',
-      'Medical Rep': 'medicalReps',
-      'Field Coordinator': 'fieldCoordinators',
-      'Junior Executive': 'juniorExecutives',
-      'Senior Executive': 'seniorExecutives',
-      'Territory Manager': 'territoryManagers',
-      'Product Manager': 'productManagers'
-    }[designation];
+  const handleEmployeeSelection = (designationBucket, employeeId, checked) => {
+    const fieldName = designationBucket;
 
     setFormData(prev => {
       const current = prev[fieldName] || [];
@@ -256,13 +232,15 @@ export default function TeamForm({ onSubmit, team }) {
     const payload = {
       name: formData.teamName,
       sector_id: parseInt(formData.sector),
-      ops: formData.operationsManagers,
-      mrs: formData.medicalReps,
-      fcs: formData.fieldCoordinators,
-      jes: formData.juniorExecutives,
-      ses: formData.seniorExecutives,
-      tms: formData.territoryManagers,
-      pms: formData.productManagers
+      ops: formData.ops,
+      sms: formData.sms,
+      mgrs: formData.mgrs,
+      pms: formData.pms,
+      tms: formData.tms,
+      ppes: formData.ppes,
+      ppej: formData.ppej,
+      fcs: formData.fcs,
+      mrs: formData.mrs
     };
 
     onSubmit && onSubmit(payload, formData, team);
@@ -272,13 +250,15 @@ export default function TeamForm({ onSubmit, team }) {
       setFormData({
         sector: "",
         teamName: "",
-        operationsManagers: [],
-        medicalReps: [],
-        fieldCoordinators: [],
-        juniorExecutives: [],
-        seniorExecutives: [],
-        territoryManagers: [],
-        productManagers: []
+        ops: [],
+        sms: [],
+        mgrs: [],
+        pms: [],
+        tms: [],
+        ppes: [],
+        ppej: [],
+        fcs: [],
+        mrs: []
       });
     }
   };
@@ -307,7 +287,7 @@ export default function TeamForm({ onSubmit, team }) {
                       type="checkbox"
                       id={`${fieldName}-${emp.id}`}
                       checked={isSelected}
-                      onChange={(e) => handleEmployeeSelection(designation, emp.id, e.target.checked)}
+                      onChange={(e) => handleEmployeeSelection(fieldName, emp.id, e.target.checked)}
                       className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
                     />
                     <label
@@ -372,16 +352,17 @@ export default function TeamForm({ onSubmit, team }) {
       </div>
 
 
-      {/* Employee Selection Dropdowns */}
       {formData.sector && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {renderEmployeeDropdown("Operations Managers", "Operations Manager", "operationsManagers")}
-          {renderEmployeeDropdown("Medical Reps", "Medical Rep", "medicalReps")}
-          {renderEmployeeDropdown("Field Coordinators", "Field Coordinator", "fieldCoordinators")}
-          {renderEmployeeDropdown("Junior Executives", "Junior Executive", "juniorExecutives")}
-          {renderEmployeeDropdown("Senior Executives", "Senior Executive", "seniorExecutives")}
-          {renderEmployeeDropdown("Territory Managers", "Territory Manager", "territoryManagers")}
-          {renderEmployeeDropdown("Product Managers", "Product Manager", "productManagers")}
+          {renderEmployeeDropdown("Operations Managers", "OM", "ops")}
+          {renderEmployeeDropdown("Senior Managers", "SM", "sms")}
+          {renderEmployeeDropdown("Managers", "MGR", "mgrs")}
+          {renderEmployeeDropdown("Products Managers", "PM", "pms")}
+          {renderEmployeeDropdown("Territory Managers", "TM", "tms")}
+          {renderEmployeeDropdown("Promo Execs - Senior", "PPES", "ppes")}
+          {renderEmployeeDropdown("Promo Execs - Junior", "PPEJ", "ppej")}
+          {renderEmployeeDropdown("Field Coordinators", "FC", "fcs")}
+          {renderEmployeeDropdown("Medical Representatives", "MR", "mrs")}
         </div>
       )}
 

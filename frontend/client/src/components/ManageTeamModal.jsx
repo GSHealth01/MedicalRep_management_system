@@ -50,7 +50,22 @@ export default function ManageTeamModal({ team, onClose, onSave, showNotificatio
                   />
                   <div>
                     <span className="font-medium">{user.name}</span>
-                    <span className="text-gray-500 ml-2">({user.designation})</span>
+                    <span className="text-gray-500 ml-2">
+                      ({
+                        {
+                          'OM':   'Operations Manager',
+                          'SM':   'Senior Manager',
+                          'MGR':  'Manager',
+                          'PM':   'Products Manager',
+                          'TM':   'Territory Manager',
+                          'PPES': 'Product Promotion Executive - Senior',
+                          'PPEJ': 'Product Promotion Executive - Junior',
+                          'FC':   'Field Coordinator',
+                          'MR':   'Medical Representative',
+                          'ADMIN':'Admin'
+                        }[user.designation] || user.designation
+                      })
+                    </span>
                     {user.team_role === 'LEADER' && (
                       <span className="text-green-600 ml-2 font-semibold">(Current Leader)</span>
                     )}

@@ -71,17 +71,16 @@ async function createDCR(req, res) {
       if (selectedManagers.size > 0) {
         // Map manager strings to user ids
         const designationMap = {
-          'Sales Executive': 'SE',
-          'Territory Manager': 'TM',
-          'Product Manager': 'PM',
-          'Junior Executive': 'JE',
-          'Field Coordinator': 'FC',
-          'Area Sales Manager': 'ASM',
-          'Regional Sales Manager': 'RSM',
-          'National Sales Manager': 'NSM',
           'Operations Manager': 'OM',
+          'Senior Manager': 'SM',
+          'Manager': 'MGR',
+          'Products Manager': 'PM',
+          'Territory Manager': 'TM',
+          'Product Promotion Executive - Senior': 'PPES',
+          'Product Promotion Executive - Junior': 'PPEJ',
+          'Field Coordinator': 'FC',
           'Medical Representative': 'MR',
-          'Administrator': 'ADMIN'
+          'Admin': 'ADMIN'
         };
 
         const managerQueries = Array.from(selectedManagers).map(managerStr => {
@@ -324,14 +323,16 @@ async function updateDCR(req, res) {
       if (selectedManagers.size > 0) {
         // Map manager strings to user ids
         const designationMap = {
-          'Senior Executive': 'SE',
-          'Territory Manager': 'TM',
-          'Product Manager': 'PM',
-          'Junior Executive': 'JE',
-          'Field Coordinator': 'FC',
           'Operations Manager': 'OM',
+          'Senior Manager': 'SM',
+          'Manager': 'MGR',
+          'Products Manager': 'PM',
+          'Territory Manager': 'TM',
+          'Product Promotion Executive - Senior': 'PPES',
+          'Product Promotion Executive - Junior': 'PPEJ',
+          'Field Coordinator': 'FC',
           'Medical Representative': 'MR',
-          'Administrator': 'ADMIN'
+          'Admin': 'ADMIN'
         };
 
         const managerQueries = Array.from(selectedManagers).map(managerStr => {

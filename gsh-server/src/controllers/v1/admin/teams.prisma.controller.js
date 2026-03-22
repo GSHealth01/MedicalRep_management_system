@@ -42,23 +42,26 @@ exports.list = async (req, res) => {
       const groupedUsers = {
         ops: [],
         sms: [],
+        mgrs: [],
         pms: [],
         tms: [],
-        ses: [],
-        jes: [],
+        ppes: [],
+        ppej: [],
         fcs: [],
         mrs: []
       };
 
       // Map designation codes to bucket keys
       const designationToBucket = {
-        'OM': 'ops',
-        'SE': 'ses',
-        'PM': 'pms',
-        'TM': 'tms',
-        'JE': 'jes',
-        'FC': 'fcs',
-        'MR': 'mrs'
+        'OM':   'ops',
+        'SM':   'sms',
+        'MGR':  'mgrs',
+        'PM':   'pms',
+        'TM':   'tms',
+        'PPES': 'ppes',
+        'PPEJ': 'ppej',
+        'FC':   'fcs',
+        'MR':   'mrs'
       };
 
       team.users.forEach(user => {
@@ -73,13 +76,15 @@ exports.list = async (req, res) => {
       // Add the grouped fields to the team object
       return {
         ...team,
-        operations_manager: groupedUsers.ops.map(u => u.name).join(', ') || '-',
-        territory_managers: groupedUsers.tms.map(u => u.name).join(', ') || '-',
-        product_managers: groupedUsers.pms.map(u => u.name).join(', ') || '-',
-        senior_executives: groupedUsers.ses.map(u => u.name).join(', ') || '-',
-        junior_executives: groupedUsers.jes.map(u => u.name).join(', ') || '-',
-        field_coordinators: groupedUsers.fcs.map(u => u.name).join(', ') || '-',
-        medical_representatives: groupedUsers.mrs.map(u => u.name).join(', ') || '-'
+        operations_manager:      groupedUsers.ops.map(u => u.name).join(', ')  || '-',
+        senior_managers:         groupedUsers.sms.map(u => u.name).join(', ')  || '-',
+        managers:                groupedUsers.mgrs.map(u => u.name).join(', ') || '-',
+        products_managers:       groupedUsers.pms.map(u => u.name).join(', ')  || '-',
+        territory_managers:      groupedUsers.tms.map(u => u.name).join(', ')  || '-',
+        promo_executives_senior: groupedUsers.ppes.map(u => u.name).join(', ') || '-',
+        promo_executives_junior: groupedUsers.ppej.map(u => u.name).join(', ') || '-',
+        field_coordinators:      groupedUsers.fcs.map(u => u.name).join(', ')  || '-',
+        medical_representatives: groupedUsers.mrs.map(u => u.name).join(', ')  || '-'
       };
     });
 
@@ -109,10 +114,11 @@ exports.create = async (req, res) => {
       // Employee IDs that will be assigned to the team
       ops = [],
       sms = [],
+      mgrs = [],
       pms = [],
       tms = [],
-      ses = [],
-      jes = [],
+      ppes = [],
+      ppej = [],
       fcs = [],
       mrs = []
     } = req.body;
@@ -139,7 +145,7 @@ exports.create = async (req, res) => {
     console.log(`Created team ${team.name} with ID: ${team.id}`);
 
     // Collect all user IDs to assign to this team
-    const allUserIds = [...ops, ...sms, ...pms, ...tms, ...ses, ...jes, ...fcs, ...mrs];
+    const allUserIds = [...ops, ...sms, ...mgrs, ...pms, ...tms, ...ppes, ...ppej, ...fcs, ...mrs];
     
     if (allUserIds.length > 0) {
       // Update users to assign them to this team
@@ -180,23 +186,27 @@ exports.create = async (req, res) => {
     // Group users by their designations for better display
     const groupedUsers = {
       ops: [],
+      sms: [],
+      mgrs: [],
       pms: [],
       tms: [],
-      ses: [],
-      jes: [],
+      ppes: [],
+      ppej: [],
       fcs: [],
       mrs: []
     };
 
     // Map designation codes to bucket keys
     const designationToBucket = {
-      'OM': 'ops',
-      'SE': 'ses',
-      'PM': 'pms',
-      'TM': 'tms',
-      'JE': 'jes',
-      'FC': 'fcs',
-      'MR': 'mrs'
+      'OM':   'ops',
+      'SM':   'sms',
+      'MGR':  'mgrs',
+      'PM':   'pms',
+      'TM':   'tms',
+      'PPES': 'ppes',
+      'PPEJ': 'ppej',
+      'FC':   'fcs',
+      'MR':   'mrs'
     };
 
     teamWithUsers.users.forEach(user => {
@@ -211,16 +221,7 @@ exports.create = async (req, res) => {
       id: teamWithUsers.id,
       name: teamWithUsers.name,
       sector: teamWithUsers.sector,
-      assignedUsers: {
-        ops: groupedUsers.ops,
-        sms: groupedUsers.sms,
-        pms: groupedUsers.pms,
-        tms: groupedUsers.tms,
-        ses: groupedUsers.ses,
-        jes: groupedUsers.jes,
-        fcs: groupedUsers.fcs,
-        mrs: groupedUsers.mrs
-      }
+      assignedUsers: groupedUsers
     }, 201);
   });
 
@@ -273,10 +274,11 @@ exports.update = async (req, res) => {
       // Employee IDs that will be assigned to the team
       ops = [],
       sms = [],
+      mgrs = [],
       pms = [],
       tms = [],
-      ses = [],
-      jes = [],
+      ppes = [],
+      ppej = [],
       fcs = [],
       mrs = []
     } = req.body;
@@ -310,7 +312,7 @@ exports.update = async (req, res) => {
     });
 
     // Collect all user IDs to assign to this team
-    const allUserIds = [...ops, ...sms, ...pms, ...tms, ...ses, ...jes, ...fcs, ...mrs];
+    const allUserIds = [...ops, ...sms, ...mgrs, ...pms, ...tms, ...ppes, ...ppej, ...fcs, ...mrs];
 
     if (allUserIds.length > 0) {
       // Update users to assign them to this team
@@ -334,14 +336,15 @@ exports.update = async (req, res) => {
 
     // Set specific roles based on arrays
     const roleAssignments = [
-      { ids: ops, role: 'LEADER' }, // Assuming ops are leaders or something, but wait, in create it's NORMAL
-      { ids: sms, role: 'NORMAL' },
-      { ids: pms, role: 'NORMAL' },
-      { ids: tms, role: 'NORMAL' },
-      { ids: ses, role: 'NORMAL' },
-      { ids: jes, role: 'NORMAL' },
-      { ids: fcs, role: 'NORMAL' },
-      { ids: mrs, role: 'NORMAL' }
+      { ids: ops,  role: 'LEADER' }, // Using LEADER for ops or manager context
+      { ids: sms,  role: 'NORMAL' },
+      { ids: mgrs, role: 'NORMAL' },
+      { ids: pms,  role: 'NORMAL' },
+      { ids: tms,  role: 'NORMAL' },
+      { ids: ppes, role: 'NORMAL' },
+      { ids: ppej, role: 'NORMAL' },
+      { ids: fcs,  role: 'NORMAL' },
+      { ids: mrs,  role: 'NORMAL' }
     ];
 
     for (const assignment of roleAssignments) {

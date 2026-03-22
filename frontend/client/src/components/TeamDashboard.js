@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api, getAllocatedPriceByDesignationCode } from '../services/api';
@@ -17,50 +17,221 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaUsers,
-  FaSync
+  FaSync,
+  FaSort,
+  FaSortUp,
+  FaSortDown,
+  FaUser
 } from 'react-icons/fa';
 import './RepDashboard.css';
 
-import EmployeeOverview from './EmployeeOverview';
-
-// Get available months from data - returns format like "March 2026"
-const getAvailableMonths = (itineraries, dcrs) => {
-  const months = new Set();
-
-  itineraries.forEach(itinerary => {
-    if (itinerary.month) {
-      let monthStr = itinerary.month;
-      if (monthStr.match(/^\d{4}-\d{2}$/)) {
-        const [year, month] = monthStr.split('-');
-        const date = new Date(`${year}-${month}-01`);
-        monthStr = date.toLocaleString('default', { month: 'long', year: 'numeric' });
-      }
-      months.add(monthStr);
-    }
-  });
-
-  Object.keys(dcrs).forEach(monthYear => {
-    months.add(monthYear);
-  });
-
-  const sortedMonths = Array.from(months).sort((a, b) => {
-    const dateA = new Date(a + '-01');
-    const dateB = new Date(b + '-01');
-    return dateB - dateA;
-  });
-
-  return sortedMonths;
+// ─────────────────────────────────────────────
+// Designation helpers
+// ─────────────────────────────────────────────
+const DESIGNATION_NAMES = {
+  'OM':   'Operations Manager',
+  'SM':   'Senior Manager',
+  'MGR':  'Manager',
+  'PM':   'Products Manager',
+  'TM':   'Territory Manager',
+  'PPES': 'Product Promotion Executive - Senior',
+  'PPEJ': 'Product Promotion Executive - Junior',
+  'FC':   'Field Coordinator',
+  'MR':   'Medical Representative',
+  'ADMIN':'Admin'
 };
 
-export default function OMDashboard() {
+const getDesignationName = (code) => DESIGNATION_NAMES[code] || code || '-';
+
+// ─────────────────────────────────────────────
+// TeamEmployeeOverview – shows subordinates
+// ─────────────────────────────────────────────
+function TeamEmployeeOverview() {
+  const navigate = useNavigate();
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
+
+  useEffect(() => {
+    const fetchSubordinates = async () => {
+      try {
+        const response = await api.get('/users/team-subordinates');
+        setEmployees(response.data.data || []);
+      } catch (err) {
+        console.error('Error fetching team subordinates:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubordinates();
+  }, []);
+
+  const sortedEmployees = useMemo(() => {
+    return [...employees].sort((a, b) => {
+      let aValue, bValue;
+      if (sortBy === 'range') {
+        aValue = a.sector?.range || '';
+        bValue = b.sector?.range || '';
+      } else if (sortBy === 'agency') {
+        aValue = a.sector?.agency || '';
+        bValue = b.sector?.agency || '';
+      } else {
+        aValue = a.name || '';
+        bValue = b.name || '';
+      }
+      return sortOrder === 'asc'
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    });
+  }, [employees, sortBy, sortOrder]);
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const getSortIcon = (field) => {
+    if (sortBy !== field) return <FaSort className="text-gray-400" />;
+    return sortOrder === 'asc' ? <FaSortUp className="text-blue-600" /> : <FaSortDown className="text-blue-600" />;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <span className="ml-3 text-gray-600">Loading team members...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Team Overview</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Showing team members below your level in the hierarchy
+        </p>
+      </div>
+
+      {employees.length === 0 ? (
+        <div className="text-center py-16 text-gray-500">
+          <FaUsers className="text-5xl mx-auto mb-4 text-gray-300" />
+          <p className="text-lg font-medium">No team members found</p>
+          <p className="text-sm mt-1">Either you have no team assigned or there are no members below your designation.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white rounded-xl shadow-md">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gradient-to-r from-blue-600 to-blue-700">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  <button className="flex items-center gap-1" onClick={() => handleSort('name')}>
+                    Name {getSortIcon('name')}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  Emp No
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  Designation
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  <button className="flex items-center gap-1" onClick={() => handleSort('range')}>
+                    Range {getSortIcon('range')}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  <button className="flex items-center gap-1" onClick={() => handleSort('agency')}>
+                    Agency {getSortIcon('agency')}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-white uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {sortedEmployees.map((emp) => (
+                <tr
+                  key={emp.id}
+                  className="hover:bg-blue-50 cursor-pointer transition-colors duration-150"
+                  onClick={() => navigate(`/employee-rep-dashboard/${emp.id}`)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
+                        <FaUser className="text-blue-600 text-sm" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-900">{emp.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{emp.emp_no || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {getDesignationName(emp.designation)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {emp.sector?.range || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {emp.sector?.agency || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/employee-rep-dashboard/${emp.id}`); }}
+                      className="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      View Dashboard
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-6 py-3 bg-gray-50 text-sm text-gray-500 border-t">
+            {employees.length} team member{employees.length !== 1 ? 's' : ''} found
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Month helper (same as OMDashboard)
+// ─────────────────────────────────────────────
+const getAvailableMonths = (itineraries, dcrs) => {
+  const months = new Set();
+  itineraries.forEach(it => {
+    if (it.month) {
+      let m = it.month;
+      if (m.match(/^\d{4}-\d{2}$/)) {
+        const [y, mo] = m.split('-');
+        m = new Date(`${y}-${mo}-01`).toLocaleString('default', { month: 'long', year: 'numeric' });
+      }
+      months.add(m);
+    }
+  });
+  Object.keys(dcrs).forEach(m => months.add(m));
+  return Array.from(months).sort((a, b) => new Date(b + '-01') - new Date(a + '-01'));
+};
+
+// ─────────────────────────────────────────────
+// Main TeamDashboard component
+// ─────────────────────────────────────────────
+export default function TeamDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  // Read tab from navigation state (e.g. when coming from Itinerary/Reports sidebar)
-  const [activeTab, setActiveTab] = useState(
-    location.state?.tab || 'Overview'
-  );
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'Overview');
+
   const [itineraries, setItineraries] = useState([]);
   const [dcrs, setDcrs] = useState({});
   const [loading, setLoading] = useState(true);
@@ -70,44 +241,32 @@ export default function OMDashboard() {
   const [allocatedPrices, setAllocatedPrices] = useState(null);
   const [availableMonths, setAvailableMonths] = useState([]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/', { replace: true });
-  };
+  const handleLogout = () => { logout(); navigate('/', { replace: true }); };
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch the OM's own itineraries
-      const itinerariesResponse = await api.get('/itineraries');
-      const itinerariesData = itinerariesResponse.data.data || [];
-      setItineraries(itinerariesData);
+      const [itinRes, dcrRes] = await Promise.all([
+        api.get('/itineraries'),
+        api.get('/dcrs')
+      ]);
 
-      // Fetch the OM's own DCRs
-      const dcrsResponse = await api.get('/dcrs');
-      const dcrsData = dcrsResponse.data.dcrs || {};
-      setDcrs(dcrsData);
+      const itinData = itinRes.data.data || [];
+      const dcrData = dcrRes.data.dcrs || {};
+      setItineraries(itinData);
+      setDcrs(dcrData);
 
-      // Get available months
-      const months = getAvailableMonths(itinerariesData, dcrsData);
+      const months = getAvailableMonths(itinData, dcrData);
       setAvailableMonths(months);
+      if (months.length > 0) setSelectedMonth(prev => prev || months[0]);
 
-      if (months.length > 0) {
-        setSelectedMonth(prev => prev || months[0]);
-      }
-
-      // Fetch allocated prices for OM
       if (user?.designation) {
         try {
-          const pricesResponse = await getAllocatedPriceByDesignationCode(user.designation);
-          if (pricesResponse.data) {
-            setAllocatedPrices(pricesResponse.data);
-          }
-        } catch (priceErr) {
-          console.error('Error fetching allocated prices:', priceErr);
-        }
+          const priceRes = await getAllocatedPriceByDesignationCode(user.designation);
+          if (priceRes.data) setAllocatedPrices(priceRes.data);
+        } catch (_) {}
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -119,13 +278,7 @@ export default function OMDashboard() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    try {
-      await fetchData();
-    } catch (err) {
-      console.error('Error refreshing data:', err);
-    } finally {
-      setRefreshing(false);
-    }
+    try { await fetchData(); } catch (_) {} finally { setRefreshing(false); }
   };
 
   useEffect(() => {
@@ -133,81 +286,49 @@ export default function OMDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.designation]);
 
-  // Calculate dashboard metrics for selected month (same as RepDashboard)
+  // ── Metrics calculation (identical to OMDashboard) ──
   const calculateMetrics = () => {
     if (!selectedMonth) return null;
-
     let monthKey = selectedMonth;
     if (monthKey.match(/^\d{4}-\d{2}$/)) {
-      const [year, month] = monthKey.split('-');
-      const date = new Date(`${year}-${month}-01`);
-      monthKey = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const [y, m] = monthKey.split('-');
+      monthKey = new Date(`${y}-${m}-01`).toLocaleString('default', { month: 'long', year: 'numeric' });
     }
-
     const monthDcrs = dcrs[monthKey] || [];
-
     const monthItineraries = itineraries.filter(it => {
-      let itMonth = it.month;
-      if (itMonth && itMonth.match(/^\d{4}-\d{2}$/)) {
-        const [year, m] = itMonth.split('-');
-        const date = new Date(`${year}-${m}-01`);
-        itMonth = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+      let itm = it.month;
+      if (itm && itm.match(/^\d{4}-\d{2}$/)) {
+        const [y, m] = itm.split('-');
+        itm = new Date(`${y}-${m}-01`).toLocaleString('default', { month: 'long', year: 'numeric' });
       }
-      return itMonth === monthKey;
+      return itm === monthKey;
     });
 
-    let scheduledDoctorCalls = 0;
-    let scheduledChemistCalls = 0;
-    let scheduledMileage = 0;
-
-    monthItineraries.forEach(itinerary => {
-      if (itinerary.entries && Array.isArray(itinerary.entries)) {
-        itinerary.entries.forEach(entry => {
-          scheduledDoctorCalls += parseInt(entry.doctorCalls) || 0;
-          scheduledChemistCalls += parseInt(entry.chemistCalls) || 0;
-          scheduledMileage += parseFloat(entry.mileage) || 0;
-        });
-      }
+    let scheduledDoctorCalls = 0, scheduledChemistCalls = 0, scheduledMileage = 0;
+    monthItineraries.forEach(it => {
+      (it.entries || []).forEach(e => {
+        scheduledDoctorCalls += parseInt(e.doctorCalls) || 0;
+        scheduledChemistCalls += parseInt(e.chemistCalls) || 0;
+        scheduledMileage += parseFloat(e.mileage) || 0;
+      });
     });
 
-    let actualDoctorCalls = 0;
-    let actualChemistCalls = 0;
-    let actualMileage = 0;
-    let totalFuelPumped = 0;
-    let totalFuelCost = 0;
-    let bataDays = 0;
-    let nightOutDays = 0;
-    let nightOutReturnDays = 0;
+    let actualDoctorCalls = 0, actualChemistCalls = 0, actualMileage = 0;
+    let totalFuelPumped = 0, totalFuelCost = 0;
+    let bataDays = 0, nightOutDays = 0, nightOutReturnDays = 0;
 
     monthDcrs.forEach(dcr => {
-      if (dcr.callReport && Array.isArray(dcr.callReport)) {
-        dcr.callReport.forEach(entry => {
-          if (entry.doctor) actualDoctorCalls++;
-          if (entry.chemist) actualChemistCalls++;
-        });
-      }
-
+      (dcr.callReport || []).forEach(entry => {
+        if (entry.doctor) actualDoctorCalls++;
+        if (entry.chemist) actualChemistCalls++;
+      });
       if (dcr.mileage) {
-        let opening = parseFloat(dcr.mileage.openingMileage) || 0;
-        let closing = parseFloat(dcr.mileage.closingMileage) || 0;
-
-        if (opening === 0 && dcr.mileage.odometerStart) {
-          opening = parseFloat(dcr.mileage.odometerStart) || 0;
-        }
-        if (closing === 0 && dcr.mileage.odometerEnd) {
-          closing = parseFloat(dcr.mileage.odometerEnd) || 0;
-        }
-
-        if (closing >= opening && closing > 0 && opening > 0) {
-          actualMileage += (closing - opening);
-        } else if (closing > 0 && opening > 0) {
-          actualMileage += Math.abs(closing - opening);
-        }
-
-        totalFuelPumped += parseFloat(dcr.mileage?.fuelPumped) || 0;
-        totalFuelCost += parseFloat(dcr.mileage?.cost) || 0;
+        const opening = parseFloat(dcr.mileage.openingMileage || dcr.mileage.odometerStart) || 0;
+        const closing = parseFloat(dcr.mileage.closingMileage || dcr.mileage.odometerEnd) || 0;
+        if (closing > 0 && opening > 0) actualMileage += Math.abs(closing - opening);
+        totalFuelPumped += parseFloat(dcr.mileage.fuelPumped) || 0;
+        totalFuelCost   += parseFloat(dcr.mileage.cost) || 0;
       }
-
       if (dcr.dailyExpenses) {
         if (dcr.dailyExpenses.bata) bataDays++;
         if (dcr.dailyExpenses.nightOut) nightOutDays++;
@@ -215,64 +336,37 @@ export default function OMDashboard() {
       }
     });
 
-    const doctorCallsPercentage = scheduledDoctorCalls > 0
-      ? (actualDoctorCalls / scheduledDoctorCalls) * 100
-      : 0;
-    const chemistCallsPercentage = scheduledChemistCalls > 0
-      ? (actualChemistCalls / scheduledChemistCalls) * 100
-      : 0;
-    const mileagePercentage = scheduledMileage > 0
-      ? (actualMileage / scheduledMileage) * 100
-      : 0;
-
+    const doctorCallsPercentage  = scheduledDoctorCalls  > 0 ? (actualDoctorCalls  / scheduledDoctorCalls)  * 100 : 0;
+    const chemistCallsPercentage = scheduledChemistCalls > 0 ? (actualChemistCalls / scheduledChemistCalls) * 100 : 0;
+    const mileagePercentage = scheduledMileage > 0 ? (actualMileage / scheduledMileage) * 100 : 0;
     const exceededMileage = Math.max(0, actualMileage - scheduledMileage);
     const monthlyFuelAllocation = allocatedPrices?.monthlyFuel || 0;
     const exceededFuelCost = Math.max(0, totalFuelCost - monthlyFuelAllocation);
-
     const dailyBataAmount = allocatedPrices?.dailyBata || 0;
     const nightOutAmount = allocatedPrices?.nightOut || 0;
     const nightOutReturnAmount = allocatedPrices?.nightOutReturn || 0;
-
     const totalBata = bataDays * dailyBataAmount;
     const totalNightOut = (nightOutDays * nightOutAmount) + (nightOutReturnDays * nightOutReturnAmount);
 
     return {
-      scheduledDoctorCalls,
-      actualDoctorCalls,
-      doctorCallsPercentage,
-      scheduledChemistCalls,
-      actualChemistCalls,
-      chemistCallsPercentage,
-      scheduledMileage,
-      actualMileage,
-      mileagePercentage,
-      exceededMileage,
-      totalFuelPumped,
-      totalFuelCost,
-      exceededFuelCost,
-      bataDays,
-      totalBata,
-      nightOutDays,
-      nightOutReturnDays,
-      totalNightOut,
-      dcrCount: monthDcrs.length,
-      itineraryCount: monthItineraries.length
+      scheduledDoctorCalls, actualDoctorCalls, doctorCallsPercentage,
+      scheduledChemistCalls, actualChemistCalls, chemistCallsPercentage,
+      scheduledMileage, actualMileage, mileagePercentage,
+      exceededMileage, totalFuelPumped, totalFuelCost, exceededFuelCost,
+      bataDays, totalBata, nightOutDays, nightOutReturnDays, totalNightOut,
+      dcrCount: monthDcrs.length, itineraryCount: monthItineraries.length
     };
   };
 
   const metrics = calculateMetrics();
 
   // Color helpers
-  const getPercentageColor = (pct) => pct >= 100 ? 'text-green-600' : 'text-red-600';
-  const getPercentageBgColor = (pct) => pct >= 100 ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300';
-  const getMileageBgColor = (pct) => pct >= 100 ? 'bg-red-100 border-red-300' : 'bg-green-100 border-green-300';
-  const getMileageTextColor = (pct) => pct >= 100 ? 'text-red-600' : 'text-green-600';
-  const getMileageIcon = (pct) => pct >= 100
-    ? <FaTimesCircle className="text-red-600" />
-    : <FaCheckCircle className="text-green-600" />;
-  const getPercentageIcon = (pct) => pct >= 100
-    ? <FaCheckCircle className="text-green-600" />
-    : <FaTimesCircle className="text-red-600" />;
+  const getPercentageColor   = (p) => p >= 100 ? 'text-green-600' : 'text-red-600';
+  const getPercentageBgColor = (p) => p >= 100 ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300';
+  const getMileageBgColor    = (p) => p >= 100 ? 'bg-red-100 border-red-300' : 'bg-green-100 border-green-300';
+  const getMileageTextColor  = (p) => p >= 100 ? 'text-red-600' : 'text-green-600';
+  const getMileageIcon   = (p) => p >= 100 ? <FaTimesCircle className="text-red-600" />   : <FaCheckCircle className="text-green-600" />;
+  const getPercentageIcon = (p) => p >= 100 ? <FaCheckCircle className="text-green-600" /> : <FaTimesCircle className="text-red-600" />;
 
   if (loading) {
     return (
@@ -302,10 +396,7 @@ export default function OMDashboard() {
     <div className="dashboard-wrapper">
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
-        <button
-          className="toggle-btn"
-          onClick={() => setSidebarOpen(o => !o)}
-        >
+        <button className="toggle-btn" onClick={() => setSidebarOpen(o => !o)}>
           {sidebarOpen ? <FaTimes /> : <FaBars />}
         </button>
         <img src={logo} alt="GSH Logo" className="logo" />
@@ -323,18 +414,14 @@ export default function OMDashboard() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               <FaUsers style={{ fontSize: '0.9rem' }} />
-              Employee Overview
+              Team Overview
             </li>
             <li onClick={() => navigate('/itineraries')}>Itinerary</li>
             <li onClick={() => navigate('/dcr-reports')}>Reports</li>
           </ul>
         </nav>
         <div className="sidebar-footer">
-          <button
-            className="logout-btn-sidebar"
-            onClick={handleLogout}
-            title="Logout"
-          >
+          <button className="logout-btn-sidebar" onClick={handleLogout} title="Logout">
             <FaSignOutAlt />
             <span>Logout</span>
           </button>
@@ -357,23 +444,23 @@ export default function OMDashboard() {
             <span className="user-info">
               Welcome, {user?.name || 'User'}
               <span className="designation-badge" style={{ marginLeft: '0.75rem' }}>
-                Operations Manager
+                {getDesignationName(user?.designation)}
               </span>
             </span>
           </div>
         </header>
 
-        {/* ── Overview Tab: Rep-style dashboard for OM's own data ── */}
+        {/* ── Overview Tab ── */}
         {activeTab === 'Overview' && (
           <>
             {/* Month Selector */}
             <div className="month-selector-container">
-              <label htmlFor="om-month-select" className="month-label">
+              <label htmlFor="team-month-select" className="month-label">
                 <FaCalendarAlt className="mr-2" />
                 Select Month:
               </label>
               <select
-                id="om-month-select"
+                id="team-month-select"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="month-select"
@@ -381,14 +468,12 @@ export default function OMDashboard() {
                 {availableMonths.length === 0 ? (
                   <option value="">No data available</option>
                 ) : (
-                  availableMonths.map(month => (
-                    <option key={month} value={month}>{month}</option>
-                  ))
+                  availableMonths.map(m => <option key={m} value={m}>{m}</option>)
                 )}
               </select>
               {user?.designation && (
                 <span className="designation-badge">
-                  Designation: {user.designation}
+                  Designation: {getDesignationName(user.designation)}
                 </span>
               )}
             </div>
@@ -447,7 +532,7 @@ export default function OMDashboard() {
                     </div>
                   </div>
 
-                  {/* Total Mileage */}
+                  {/* Mileage */}
                   <div className={`overview-card ${getMileageBgColor(metrics.mileagePercentage)}`}>
                     <div className="card-header">
                       <div className="card-icon"><FaRoute /></div>
@@ -475,9 +560,7 @@ export default function OMDashboard() {
 
                 {/* Mileage Details */}
                 <section className="details-section">
-                  <h3 className="section-title">
-                    <FaRoute /> Mileage Details
-                  </h3>
+                  <h3 className="section-title"><FaRoute /> Mileage Details</h3>
                   <div className="exceeded-mileage-cards">
                     <div className="exceeded-card">
                       <div className="exceeded-icon"><FaRoute /></div>
@@ -489,18 +572,14 @@ export default function OMDashboard() {
                         </p>
                       </div>
                     </div>
-
                     <div className="exceeded-card">
                       <div className="exceeded-icon"><FaGasPump /></div>
                       <div className="exceeded-content">
                         <p className="exceeded-label">Total Fuel Pumped</p>
                         <p className="exceeded-value">{(metrics.totalFuelPumped || 0).toFixed(2)} L</p>
-                        <p className="exceeded-detail">
-                          Cost: Rs. {(metrics.totalFuelCost || 0).toFixed(2)}
-                        </p>
+                        <p className="exceeded-detail">Cost: Rs. {(metrics.totalFuelCost || 0).toFixed(2)}</p>
                       </div>
                     </div>
-
                     <div className="exceeded-card highlight">
                       <div className="exceeded-icon"><FaMoneyBillWave /></div>
                       <div className="exceeded-content">
@@ -516,9 +595,7 @@ export default function OMDashboard() {
 
                 {/* Expenses */}
                 <section className="details-section">
-                  <h3 className="section-title">
-                    <FaMoneyBillWave /> Expenses
-                  </h3>
+                  <h3 className="section-title"><FaMoneyBillWave /> Expenses</h3>
                   <div className="expenses-cards">
                     <div className="expense-card">
                       <div className="expense-icon"><FaCheckCircle /></div>
@@ -531,7 +608,6 @@ export default function OMDashboard() {
                         </p>
                       </div>
                     </div>
-
                     <div className="expense-card">
                       <div className="expense-icon"><FaMoon /></div>
                       <div className="expense-content">
@@ -543,7 +619,6 @@ export default function OMDashboard() {
                         </p>
                       </div>
                     </div>
-
                     <div className="expense-card">
                       <div className="expense-icon"><FaMoon /></div>
                       <div className="expense-content">
@@ -580,8 +655,8 @@ export default function OMDashboard() {
           </>
         )}
 
-        {/* ── Employee Overview Tab ── */}
-        {activeTab === 'Employee Overview' && <EmployeeOverview />}
+        {/* ── Team Overview Tab ── */}
+        {activeTab === 'Employee Overview' && <TeamEmployeeOverview />}
       </div>
     </div>
   );

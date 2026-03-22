@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/gsh.logo.png';
-import { FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+import { FaBars, FaTimes, FaSignOutAlt, FaUsers } from 'react-icons/fa';
 import '../components/RepDashboard.css';
 
 export default function ItineraryList() {
@@ -187,7 +187,30 @@ export default function ItineraryList() {
         <img src={logo} alt="GSH Logo" className="logo" />
         <nav className="sidebar-nav">
           <ul>
-            <li className={user?.designation === 'OM' ? '' : ''} onClick={() => navigate('/rep-dashboard')}>Overview</li>
+            <li onClick={() => {
+              const d = user?.designation;
+              if (d === 'OM') navigate('/om-dashboard');
+              else if (['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(d)) navigate('/team-dashboard');
+              else navigate('/rep-dashboard');
+            }}>Overview</li>
+            {user?.designation === 'OM' && (
+              <li
+                onClick={() => navigate('/om-dashboard', { state: { tab: 'Employee Overview' } })}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <FaUsers style={{ fontSize: '0.9rem' }} />
+                Employee Overview
+              </li>
+            )}
+            {['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(user?.designation) && (
+              <li
+                onClick={() => navigate('/team-dashboard', { state: { tab: 'Employee Overview' } })}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <FaUsers style={{ fontSize: '0.9rem' }} />
+                Team Overview
+              </li>
+            )}
             <li className="active">Itinerary</li>
             <li onClick={() => navigate('/dcr-reports')}>Reports</li>
           </ul>
@@ -212,7 +235,16 @@ export default function ItineraryList() {
               <h1 className="text-3xl font-bold text-gray-800">Itinerary Management</h1>
               <div className="flex gap-3">
                 <button
-                  onClick={() => employeeId ? navigate(`/employee-status/${employeeId}`) : navigate('/rep-dashboard')}
+                  onClick={() => {
+                    if (employeeId) {
+                      navigate(`/employee-rep-dashboard/${employeeId}`);
+                    } else {
+                      const d = user?.designation;
+                      if (d === 'OM') navigate('/om-dashboard');
+                      else if (['SM','MGR','PM','TM','PPES','PPEJ','FC'].includes(d)) navigate('/team-dashboard');
+                      else navigate('/rep-dashboard');
+                    }
+                  }}
                   className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,12 +342,14 @@ export default function ItineraryList() {
                             </svg>
                             View
                           </button>
-                          <button
-                            onClick={() => handleEdit(itinerary)}
-                            className="text-orange-600 hover:text-orange-900 px-3 py-1 rounded text-sm font-medium border border-orange-600 hover:bg-orange-50"
-                          >
-                            Edit
-                          </button>
+                          {!employeeId && (
+                            <button
+                              onClick={() => handleEdit(itinerary)}
+                              className="text-orange-600 hover:text-orange-900 px-3 py-1 rounded text-sm font-medium border border-orange-600 hover:bg-orange-50"
+                            >
+                              Edit
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDownload(itinerary)}
                             className="text-green-600 hover:text-green-900 px-3 py-1 rounded text-sm font-medium border border-green-600 hover:bg-green-50"
@@ -323,13 +357,15 @@ export default function ItineraryList() {
                           >
                             Download
                           </button>
-                          <button
-                            onClick={() => handleDelete(itinerary)}
-                            className="text-red-600 hover:text-red-900 px-3 py-1 rounded text-sm font-medium border border-red-600 hover:bg-red-50"
-                            title="Delete Itinerary"
-                          >
-                            Delete
-                          </button>
+                          {!employeeId && (
+                            <button
+                              onClick={() => handleDelete(itinerary)}
+                              className="text-red-600 hover:text-red-900 px-3 py-1 rounded text-sm font-medium border border-red-600 hover:bg-red-50"
+                              title="Delete Itinerary"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

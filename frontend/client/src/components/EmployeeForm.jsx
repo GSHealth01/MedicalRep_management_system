@@ -290,13 +290,15 @@ export default function EmployeeForm({ onSubmit }) {
           required
         >
           <option value="">Select designation</option>
-          <option value="MR">Medical Rep</option>
-          <option value="FC">Field Coordinator</option>
-          <option value="JE">Junior Executive</option>
-          <option value="SE">Senior Executive</option>
-          <option value="TM">Territory Manager</option>
-          <option value="PM">Product Manager</option>
           <option value="OM">Operations Manager</option>
+          <option value="SM">Senior Manager</option>
+          <option value="MGR">Manager</option>
+          <option value="PM">Products Manager</option>
+          <option value="TM">Territory Manager</option>
+          <option value="PPES">Product Promotion Executive - Senior</option>
+          <option value="PPEJ">Product Promotion Executive - Junior</option>
+          <option value="FC">Field Coordinator</option>
+          <option value="MR">Medical Representative</option>
           <option value="ADMIN">Admin</option>
         </select>
       </div>

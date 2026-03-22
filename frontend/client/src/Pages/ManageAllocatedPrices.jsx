@@ -4,22 +4,26 @@ import { useNotification } from "../components/NotificationPopup";
 
 // Designation mapping from abbreviations to full names
 const designationMap = {
-  'MR': 'Medical Rep',
-  'FC': 'Field Coordinator',
-  'JE': 'Junior Executive',
-  'SE': 'Senior Executive',
-  'TM': 'Territory Manager',
-  'PM': 'Product Manager',
   'OM': 'Operations Manager',
+  'SM': 'Senior Manager',
+  'MGR': 'Manager',
+  'PM': 'Products Manager',
+  'TM': 'Territory Manager',
+  'PPES': 'Product Promotion Executive - Senior',
+  'PPEJ': 'Product Promotion Executive - Junior',
+  'FC': 'Field Coordinator',
+  'MR': 'Medical Representative',
   'ADMIN': 'Admin',
-  // Full names as well
-  'Medical Rep': 'Medical Rep',
-  'Field Coordinator': 'Field Coordinator',
-  'Junior Executive': 'Junior Executive',
-  'Senior Executive': 'Senior Executive',
-  'Territory Manager': 'Territory Manager',
-  'Product Manager': 'Product Manager',
+  // Full names map to themselves
   'Operations Manager': 'Operations Manager',
+  'Senior Manager': 'Senior Manager',
+  'Manager': 'Manager',
+  'Products Manager': 'Products Manager',
+  'Territory Manager': 'Territory Manager',
+  'Product Promotion Executive - Senior': 'Product Promotion Executive - Senior',
+  'Product Promotion Executive - Junior': 'Product Promotion Executive - Junior',
+  'Field Coordinator': 'Field Coordinator',
+  'Medical Representative': 'Medical Representative',
   'Admin': 'Admin'
 };
 
@@ -28,16 +32,18 @@ const getFullDesignationName = (code) => {
   return designationMap[code] || code || "";
 };
 
-// All possible designations (full names) - matching EmployeeForm.jsx
+// All possible designations (codes) - used for available designations list
 const ALL_DESIGNATIONS = [
-  'Medical Rep',
-  'Field Coordinator',
-  'Junior Executive',
-  'Senior Executive',
-  'Territory Manager',
-  'Product Manager',
-  'Operations Manager',
-  'Admin'
+  'OM',
+  'SM',
+  'MGR',
+  'PM',
+  'TM',
+  'PPES',
+  'PPEJ',
+  'FC',
+  'MR',
+  'ADMIN'
 ];
 
 // Add/Edit Modal Component
@@ -49,7 +55,7 @@ function AllocatedPriceModal({ allocatedPrice, availableDesignations, onClose, o
     nightOutReturn: allocatedPrice?.nightOutReturn || "",
     monthlyFuel: allocatedPrice?.monthlyFuel || ""
   });
-  
+
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -106,7 +112,7 @@ function AllocatedPriceModal({ allocatedPrice, availableDesignations, onClose, o
                 <option value="">Select Designation</option>
                 {availableDesignations.map((desig) => (
                   <option key={desig} value={desig}>
-                    {desig}
+                    {getFullDesignationName(desig)}
                   </option>
                 ))}
               </select>
@@ -212,7 +218,7 @@ export default function ManageAllocatedPrices() {
   const [showModal, setShowModal] = useState(false);
   const [editingAllocatedPrice, setEditingAllocatedPrice] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, price: null });
-  
+
   const { showNotification, NotificationComponent } = useNotification();
 
   // Fetch allocated prices and designations
@@ -220,12 +226,12 @@ export default function ManageAllocatedPrices() {
     try {
       setLoading(true);
       setError("");
-      
+
       // Fetch allocated prices
       const pricesResponse = await getAllocatedPrices();
       const pricesData = pricesResponse?.data || pricesResponse || [];
       setAllocatedPrices(Array.isArray(pricesData) ? pricesData : []);
-      
+
       // Fetch designations from employees
       const designationsResponse = await getDesignations();
       const designationsData = designationsResponse?.data || designationsResponse || [];
@@ -279,7 +285,7 @@ export default function ManageAllocatedPrices() {
   const confirmDelete = async () => {
     const allocatedPrice = deleteConfirm.price;
     setDeleteConfirm({ show: false, price: null });
-    
+
     if (!allocatedPrice) return;
 
     try {
@@ -323,20 +329,23 @@ export default function ManageAllocatedPrices() {
     }
   };
 
-  // Get designations that don't have allocated prices yet
-  // Use all possible designations + any from employees that aren't in our list
-  const usedDesignations = allocatedPrices.map(p => p.designation);
+  // Get designations that don't have allocated prices yet.
+  // ALL_DESIGNATIONS is the complete canonical list of codes.
+  // Normalize stored designations to codes for comparison (handles both codes and old full names).
+  const usedCodes = allocatedPrices.map(p => {
+    // If it's already a known code, use it; otherwise try reverse-lookup via the map
+    const entry = Object.entries({
+      'OM': 'Operations Manager', 'SM': 'Senior Manager', 'MGR': 'Manager',
+      'PM': 'Products Manager', 'TM': 'Territory Manager',
+      'PPES': 'Product Promotion Executive - Senior',
+      'PPEJ': 'Product Promotion Executive - Junior',
+      'FC': 'Field Coordinator', 'MR': 'Medical Representative', 'ADMIN': 'Admin'
+    }).find(([, name]) => name === p.designation);
+    return entry ? entry[0] : p.designation;
+  });
   
-  // Convert all designations to full names and combine with employee designations
-  const allDisplayDesignations = [
-    ...new Set([
-      ...ALL_DESIGNATIONS,
-      ...employeeDesignations.map(d => getFullDesignationName(d))
-    ])
-  ].sort();
-  
-  const usedDisplayDesignations = usedDesignations.map(d => getFullDesignationName(d));
-  const availableDesignations = allDisplayDesignations.filter(d => !usedDisplayDesignations.includes(d));
+  // Show all designations in the dropdown so none are 'missing'. Uniqueness is handled by the backend.
+  const availableDesignations = ALL_DESIGNATIONS;
 
   return (
     <div className="p-6">
@@ -363,8 +372,8 @@ export default function ManageAllocatedPrices() {
         <div className="text-center py-8 text-gray-500">Loading...</div>
       ) : allocatedPrices.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          No allocated prices found. 
-          {employeeDesignations.length > 0 
+          No allocated prices found.
+          {employeeDesignations.length > 0
             ? ` Click "Add Allocated Price" to create one for an employee designation.`
             : " Add employees first to configure their allocated prices."}
         </div>
@@ -447,7 +456,7 @@ export default function ManageAllocatedPrices() {
 
       {/* Notification and Confirm Dialogs */}
       {NotificationComponent}
-      
+
       {/* Delete Confirmation Modal */}
       {deleteConfirm.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -462,13 +471,13 @@ export default function ManageAllocatedPrices() {
                 </h3>
               </div>
             </div>
-            
+
             <div className="mb-6">
               <p className="text-gray-700 text-sm leading-relaxed">
                 Are you sure you want to delete the allocated price for <strong>"{getFullDesignationName(deleteConfirm.price?.designation)}"</strong>? This action cannot be undone.
               </p>
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
