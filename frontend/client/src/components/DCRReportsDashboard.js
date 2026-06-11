@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import logo from '../assets/gsh.logo.png';
 import { FaBars, FaTimes, FaSignOutAlt, FaUsers } from 'react-icons/fa';
 import './RepDashboard.css';
+import { useConfirm } from './ConfirmDialog';
 
 // Function to transform products from API to expected format
 const transformProductsToCategories = (products) => {
@@ -326,6 +327,53 @@ const ChemistSummaryTable = ({ tableData, products }) => {
 };
 
 export default function DCRReportsDashboard() {
+  const { showConfirm, ConfirmDialogComponent } = useConfirm();
+
+  // Simple toast notification functions
+  const showSuccessToast = (message) => {
+    showToast(message, 'success');
+  };
+
+  const showErrorToast = (message) => {
+    showToast(message, 'error');
+  };
+
+  const showToast = (message, type) => {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    
+    Object.assign(toast.style, {
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      padding: '12px 20px',
+      borderRadius: '8px',
+      color: 'white',
+      fontWeight: '500',
+      fontSize: '14px',
+      zIndex: '9999',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      transition: 'all 0.3s ease',
+      opacity: '0',
+      transform: 'translateX(100%)',
+      backgroundColor: type === 'success' ? '#10b981' : '#ef4444'
+    });
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(100%)';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  };
+
   const [dcrs, setDcrs] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedDCR, setSelectedDCR] = useState(null);
@@ -379,7 +427,7 @@ export default function DCRReportsDashboard() {
       setSelectedDCR(response.data.dcr);
     } catch (error) {
       console.error('Error fetching DCR details:', error);
-      alert('DCR not found or has been deleted.');
+      showErrorToast('DCR not found or has been deleted.');
     }
   };
 
@@ -392,16 +440,24 @@ export default function DCRReportsDashboard() {
   };
 
   const handleDeleteDCR = async (dcrId) => {
-    if (window.confirm('Are you sure you want to delete this DCR report? This action cannot be undone.')) {
-      try {
-        await api.delete(`/dcrs/${dcrId}`);
-        // Refresh the DCRs list
-        fetchDCRs();
-        alert('DCR report deleted successfully');
-      } catch (error) {
-        console.error('Error deleting DCR:', error);
-        alert('Failed to delete DCR report');
-      }
+    const confirmed = await showConfirm({
+      title: "Delete DCR Report",
+      message: "Are you sure you want to delete this DCR report? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/dcrs/${dcrId}`);
+      // Refresh the DCRs list
+      fetchDCRs();
+      showSuccessToast('DCR report deleted successfully');
+    } catch (error) {
+      console.error('Error deleting DCR:', error);
+      showErrorToast('Failed to delete DCR report');
     }
   };
 
@@ -675,6 +731,7 @@ export default function DCRReportsDashboard() {
         </div>
       </div>
     </div>
+    {ConfirmDialogComponent}
   </div>
 );
 }
@@ -883,6 +940,7 @@ export default function DCRReportsDashboard() {
           </div>
         </div>
       </div>
+      {ConfirmDialogComponent}
     </div>
   );
 }

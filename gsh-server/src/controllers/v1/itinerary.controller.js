@@ -518,6 +518,469 @@ const generateExcel = asyncHandler(async (req, res) => {
   res.end();
 });
 
+const getComparisonReport = asyncHandler(async (req, res) => {
+  let userId = req.user.id;
+  if (req.query.employeeId) {
+    userId = parseInt(req.query.employeeId);
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, emp_no: true, designation: true }
+  });
+
+  if (!targetUser) {
+    throw new AppError(404, 'User not found');
+  }
+
+  const selectedMonth = req.query.month;
+  if (!selectedMonth) {
+    throw new AppError(400, 'Month is required');
+  }
+
+  // Convert month to YYYY-MM if it's in "Month Year" format
+  let monthKey = selectedMonth;
+  if (!monthKey.match(/^\d{4}-\d{2}$/)) {
+    const [monthName, year] = selectedMonth.split(' ');
+    const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
+    monthKey = `${year}-${String(monthIndex).padStart(2, '0')}`;
+  }
+
+  // Fetch itinerary
+  const itinerary = await prisma.itinerary.findFirst({
+    where: {
+      user_id: userId,
+      month: monthKey
+    },
+    include: {
+      entries: {
+        orderBy: { date: 'asc' }
+      }
+    }
+  });
+
+  // Fetch DCRs
+  const dcrsInMonth = await prisma.dcr.findMany({
+    where: {
+      date: {
+        startsWith: monthKey
+      }
+    },
+    orderBy: { date: 'asc' }
+  });
+
+  const filteredDcrs = dcrsInMonth.filter(dcr => {
+    const isOwner = dcr.user_id === userId;
+    let isJoint = false;
+    if (dcr.joint_user_ids) {
+      try {
+        const jointIds = typeof dcr.joint_user_ids === 'string' ? JSON.parse(dcr.joint_user_ids) : dcr.joint_user_ids;
+        if (Array.isArray(jointIds)) {
+          isJoint = jointIds.map(Number).includes(userId);
+        }
+      } catch (err) {
+        console.error('Error parsing joint_user_ids:', err);
+      }
+    }
+    return isOwner || isJoint;
+  });
+
+  // Fetch allocated price based on user designation
+  let dailyBata = 0;
+  let nightOutRate = 0;
+  let nightOutReturnRate = 0;
+  
+  if (targetUser.designation) {
+    const designationMap = {
+      'MR': 'Medical Rep',
+      'FC': 'Field Coordinator',
+      'JE': 'Junior Executive',
+      'SE': 'Senior Executive',
+      'TM': 'Territory Manager',
+      'PM': 'Product Manager',
+      'OM': 'Operations Manager',
+      'ADMIN': 'Admin'
+    };
+    
+    let allocatedPrice = await prisma.allocatedPrice.findFirst({
+      where: { 
+        designation: { 
+          equals: targetUser.designation, 
+          mode: 'insensitive' 
+        }
+      }
+    });
+    
+    if (!allocatedPrice) {
+      const fullName = designationMap[targetUser.designation.toUpperCase()];
+      if (fullName) {
+        allocatedPrice = await prisma.allocatedPrice.findFirst({
+          where: { 
+            designation: { 
+              equals: fullName, 
+              mode: 'insensitive' 
+            }
+          }
+        });
+      }
+    }
+    
+    if (!allocatedPrice) {
+      allocatedPrice = await prisma.allocatedPrice.findFirst({
+        where: { 
+          designation: {
+            contains: targetUser.designation,
+            mode: 'insensitive'
+          }
+        }
+      });
+    }
+
+    if (allocatedPrice) {
+      dailyBata = allocatedPrice.dailyBata || 0;
+      nightOutRate = allocatedPrice.nightOut || 0;
+      nightOutReturnRate = allocatedPrice.nightOutReturn || 0;
+    }
+  }
+
+  // Build daily comparison records
+  const [yearStr, monthStr] = monthKey.split('-');
+  const year = parseInt(yearStr);
+  const month = parseInt(monthStr);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  
+  const comparisonData = [];
+  
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateString = `${yearStr}-${monthStr}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(year, month - 1, day);
+    const isSun = dateObj.getDay() === 0;
+    
+    const itinEntry = itinerary?.entries.find(e => e.date === dateString);
+    const dcrEntry = filteredDcrs.find(d => d.date === dateString);
+    
+    // Skip day if no itinerary entry AND no DCR report exists (and it's a Sunday)
+    if (!itinEntry && !dcrEntry && isSun) {
+      continue;
+    }
+    
+    let actualDoctorCalls = 0;
+    let actualChemistCalls = 0;
+    let actualMileage = 0;
+    let fuelCost = 0;
+    let otherExpenses = 0;
+    let hasBata = false;
+    let hasNightOut = false;
+    let hasNightOutReturn = false;
+    
+    if (dcrEntry) {
+      if (dcrEntry.callReport && Array.isArray(dcrEntry.callReport)) {
+        dcrEntry.callReport.forEach(call => {
+          if (call.doctor) actualDoctorCalls++;
+          if (call.chemist) actualChemistCalls++;
+        });
+      }
+      
+      if (dcrEntry.mileage) {
+        const opening = parseFloat(dcrEntry.mileage.openingMileage || dcrEntry.mileage.odometerStart) || 0;
+        const closing = parseFloat(dcrEntry.mileage.closingMileage || dcrEntry.mileage.odometerEnd) || 0;
+        if (closing > 0 && opening > 0) {
+          actualMileage = Math.abs(closing - opening);
+        }
+        fuelCost = parseFloat(dcrEntry.mileage.cost) || 0;
+      }
+      
+      if (dcrEntry.dailyExpenses) {
+        hasBata = !!dcrEntry.dailyExpenses.bata;
+        hasNightOut = !!dcrEntry.dailyExpenses.nightOut;
+        hasNightOutReturn = !!dcrEntry.dailyExpenses.nightOutReturn;
+      }
+      
+      if (dcrEntry.otherBills && dcrEntry.otherBills.details) {
+        otherExpenses += parseFloat(dcrEntry.otherBills.details.parking?.amount || 0);
+        otherExpenses += parseFloat(dcrEntry.otherBills.details.highway?.amount || 0);
+        otherExpenses += parseFloat(dcrEntry.otherBills.details.other?.amount || 0);
+      }
+    }
+    
+    comparisonData.push({
+      date: dateString,
+      dayName: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
+      isSunday: isSun,
+      schedArea: itinEntry?.area || '',
+      schedTown: itinEntry?.town || '',
+      schedDoctorCalls: itinEntry?.doctorCalls || 0,
+      schedChemistCalls: itinEntry?.chemistCalls || 0,
+      schedMileage: itinEntry?.mileage || 0,
+      schedNightOutArea: itinEntry?.nightOutArea || '',
+      actArea: dcrEntry?.actualWorkingArea || dcrEntry?.area || '',
+      actTown: dcrEntry?.town || '',
+      actDoctorCalls: actualDoctorCalls,
+      actChemistCalls: actualChemistCalls,
+      actMileage: actualMileage,
+      actNightOut: hasNightOut ? 'Yes' : 'No',
+      actNightOutReturn: hasNightOutReturn ? 'Yes' : 'No',
+      actBata: hasBata ? 'Yes' : 'No',
+      bataCost: hasBata ? dailyBata : 0,
+      nightOutCost: (hasNightOut ? nightOutRate : 0) + (hasNightOutReturn ? nightOutReturnRate : 0),
+      fuelCost: fuelCost,
+      otherExpenses: otherExpenses
+    });
+  }
+
+  // Excel Generation
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Comparison Summary');
+  
+  worksheet.views = [{ showGridLines: true }];
+
+  worksheet.addRow(['Monthly Comparison Summary Report (Scheduled vs. Actual)']);
+  worksheet.addRow(['']);
+  worksheet.addRow(['Employee Name:', targetUser.name]);
+  worksheet.addRow(['Employee No:', targetUser.emp_no]);
+  worksheet.addRow(['Designation:', targetUser.designation || 'N/A']);
+  worksheet.addRow(['Month:', selectedMonth]);
+  worksheet.addRow(['Generated On:', new Date().toLocaleDateString()]);
+  worksheet.addRow(['']);
+
+  const titleRow = worksheet.getRow(1);
+  titleRow.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FF1E293B' } };
+  
+  for (let r = 3; r <= 7; r++) {
+    worksheet.getRow(r).getCell(1).font = { bold: true, color: { argb: 'FF475569' } };
+  }
+
+  worksheet.addRow([
+    'Date Info', '', 
+    'Scheduled Itinerary Details', '', '', '', '', '',
+    'Actual DCR Details', '', '', '', '', '', '', '', '', '', '', '', '',
+    'Variance', '', ''
+  ]);
+  worksheet.addRow([
+    'Date', 'Day',
+    'Area', 'Town', 'Dr Calls', 'Ch Calls', 'Mileage (km)', 'Night Out Area',
+    'Area', 'Town', 'Dr Calls', 'Ch Calls', 'Mileage (km)', 'Night Out', 'Night Out Return', 'Bata', 'Bata (Rs)', 'N/Out (Rs)', 'Fuel (Rs)', 'Other (Rs)', 'Total (Rs)',
+    'Dr Calls', 'Ch Calls', 'Mileage (km)'
+  ]);
+
+  worksheet.mergeCells('A9:B9');   // Date Info
+  worksheet.mergeCells('C9:H9');   // Scheduled Itinerary Details
+  worksheet.mergeCells('I9:U9');   // Actual DCR Details
+  worksheet.mergeCells('V9:X9');   // Variance
+
+  const groupHeaderRow = worksheet.getRow(9);
+  const detailHeaderRow = worksheet.getRow(10);
+
+  groupHeaderRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+  groupHeaderRow.alignment = { horizontal: 'center', vertical: 'middle' };
+  
+  const groupColors = {
+    dateInfo: 'FF475569',
+    scheduled: 'FF2563EB',
+    actual: 'FF10B981',
+    variance: 'FFF59E0B'
+  };
+
+  for (let c = 1; c <= 24; c++) {
+    let color = groupColors.dateInfo;
+    if (c >= 3 && c <= 8) color = groupColors.scheduled;
+    if (c >= 9 && c <= 21) color = groupColors.actual;
+    if (c >= 22 && c <= 24) color = groupColors.variance;
+    
+    groupHeaderRow.getCell(c).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: color }
+    };
+  }
+
+  detailHeaderRow.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF1E293B' } };
+  detailHeaderRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  for (let c = 1; c <= 24; c++) {
+    detailHeaderRow.getCell(c).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF1F5F9' }
+    };
+    detailHeaderRow.getCell(c).border = {
+      top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      bottom: { style: 'medium', color: { argb: 'FF94A3B8' } },
+      left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
+  }
+
+  groupHeaderRow.height = 28;
+  detailHeaderRow.height = 24;
+
+  let startRow = 11;
+  let currentRow = startRow;
+  
+  comparisonData.forEach(data => {
+    const row = worksheet.addRow([
+      data.date,
+      data.dayName,
+      data.schedArea,
+      data.schedTown,
+      data.schedDoctorCalls,
+      data.schedChemistCalls,
+      data.schedMileage,
+      data.schedNightOutArea,
+      data.actArea,
+      data.actTown,
+      data.actDoctorCalls,
+      data.actChemistCalls,
+      data.actMileage,
+      data.actNightOut,
+      data.actNightOutReturn,
+      data.actBata,
+      data.bataCost,
+      data.nightOutCost,
+      data.fuelCost,
+      data.otherExpenses,
+      { formula: `=Q${currentRow}+R${currentRow}+S${currentRow}+T${currentRow}` },
+      { formula: `=K${currentRow}-E${currentRow}` },
+      { formula: `=L${currentRow}-F${currentRow}` },
+      { formula: `=M${currentRow}-G${currentRow}` }
+    ]);
+
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: 'center' };
+    row.getCell(5).alignment = { horizontal: 'right' };
+    row.getCell(6).alignment = { horizontal: 'right' };
+    row.getCell(7).alignment = { horizontal: 'right' };
+    row.getCell(11).alignment = { horizontal: 'right' };
+    row.getCell(12).alignment = { horizontal: 'right' };
+    row.getCell(13).alignment = { horizontal: 'right' };
+    row.getCell(14).alignment = { horizontal: 'center' };
+    row.getCell(15).alignment = { horizontal: 'center' };
+    row.getCell(16).alignment = { horizontal: 'center' };
+    row.getCell(17).alignment = { horizontal: 'right' };
+    row.getCell(18).alignment = { horizontal: 'right' };
+    row.getCell(19).alignment = { horizontal: 'right' };
+    row.getCell(20).alignment = { horizontal: 'right' };
+    row.getCell(21).alignment = { horizontal: 'right' };
+    row.getCell(22).alignment = { horizontal: 'right' };
+    row.getCell(23).alignment = { horizontal: 'right' };
+    row.getCell(24).alignment = { horizontal: 'right' };
+
+    row.getCell(7).numFmt = '0.0';
+    row.getCell(13).numFmt = '0.0';
+    row.getCell(17).numFmt = '"Rs." #,##0.00';
+    row.getCell(18).numFmt = '"Rs." #,##0.00';
+    row.getCell(19).numFmt = '"Rs." #,##0.00';
+    row.getCell(20).numFmt = '"Rs." #,##0.00';
+    row.getCell(21).numFmt = '"Rs." #,##0.00';
+    row.getCell(22).numFmt = '+0;-0;0';
+    row.getCell(23).numFmt = '+0;-0;0';
+    row.getCell(24).numFmt = '+0.0;-0.0;0.0';
+
+    for (let c = 1; c <= 24; c++) {
+      row.getCell(c).border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      };
+      
+      if (data.isSunday) {
+        row.getCell(c).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF1F5F9' }
+        };
+      }
+    }
+
+    currentRow++;
+  });
+
+  const totalRowIndex = currentRow;
+  const totalRow = worksheet.addRow([
+    'TOTALS', '', 
+    '', '', 
+    { formula: `=SUM(E${startRow}:E${totalRowIndex-1})` },
+    { formula: `=SUM(F${startRow}:F${totalRowIndex-1})` },
+    { formula: `=SUM(G${startRow}:G${totalRowIndex-1})` },
+    '', 
+    '', '', 
+    { formula: `=SUM(K${startRow}:K${totalRowIndex-1})` },
+    { formula: `=SUM(L${startRow}:L${totalRowIndex-1})` },
+    { formula: `=SUM(M${startRow}:M${totalRowIndex-1})` },
+    '', '', '', 
+    { formula: `=SUM(Q${startRow}:Q${totalRowIndex-1})` },
+    { formula: `=SUM(R${startRow}:R${totalRowIndex-1})` },
+    { formula: `=SUM(S${startRow}:S${totalRowIndex-1})` },
+    { formula: `=SUM(T${startRow}:T${totalRowIndex-1})` },
+    { formula: `=SUM(U${startRow}:U${totalRowIndex-1})` },
+    { formula: `=SUM(V${startRow}:V${totalRowIndex-1})` },
+    { formula: `=SUM(W${startRow}:W${totalRowIndex-1})` },
+    { formula: `=SUM(X${startRow}:X${totalRowIndex-1})` }
+  ]);
+
+  worksheet.mergeCells(`A${totalRowIndex}:B${totalRowIndex}`);
+  totalRow.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF0F172A' } };
+  
+  for (let c = 1; c <= 24; c++) {
+    totalRow.getCell(c).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE2E8F0' }
+    };
+    totalRow.getCell(c).border = {
+      top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+      bottom: { style: 'double', color: { argb: 'FF0F172A' } }
+    };
+  }
+
+  totalRow.getCell(5).numFmt = '#,##0';
+  totalRow.getCell(6).numFmt = '#,##0';
+  totalRow.getCell(7).numFmt = '#,##0.0';
+  totalRow.getCell(11).numFmt = '#,##0';
+  totalRow.getCell(12).numFmt = '#,##0';
+  totalRow.getCell(13).numFmt = '#,##0.0';
+  totalRow.getCell(17).numFmt = '"Rs." #,##0.00';
+  totalRow.getCell(18).numFmt = '"Rs." #,##0.00';
+  totalRow.getCell(19).numFmt = '"Rs." #,##0.00';
+  totalRow.getCell(20).numFmt = '"Rs." #,##0.00';
+  totalRow.getCell(21).numFmt = '"Rs." #,##0.00';
+  totalRow.getCell(22).numFmt = '+0;-0;0';
+  totalRow.getCell(23).numFmt = '+0;-0;0';
+  totalRow.getCell(24).numFmt = '+0.0;-0.0;0.0';
+
+  totalRow.getCell(1).alignment = { horizontal: 'center' };
+  totalRow.getCell(5).alignment = { horizontal: 'right' };
+  totalRow.getCell(6).alignment = { horizontal: 'right' };
+  totalRow.getCell(7).alignment = { horizontal: 'right' };
+  totalRow.getCell(11).alignment = { horizontal: 'right' };
+  totalRow.getCell(12).alignment = { horizontal: 'right' };
+  totalRow.getCell(13).alignment = { horizontal: 'right' };
+  totalRow.getCell(17).alignment = { horizontal: 'right' };
+  totalRow.getCell(18).alignment = { horizontal: 'right' };
+  totalRow.getCell(19).alignment = { horizontal: 'right' };
+  totalRow.getCell(20).alignment = { horizontal: 'right' };
+  totalRow.getCell(21).alignment = { horizontal: 'right' };
+  totalRow.getCell(22).alignment = { horizontal: 'right' };
+  totalRow.getCell(23).alignment = { horizontal: 'right' };
+  totalRow.getCell(24).alignment = { horizontal: 'right' };
+
+  worksheet.columns.forEach((column, i) => {
+    let maxLen = 0;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      let val = cell.value ? String(cell.value) : '';
+      if (cell.formula) val = 'Rs. 99,999.00';
+      if (val.length > maxLen) maxLen = val.length;
+    });
+    column.width = Math.min(Math.max(maxLen + 4, 12), 35);
+  });
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename=comparison-report-${monthKey}-${targetUser.emp_no}.xlsx`);
+
+  await workbook.xlsx.write(res);
+  res.end();
+});
+
 // Helper function to generate HTML for PDF
 function generateItineraryHTML(itinerary) {
   const monthName = new Date(itinerary.month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
@@ -604,5 +1067,6 @@ module.exports = {
   deleteItinerary,
   generatePDF,
   generateExcel,
-  getItineraryByDate
+  getItineraryByDate,
+  getComparisonReport
 };

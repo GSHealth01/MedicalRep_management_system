@@ -74,8 +74,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-red-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
         <div className="text-center mb-8">
           <img src={logo} alt="GSH Logo" className="h-16 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-800">Password Recovery</h1>
@@ -108,7 +108,7 @@ export default function ForgotPassword() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     placeholder="e.g. name@gsh.com"
                     required
                   />
@@ -116,7 +116,7 @@ export default function ForgotPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors disabled:bg-gray-400"
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:bg-gray-400"
                 >
                   {loading ? 'Verifying...' : 'Next Step'}
                 </button>
@@ -131,7 +131,7 @@ export default function ForgotPassword() {
                     type="text"
                     value={empNo}
                     onChange={(e) => setEmpNo(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     placeholder="Enter your staff ID"
                     required
                   />
@@ -147,7 +147,7 @@ export default function ForgotPassword() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors disabled:bg-gray-400"
+                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:bg-gray-400"
                   >
                     {loading ? 'Verifying...' : 'Continue'}
                   </button>
@@ -163,7 +163,7 @@ export default function ForgotPassword() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     placeholder="Minimum 6 characters"
                     required
                   />
@@ -174,7 +174,7 @@ export default function ForgotPassword() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     placeholder="Repeat password"
                     required
                   />
@@ -190,7 +190,7 @@ export default function ForgotPassword() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors disabled:bg-gray-400"
+                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:bg-gray-400"
                   >
                     {loading ? 'Resetting...' : 'Reset Password'}
                   </button>
@@ -203,7 +203,7 @@ export default function ForgotPassword() {
         <div className="mt-8 text-center">
           <button
             onClick={() => navigate('/')}
-            className="text-red-600 hover:text-red-800 text-sm font-semibold hover:underline"
+            className="text-blue-600 hover:text-blue-800 text-sm font-semibold hover:underline"
           >
             Return to Login Page
           </button>

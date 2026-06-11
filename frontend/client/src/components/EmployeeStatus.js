@@ -270,7 +270,7 @@ export default function EmployeeStatus() {
             </div>
         {/* Employee Profile Header */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-8 text-white">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-8 text-white">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="h-20 w-20 rounded-full bg-white bg-opacity-20 flex items-center justify-center">

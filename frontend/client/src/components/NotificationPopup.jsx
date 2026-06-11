@@ -1,119 +1,100 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-const NotificationPopup = ({ 
-  message, 
-  type = 'success', 
-  duration = 3000, 
-  onClose,
-  show = false 
-}) => {
-  const [isVisible, setIsVisible] = useState(show);
-  console.log('[DEBUG-Notification] Rendering with show:', show, 'message:', message, 'type:', type);
+// ─── Toast UI ──────────────────────────────────────────────────────────────────
+const TOAST_STYLES = `
+  @keyframes toastIn  { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(110%); opacity: 0; } }
+  .toast-in  { animation: toastIn  0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
+  .toast-out { animation: toastOut 0.28s cubic-bezier(0.4,0,1,1)   forwards; }
+`;
 
-  useEffect(() => {
-    console.log('[DEBUG-Notification] useEffect triggered, show:', show);
-    setIsVisible(show);
-    if (show && duration > 0) {
-      const timer = setTimeout(() => {
-        console.log('[DEBUG-Notification] Auto-hide timer triggered');
-        setIsVisible(false);
-        onClose && onClose();
-      }, duration);
-      return () => clearTimeout(timer);
-    }
-  }, [show, duration, onClose]);
+const BORDER_CLASS = { success: 'border-emerald-500', error: 'border-rose-500', warning: 'border-amber-500', info: 'border-sky-500' };
 
-  const handleClose = () => {
-    console.log('[DEBUG-Notification] handleClose called');
-    setIsVisible(false);
-    onClose && onClose();
-  };
+const ICONS = {
+  success: <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  error:   <svg className="w-5 h-5 text-rose-500   shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  warning: <svg className="w-5 h-5 text-amber-500  shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+  info:    <svg className="w-5 h-5 text-sky-500    shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+};
 
-  if (!isVisible) {
-    console.log('[DEBUG-Notification] Not visible, returning null');
-    return null;
-  }
+function ToastCard({ message, type = 'success', onClose }) {
+  const [cls, setCls] = useState('toast-in');
 
-  console.log('[DEBUG-Notification] Rendering notification popup');
-
-  const getTypeStyles = () => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-100 border-green-400 text-green-700';
-      case 'error':
-        return 'bg-red-100 border-red-400 text-red-700';
-      case 'warning':
-        return 'bg-yellow-100 border-yellow-400 text-yellow-700';
-      case 'info':
-        return 'bg-blue-100 border-blue-400 text-blue-700';
-      default:
-        return 'bg-green-100 border-green-400 text-green-700';
-    }
-  };
-
-  const getIcon = () => {
-    switch (type) {
-      case 'success':
-        return '✅';
-      case 'error':
-        return '❌';
-      case 'warning':
-        return '⚠️';
-      case 'info':
-        return 'ℹ️';
-      default:
-        return '✅';
-    }
+  const dismiss = () => {
+    setCls('toast-out');
+    setTimeout(onClose, 280);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`fixed top-4 right-4 p-4 border-l-4 rounded-lg shadow-lg max-w-sm w-full mx-4 ${getTypeStyles()}`}>
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <span className="text-xl">{getIcon()}</span>
-          </div>
-          <div className="ml-3 flex-1">
-            <p className="text-sm font-medium">{message}</p>
-          </div>
-          <div className="ml-4 flex-shrink-0">
-            <button
-              onClick={handleClose}
-              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition ease-in-out duration-150"
-            >
-              <span className="text-lg">×</span>
-            </button>
-          </div>
-        </div>
+    <>
+      <style>{TOAST_STYLES}</style>
+      <div
+        className={`fixed top-5 right-5 z-[9999] flex items-start gap-3 bg-white border-l-4 rounded-xl px-4 py-3 w-[340px] ${cls} ${BORDER_CLASS[type] || BORDER_CLASS.success}`}
+        style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.13)' }}
+      >
+        <div className="mt-0.5">{ICONS[type] || ICONS.success}</div>
+        <p className="flex-1 text-sm font-medium text-gray-800 leading-snug">{message}</p>
+        <button onClick={dismiss} className="text-gray-400 hover:text-gray-600 transition-colors p-0.5 rounded hover:bg-gray-100 shrink-0">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-    </div>
+    </>
   );
-};
+}
 
-// Hook for managing notifications
+// ─── Hook ──────────────────────────────────────────────────────────────────────
+// useNotification returns:
+//   • showNotification(msg, type, duration) — triggers the toast
+//   • NotificationComponent                — a ready-to-render JSX element
+//                                            use as {NotificationComponent} in JSX
+// All pages that previously used <NotificationComponent /> must switch to
+// {NotificationComponent} — see the fix in ManageDistributors, etc.
 export const useNotification = () => {
-  const [notification, setNotification] = useState(null);
+  const [toast, setToast] = useState(null);   // null | { id, message, type, duration }
+  const timerRef = useRef(null);
 
-  const showNotification = (message, type = 'success', duration = 3000) => {
-    setNotification({ message, type, duration, show: true });
+  const showNotification = (message, type = 'success', duration = 3500) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    // Give a tiny gap so rapid re-calls always re-mount the card
+    setToast(null);
+    setTimeout(() => {
+      const id = Date.now();
+      setToast({ id, message, type, duration });
+      if (duration > 0) {
+        timerRef.current = setTimeout(() => setToast(null), duration);
+      }
+    }, 20);
   };
 
   const hideNotification = () => {
-    setNotification(prev => prev ? { ...prev, show: false } : null);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setToast(null);
   };
 
-  const NotificationComponent = () => (
-    <NotificationPopup
-      {...notification}
-      onClose={hideNotification}
-    />
-  );
+  // JSX element — use as {NotificationComponent} (not <NotificationComponent />)
+  const NotificationComponent = toast
+    ? <ToastCard key={toast.id} message={toast.message} type={toast.type} onClose={hideNotification} />
+    : null;
 
-  return {
-    showNotification,
-    hideNotification,
-    NotificationComponent
-  };
+  return { showNotification, hideNotification, NotificationComponent };
 };
 
-export default NotificationPopup;
+// Legacy default export kept for any direct <NotificationPopup> usage
+export default function NotificationPopup({ show, message, type = 'success', duration = 3500, onClose }) {
+  const timerRef = useRef(null);
+  const [visible, setVisible] = useState(show);
+
+  useEffect(() => {
+    setVisible(show);
+    if (show && duration > 0) {
+      timerRef.current = setTimeout(() => { setVisible(false); onClose && onClose(); }, duration);
+    }
+    return () => clearTimeout(timerRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
+
+  if (!visible) return null;
+  return <ToastCard message={message} type={type} onClose={() => { setVisible(false); onClose && onClose(); }} />;
+}

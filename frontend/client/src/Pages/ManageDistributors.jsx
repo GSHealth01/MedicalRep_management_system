@@ -251,69 +251,44 @@ export default function ManageDistributors() {
   const [editingDistributor, setEditingDistributor] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  // Load existing distributors (optionally you can filter by sector via ?sector=)
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      setErr("");
-      try {
-        const res = await api.get("/admin/distributors", {
-          params: { limit: 100 },
-        });
-        const payload = res?.data?.data ?? res?.data ?? {};
-        const items = Array.isArray(payload?.items)
-          ? payload.items
-          : Array.isArray(payload)
-          ? payload
-          : [];
-        console.log('Distributors response:', res.data); // Debug log
-        console.log('Items:', items); // Debug log
-
-        // Ensure all nested objects are properly handled
-        const safeItems = items.map(item => ({
-          ...item,
-          range: item.sector?.range || 'Unknown',
-          agency: item.sector?.agency || 'Unknown',
-          area: typeof item.area === 'object' ? item.area?.name || 'Unknown' : item.area || 'Unknown',
-          coverage_town: item.coverage_town || item.town || 'Unknown',
-        }));
-
-        if (mounted) setDistributors(safeItems);
-      } catch (e) {
-        if (mounted)
-          setErr(e?.response?.data?.message || "Failed to load distributors");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const handleAddDistributor = async (payload, rawForm) => {
+  // Load existing distributors
+  const loadDistributors = async () => {
+    setLoading(true);
+    setErr("");
     try {
-      console.log('Sending payload:', payload); // Debug log
-      const res = await api.post("/admin/distributors", payload);
-      console.log('Response:', res.data); // Debug log
+      const res = await api.get("/admin/distributors", { params: { limit: 100 } });
+      const payload = res?.data?.data ?? res?.data ?? {};
+      const items = Array.isArray(payload?.items)
+        ? payload.items
+        : Array.isArray(payload)
+        ? payload
+        : [];
 
-      // The controller returns the distributor object with agency and area included
-      const created = res?.data?.data || res?.data || {};
-      const newRow = {
-        id: created.id,
-        distributor_code: created.distributor_code,
-        name: created.name,
-        area: created.area?.name || payload.area, // Use area name from response
-        town: created.coverage_town,
-        route: created.route,
-        agency: created.sector?.agency || 'Unknown', // Use agency name from response
-        sector: created.sector?.agency || 'Unknown', // For backward compatibility
-      };
-      setDistributors((list) => [newRow, ...list]);
-      showNotification(`Distributor ${payload.name} added successfully!`, 'success');
+      const safeItems = items.map(item => ({
+        ...item,
+        range: item.sector?.range || 'Unknown',
+        agency: item.sector?.agency || 'Unknown',
+        area: typeof item.area === 'object' ? item.area?.name || 'Unknown' : item.area || 'Unknown',
+        coverage_town: item.coverage_town || item.town || 'Unknown',
+      }));
+      setDistributors(safeItems);
     } catch (e) {
-      console.error('Error adding distributor:', e); // Debug log
+      setErr(e?.response?.data?.message || "Failed to load distributors");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load on mount
+  useEffect(() => { loadDistributors(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAddDistributor = async (payload) => {
+    try {
+      await api.post("/admin/distributors", payload);
+      await loadDistributors(); // reload full list from server
+      showNotification('Distributor added successfully!', 'success');
+    } catch (e) {
+      console.error('Error adding distributor:', e);
       showNotification(e?.response?.data?.message || "Failed to add distributor", 'error');
     }
   };
@@ -325,36 +300,19 @@ export default function ManageDistributors() {
   const handleSaveEdit = async (formData) => {
     try {
       const updateData = {};
-      if (formData.name.trim()) updateData.name = formData.name.trim();
-      if (formData.town.trim()) updateData.coverage_town = formData.town.trim();
-      if (formData.route.trim()) updateData.route = formData.route.trim();
-      
-      // For range, agency and area, send as strings for backend ID lookup
+      if (formData.name) updateData.name = formData.name.trim();
+      if (formData.town) updateData.coverage_town = formData.town.trim();
+      if (formData.route) updateData.route = formData.route.trim();
       if (formData.range) updateData.range = formData.range;
       if (formData.agency) updateData.agency = formData.agency;
       if (formData.area) updateData.area = formData.area;
 
       const distributorCode = editingDistributor.distributor_code || editingDistributor.distributorCode;
+      await api.put(`/admin/distributors/${distributorCode}`, updateData);
 
-      const response = await api.put(`/admin/distributors/${distributorCode}`, updateData);
-
-      setDistributors((list) =>
-        list.map((dist) =>
-          (dist.distributor_code === distributorCode || dist.distributorCode === distributorCode)
-            ? {
-                ...dist,
-                name: formData.name,
-                area: formData.area,
-                coverage_town: formData.town,
-                town: formData.town,
-                route: formData.route,
-                agency: formData.agency
-              }
-            : dist
-        )
-      );
-
-      showNotification(`Distributor ${formData.name} updated successfully!`, 'success');
+      // Reload full list from server so all values are accurate
+      await loadDistributors();
+      showNotification('Distributor updated successfully!', 'success');
     } catch (e) {
       console.error('Error updating distributor:', e);
       throw new Error(e?.response?.data?.message || "Failed to update distributor");
@@ -375,16 +333,13 @@ export default function ManageDistributors() {
     try {
       const distributorCode = distributor.distributor_code || distributor.distributorCode;
       await api.delete(`/admin/distributors/${distributorCode}`);
-      setDistributors((list) => list.filter((dist) => {
-        const distCode = dist.distributor_code || dist.distributorCode;
-        const deleteCode = distributor.distributor_code || distributor.distributorCode;
-        return distCode !== deleteCode;
-      }));
-      showNotification(`Distributor ${distributor.name} deleted successfully!`, 'success');
+      setDistributors(list => list.filter(d => (d.distributor_code || d.distributorCode) !== distributorCode));
+      showNotification(`Distributor "${distributor.name}" deleted successfully!`, 'success');
     } catch (e) {
       showNotification(e?.response?.data?.message || "Failed to delete distributor", 'error');
     }
   };
+
 
   return (
     <div>
@@ -501,10 +456,10 @@ export default function ManageDistributors() {
       )}
       
       {/* Notification Component */}
-      <NotificationComponent />
+      {NotificationComponent}
       
       {/* Confirmation Dialog Component */}
-      <ConfirmDialogComponent />
+      {ConfirmDialogComponent}
     </div>
   );
 }

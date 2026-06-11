@@ -131,9 +131,8 @@ exports.getOne = async (req, res) => {
     const distributor = await prisma.distributor.findUnique({
       where: { distributor_code: req.params.id },
       include: {
-        agency: { select: { id: true, name: true } },
-        area: { select: { id: true, name: true } },
-        range: { select: { id: true, name: true } }
+        sector: { select: { id: true, agency: true, range: true } },
+        area:   { select: { id: true, name: true } }
       }
     });
 
@@ -181,18 +180,17 @@ exports.update = async (req, res) => {
       finalUpdate.sector_id = sector.id;
     }
 
-    // Handle area_id - either directly provided or look up by name
+    // Handle area_id - either directly provided or look up/create by name
     if (updateData.area_id) {
       finalUpdate.area_id = parseInt(updateData.area_id);
     } else if (updateData.area) {
-      // Look up area by name
-      const area = await prisma.area.findFirst({
-        where: {
-          name: { equals: updateData.area, mode: 'insensitive' }
-        }
+      // Look up area by name, create if it doesn't exist
+      let area = await prisma.area.findFirst({
+        where: { name: { equals: updateData.area.trim(), mode: 'insensitive' } }
       });
       if (!area) {
-        return ApiResponse.error(res, `Area '${updateData.area}' not found`, 400);
+        // Create the new area
+        area = await prisma.area.create({ data: { name: updateData.area.trim() } });
       }
       finalUpdate.area_id = area.id;
     }
@@ -231,9 +229,17 @@ exports.updatePut = async (req, res) => {
  */
 exports.remove = async (req, res) => {
   try {
-    await prisma.distributor.delete({
-      where: { distributor_code: req.params.id }
-    });
+    const code = req.params.id;
+
+    // First delete child records that reference this distributor
+    // (no onDelete: Cascade in schema, so we do it manually)
+    await prisma.$transaction([
+      prisma.userDistributors.deleteMany({ where: { distributor_code: code } }),
+      prisma.distributorProducts.deleteMany({ where: { distributor_code: code } }),
+      prisma.chemist.deleteMany({ where: { distributor_code: code } }),
+    ]);
+
+    await prisma.distributor.delete({ where: { distributor_code: code } });
 
     return ApiResponse.ok(res, "Distributor removed", null, 200);
   } catch (error) {

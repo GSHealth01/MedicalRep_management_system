@@ -9,7 +9,8 @@ const {
   deleteItinerary,
   generatePDF,
   generateExcel,
-  getItineraryByDate
+  getItineraryByDate,
+  getComparisonReport
 } = require('../../controllers/v1/itinerary.controller');
 const { requireAuth } = require('../../middlewares/auth');
 
@@ -18,6 +19,7 @@ router.use(requireAuth);
 router.post('/', createItinerary);
 router.get('/', getItineraries);
 router.get('/by-date', getItineraryByDate);
+router.get('/comparison-report', getComparisonReport);
 router.get('/:id', getItinerary);
 router.get('/:id/summary', getItinerarySummary);
 router.put('/:id', updateItinerary);

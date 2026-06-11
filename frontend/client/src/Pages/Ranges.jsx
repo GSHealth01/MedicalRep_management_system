@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useNotification } from '../components/NotificationPopup';
 
 export default function Ranges() {
   const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState('');
+  const { showNotification, NotificationComponent } = useNotification();
 
   // Hardcoded agencies list
   const hardcodedAgencies = [
@@ -21,6 +22,7 @@ export default function Ranges() {
   // Fetch sectors on component mount
   useEffect(() => {
     fetchSectors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSectors = async () => {
@@ -31,7 +33,7 @@ export default function Ranges() {
       setSectors(response.data.data?.items || []);
     } catch (error) {
       console.error('Error fetching sectors:', error);
-      setMessage('Failed to load sectors');
+      showNotification('Failed to load sectors', 'error');
     } finally {
       setLoading(false);
     }
@@ -47,10 +49,9 @@ export default function Ranges() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage('');
 
     if (!form.agency || !form.range) {
-      setMessage('Please fill in all required fields');
+      showNotification('Please fill in all required fields', 'error');
       return;
     }
 
@@ -60,7 +61,7 @@ export default function Ranges() {
     );
     
     if (existingSector) {
-      setMessage(`Sector with Agency ${form.agency} and Range ${form.range} already exists.`);
+      showNotification(`Sector with Agency ${form.agency} and Range ${form.range} already exists.`, 'warning');
       return;
     }
 
@@ -68,13 +69,13 @@ export default function Ranges() {
       setSubmitting(true);
       await api.post('/admin/sectors', form);
 
-      setMessage('Sector created successfully!');
+      showNotification('Sector created successfully!', 'success');
       setForm({ agency: '', range: '' });
       fetchSectors(); // Refresh the list
     } catch (error) {
       console.error('Error creating sector:', error);
       const errorMsg = error.response?.data?.message || 'Failed to create sector';
-      setMessage(errorMsg);
+      showNotification(errorMsg, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -87,12 +88,12 @@ export default function Ranges() {
 
     try {
       await api.delete(`/admin/sectors/${id}`);
-      setMessage('Sector deleted successfully!');
+      showNotification('Sector deleted successfully!', 'success');
       fetchSectors(); // Refresh the list
     } catch (error) {
       console.error('Error deleting sector:', error);
       const errorMsg = error.response?.data?.message || 'Failed to delete sector';
-      setMessage(errorMsg);
+      showNotification(errorMsg, 'error');
     }
   };
 
@@ -104,16 +105,6 @@ export default function Ranges() {
   return (
     <div className="p-8 overflow-y-auto">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">Manage Sectors</h1>
-
-      {message && (
-        <div className={`mb-4 p-3 rounded ${
-          message.includes('successfully')
-            ? 'bg-green-100 text-green-700 border border-green-400'
-            : 'bg-red-100 text-red-700 border border-red-400'
-        }`}>
-          {message}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Column 1: Add New Sector Form */}
@@ -220,6 +211,7 @@ export default function Ranges() {
           </div>
         </div>
       </div>
+      {NotificationComponent}
     </div>
   );
 }

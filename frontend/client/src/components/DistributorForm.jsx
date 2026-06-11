@@ -1,23 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../services/api"; // baseURL should be http://localhost:4000/api/v1 (or your configured URL)
+import { api } from "../services/api";
 
 export default function DistributorForm({ onSubmit }) {
   const [formData, setFormData] = useState({
-    range: "",
+    range: "",          // A or B
+    agency: "",         // sector id (from agency dropdown)
     distributorName: "",
     distributorCode: "",
     area: "",
     town: "",
     route: "",
-    sector: "",
-    date: "",
   });
 
-  const [agencies, setAgencies] = useState([]);
+  const [allSectors, setAllSectors] = useState([]);  // raw sector objects from API
   const [loadingAgencies, setLoadingAgencies] = useState(true);
   const [agencyError, setAgencyError] = useState("");
 
-  // Load sectors from API and map to agencies
+  // Load all sectors from API
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -26,12 +25,7 @@ export default function DistributorForm({ onSubmit }) {
       try {
         const res = await api.get("/admin/sectors");
         const payload = res?.data?.data?.items || [];
-        // Map sectors to agency format
-        const agencyList = payload.map(sector => ({
-          id: sector.id,
-          name: sector.agency
-        }));
-        if (mounted) setAgencies(agencyList);
+        if (mounted) setAllSectors(payload);
       } catch (err) {
         if (mounted) setAgencyError(err?.response?.data?.message || "Failed to load sectors");
       } finally {
@@ -41,42 +35,31 @@ export default function DistributorForm({ onSubmit }) {
     return () => { mounted = false; };
   }, []);
 
-  // Hardcoded ranges (same as other forms)
-  const ranges = useMemo(() => [
-    { id: 'A', name: 'A' },
-    { id: 'B', name: 'B' }
-  ], []);
-
-  const [filteredAgencies, setFilteredAgencies] = useState([]);
-
-  // when range changes, filter agencies based on the selected range
-  useEffect(() => {
-    if (!formData.sector) {
-      setFilteredAgencies([]);
-      return;
-    }
-    // Filter agencies based on the selected range
-    const filtered = agencies.filter(agency => {
-      // Check if agency name starts with the selected range (A or B)
-      return agency.name && agency.name.startsWith(formData.sector);
-    });
-    setFilteredAgencies(filtered);
-  }, [formData.sector, agencies]);
+  // Filter sectors by selected range
+  const filteredAgencies = useMemo(() => {
+    if (!formData.range) return [];
+    return allSectors.filter(s => s.range === formData.range);
+  }, [formData.range, allSectors]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((s) => ({ ...s, [name]: value }));
+    if (name === "range") {
+      // Reset agency when range changes
+      setFormData(s => ({ ...s, range: value, agency: "" }));
+      return;
+    }
+    setFormData(s => ({ ...s, [name]: value }));
   };
 
   const canSubmit = useMemo(() => {
     return (
       !!formData.range &&
+      !!formData.agency &&
       !!formData.distributorName &&
       !!formData.distributorCode &&
       !!formData.area &&
       !!formData.town &&
-      !!formData.route &&
-      !!formData.sector
+      !!formData.route
     );
   }, [formData]);
 
@@ -84,30 +67,27 @@ export default function DistributorForm({ onSubmit }) {
     e.preventDefault();
     if (!canSubmit) return;
 
-    // Normalize payload for BE
+    // formData.agency holds the sector_id from the dropdown
     const payload = {
       distributor_code: formData.distributorCode.trim(),
       name: formData.distributorName.trim(),
       coverage_town: formData.town.trim(),
       route: formData.route,
-      sector_id: parseInt(formData.range),
+      sector_id: parseInt(formData.agency),   // agency dropdown value is the sector.id
       area: formData.area.trim(),
     };
 
-    console.log('Submitting distributor payload:', payload);
-    console.log('Raw form data:', formData);
+    if (onSubmit) onSubmit(payload, formData);
 
-    if (onSubmit) onSubmit(payload, formData); 
-  setFormData({
-    range: "",
-    distributorName: "",
-    distributorCode: "",
-    area: "",
-    town: "",
-    route: "",
-    sector: "",
-    date: "",
-  });
+    setFormData({
+      range: "",
+      agency: "",
+      distributorName: "",
+      distributorCode: "",
+      area: "",
+      town: "",
+      route: "",
+    });
   };
 
   return (
@@ -117,14 +97,14 @@ export default function DistributorForm({ onSubmit }) {
     >
       {/* Distributor Name */}
       <div>
-        <label className="block text-gray-700 mb-1">Distributor Name</label>
+        <label className="block text-gray-700 mb-1">Distributor Name *</label>
         <input
           type="text"
           name="distributorName"
           value={formData.distributorName}
           onChange={handleChange}
           placeholder="Enter distributor name"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
           required
         />
       </div>
@@ -137,46 +117,41 @@ export default function DistributorForm({ onSubmit }) {
           name="distributorCode"
           value={formData.distributorCode}
           onChange={handleChange}
-          placeholder="Enter distributor code (e.g., DIS036)"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          placeholder="e.g., DIS036"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
           required
-          pattern="[A-Z]{3}[0-9]{3}"
-          title="Code should be in format DIS036"
         />
       </div>
 
-      {/* Range (Sector) */}
+      {/* Range (A or B) */}
       <div>
-        <label className="block text-gray-700 mb-1">Range (Sector)</label>
-        <select
-          name="sector"
-          value={formData.sector}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
-          required
-        >
-          <option value="">Select range</option>
-          {ranges.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Agency */}
-      <div>
-        <label className="block text-gray-700 mb-1">Agency</label>
+        <label className="block text-gray-700 mb-1">Range *</label>
         <select
           name="range"
           value={formData.range}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
           required
-          disabled={!formData.sector || loadingAgencies}
+        >
+          <option value="">Select range</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+        </select>
+      </div>
+
+      {/* Agency (sector dropdown filtered by range) */}
+      <div>
+        <label className="block text-gray-700 mb-1">Agency *</label>
+        <select
+          name="agency"
+          value={formData.agency}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+          required
+          disabled={!formData.range || loadingAgencies}
         >
           <option value="">
-            {!formData.sector
+            {!formData.range
               ? "Select range first"
               : loadingAgencies
               ? "Loading agencies..."
@@ -184,56 +159,52 @@ export default function DistributorForm({ onSubmit }) {
               ? "Error loading agencies"
               : "Select agency"}
           </option>
-          {filteredAgencies.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
+          {filteredAgencies.map(s => (
+            <option key={s.id} value={s.id}>{s.agency}</option>
           ))}
         </select>
-        {agencyError && (
-          <p className="text-sm text-red-600 mt-1">{agencyError}</p>
-        )}
-        {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.sector && (
-          <p className="text-sm text-gray-500 mt-1">No agencies found for this range</p>
+        {agencyError && <p className="text-sm text-red-600 mt-1">{agencyError}</p>}
+        {filteredAgencies.length === 0 && !loadingAgencies && !agencyError && formData.range && (
+          <p className="text-sm text-gray-500 mt-1">No agencies found for range {formData.range}</p>
         )}
       </div>
 
       {/* Area */}
       <div>
-        <label className="block text-gray-700 mb-1">Area</label>
+        <label className="block text-gray-700 mb-1">Area *</label>
         <input
           type="text"
           name="area"
           value={formData.area}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
           required
           placeholder="Enter area name"
         />
       </div>
 
-      {/* Coverage (Town) */}
+      {/* Town */}
       <div>
-        <label className="block text-gray-700 mb-1">Coverage (Town)</label>
+        <label className="block text-gray-700 mb-1">Coverage (Town) *</label>
         <input
           type="text"
           name="town"
           value={formData.town}
           onChange={handleChange}
           placeholder="Enter town coverage"
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
           required
         />
       </div>
 
-      {/* Route (local-only for now) */}
+      {/* Route */}
       <div>
-        <label className="block text-gray-700 mb-1">Route</label>
+        <label className="block text-gray-700 mb-1">Route *</label>
         <select
           name="route"
           value={formData.route}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
           required
         >
           <option value="">Select route</option>
@@ -242,7 +213,6 @@ export default function DistributorForm({ onSubmit }) {
           <option value="Route C">Route C</option>
         </select>
       </div>
-
 
       {/* Submit */}
       <button

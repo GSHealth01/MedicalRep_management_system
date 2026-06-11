@@ -372,7 +372,7 @@ export default function ItineraryList() {
           </div>
         </div>
       </div>
-      <ConfirmDialogComponent />
+      {ConfirmDialogComponent}
      </div>
    </div>
  </div>

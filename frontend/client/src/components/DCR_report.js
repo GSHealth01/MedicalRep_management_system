@@ -252,6 +252,51 @@ export default function RepdetailsReport() {
   const [isEdit, setIsEdit] = useState(false);
   const editId = location.state?.editId;
 
+  // Simple toast notification functions
+  const showSuccessToast = (message) => {
+    showToast(message, 'success');
+  };
+
+  const showErrorToast = (message) => {
+    showToast(message, 'error');
+  };
+
+  const showToast = (message, type) => {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    
+    Object.assign(toast.style, {
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      padding: '12px 20px',
+      borderRadius: '8px',
+      color: 'white',
+      fontWeight: '500',
+      fontSize: '14px',
+      zIndex: '9999',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      transition: 'all 0.3s ease',
+      opacity: '0',
+      transform: 'translateX(100%)',
+      backgroundColor: type === 'success' ? '#10b981' : '#ef4444'
+    });
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(100%)';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/', { replace: true });
@@ -1093,11 +1138,11 @@ export default function RepdetailsReport() {
         },
       });
 
-      alert(isEdit ? "DCR updated successfully!" : "DCR submitted successfully!");
-      navigate('/dcr-reports'); // Redirect to dashboard
+      showSuccessToast(isEdit ? "DCR updated successfully!" : "DCR submitted successfully!");
+      setTimeout(() => navigate('/dcr-reports'), 1500); // Redirect to dashboard
     } catch (error) {
       console.error('Error submitting DCR:', error);
-      alert("Failed to submit DCR. Please try again.");
+      showErrorToast("Failed to submit DCR. Please try again.");
     }
   }
 

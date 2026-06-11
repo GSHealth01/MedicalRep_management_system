@@ -21,7 +21,8 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
-  FaUser
+  FaUser,
+  FaFileDownload
 } from 'react-icons/fa';
 import './RepDashboard.css';
 
@@ -242,8 +243,32 @@ export default function TeamDashboard() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [allocatedPrices, setAllocatedPrices] = useState(null);
   const [availableMonths, setAvailableMonths] = useState([]);
+  const [downloadingReport, setDownloadingReport] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/', { replace: true }); };
+
+  const handleDownloadComparison = async () => {
+    if (!selectedMonth) return;
+    try {
+      setDownloadingReport(true);
+      const url = `/itineraries/comparison-report?month=${encodeURIComponent(selectedMonth)}`;
+      const response = await api.get(url, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `comparison-report-${selectedMonth.replace(/\s+/g, '-')}-${user?.emp_no || 'team'}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Error downloading comparison report:', err);
+      alert('Failed to download comparison report. Please try again.');
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -471,6 +496,17 @@ export default function TeamDashboard() {
                   availableMonths.map(m => <option key={m} value={m}>{m}</option>)
                 )}
               </select>
+              {selectedMonth && (
+                <button
+                  onClick={handleDownloadComparison}
+                  disabled={downloadingReport}
+                  className="download-comparison-btn"
+                  title="Download Comparison Report (Excel)"
+                >
+                  <FaFileDownload style={{ marginRight: '0.5rem' }} />
+                  {downloadingReport ? 'Downloading...' : 'Download Excel'}
+                </button>
+              )}
               {user?.designation && (
                 <span className="designation-badge">
                   Designation: {getDesignationName(user.designation)}

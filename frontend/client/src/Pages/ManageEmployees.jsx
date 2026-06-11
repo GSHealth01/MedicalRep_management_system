@@ -644,10 +644,10 @@ export default function ManageEmployees() {
       {showForm && <EmployeeForm onSubmit={handleAddEmployee} />}
       
       {/* Notification Component */}
-      <NotificationComponent />
+      {NotificationComponent}
       
       {/* Confirmation Dialog Component */}
-      <ConfirmDialogComponent />
+      {ConfirmDialogComponent}
     </div>
   );
 }

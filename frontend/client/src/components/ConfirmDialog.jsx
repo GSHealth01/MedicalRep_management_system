@@ -134,13 +134,13 @@ export const useConfirm = () => {
     });
   };
 
-  const ConfirmDialogComponent = () => (
+  const ConfirmDialogComponent = confirmState.isOpen ? (
     <ConfirmDialog
       {...confirmState}
       onConfirm={confirmState.onConfirm}
       onCancel={confirmState.onCancel}
     />
-  );
+  ) : null;
 
   return {
     showConfirm,

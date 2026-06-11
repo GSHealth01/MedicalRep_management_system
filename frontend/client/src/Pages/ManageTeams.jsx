@@ -311,7 +311,7 @@ export default function ManageTeams() {
       )}
 
       {/* Notifications */}
-      <NotificationComponent />
+      {NotificationComponent}
     </div>
   );
 }

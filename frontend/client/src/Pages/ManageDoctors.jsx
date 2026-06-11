@@ -493,10 +493,10 @@ export default function ManageDoctors() {
     )}
     
     {/* Notification Component */}
-    <NotificationComponent />
+    {NotificationComponent}
     
     {/* Confirmation Dialog Component */}
-    <ConfirmDialogComponent />
+    {ConfirmDialogComponent}
   </div>
 );
 }

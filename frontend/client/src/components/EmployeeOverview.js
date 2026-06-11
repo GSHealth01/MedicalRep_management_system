@@ -77,7 +77,7 @@ export default function EmployeeOverview() {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
             <h2 className="text-2xl font-bold flex items-center">
               <FaUser className="mr-2" />
               Employee Overview
@@ -116,7 +116,7 @@ export default function EmployeeOverview() {
                       {/* Designation Header Row */}
                       <tr className="bg-gray-50 border-t-2 border-gray-100">
                         <td colSpan="5" className="px-6 py-3 text-sm font-bold text-blue-800">
-                          {designationMap[designationCode] || designationCode} ({group.length})
+                          {designationMap[designationCode] || designationCode} ( {group.length} )
                         </td>
                       </tr>
                       {/* Individual Employee Rows */}
@@ -129,7 +129,7 @@ export default function EmployeeOverview() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
                                   <span className="text-white font-semibold text-sm">
                                     {employee.name?.charAt(0).toUpperCase()}
                                   </span>
